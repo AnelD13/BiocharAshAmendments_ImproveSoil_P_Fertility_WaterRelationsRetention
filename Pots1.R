@@ -1568,3 +1568,62 @@ Mod15em<- emmeans(Mod15d,~Treatment|Soil, subset=(Pots1$OC), type="response")
 Mod15em_cld <- cld(Mod15em, Letters = letters, by="Soil") 
 View(Mod15em_cld)
 write.csv(Mod15em_cld, file="Pots1_OC.csv")
+
+
+
+
+####   Water holding capacity  #####
+WHC <- data.frame(
+  Soil = as.factor(rep(c("Haverhill", "Oxbow"), each=5)),
+  Treatment = as.factor(c("Control2", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "Control2",
+              "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha")),
+  VolWatContent = c(21, 22, 21, 24, 21, 22, 23, 24, 24, 24))
+print(WHC)
+# boxplot
+ggplot(WHC, aes(x = Soil, y = VolWatContent)) +
+  geom_boxplot() +
+  geom_jitter(shape = 15, color = "steelblue", position = position_jitter(0.21)) +
+    labs(x = "Treatment", y = "Volumetric Water Content %")
+ggsave("WaterHoldingCapacity_boxplot.jpg", width = 8, height = 8, dpi = 300)
+
+#geom_text(aes(label = Treatment), position = position_dodge(width = 0.5), vjust = -0.7, color = "steelblue", size = 3) +
+
+#model data
+ModWHC1 <- lm(VolWatContent~Treatment*Soil, data=WHC)
+anova(ModWHC1)
+summary(ModWHC1)
+shapiro.test(resid(ModWHC1)) # p=0.0008813
+hist(resid(ModWHC1)) # heavily flattened tails
+qqnorm(resid(ModWHC1)) # heavy tails
+qqline(resid(ModWHC1))
+
+
+
+
+pairwise.t.test(WHC$VolWatContent, list(WHC$Treatment, WHC$Soil))
+
+
+WHC %>%
+  group_by(Soil) %>%
+  do(tidy(pairwise.t.test(.$VolWatContent, .$Treatment)))
+
+ggplot(WHC, aes(x = Treatment, y = VolWatContent, pattern = Soil)) +
+  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+                   pattern_density=0.05, pattern_spacing=0.01)+
+  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
+                       labels = c("Haverhill", "Oxbow"))+
+  geom_text(aes(label = paste0(VolWatContent, "%"), fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=6, position = position_dodge2(width = 0.9), vjust=-1) +
+  labs(x = "Treatments", y = "Volumetric Water Content (%)") +
+  scale_x_discrete(labels = c("Control 2", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/h"))+
+  scale_y_continuous(limits = c(0, 28))+
+  theme_bw() +
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
+        legend.text=element_text(size=12))+
+  theme(plot.title = element_text(size = 18))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+ggsave("Pots1_WatHolCapacity.jpg", width = 12, height = 8, dpi = 500)
+
