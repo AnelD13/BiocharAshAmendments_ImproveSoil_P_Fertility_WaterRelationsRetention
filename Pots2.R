@@ -1,0 +1,1034 @@
+## Field data for Pots2 study
+#Loading data in to R
+Pots2<-read.csv("Pots2.csv", fileEncoding="UTF-8-BOM")
+View(Pots2)
+Pots2Raw<-read.csv("Pots2raw.csv", fileEncoding="UTF-8-BOM")
+
+#Loading libraries
+library(lme4)
+library(nlme)
+library(lmerTest)
+library(doBy)
+library(ggplot2)
+library(ggpattern)
+library(plotrix)
+library(car)
+library(afex)
+library(onewaytests)
+library(multcomp)
+library(dplyr)
+library(tidyr)
+library(magrittr)
+library(readr)
+library(broom)
+library(multcomp)
+library(multcompView)
+library(emmeans)
+library(lsmeans)
+library(e1071)
+library(rsq)
+library(pgirmess)
+library(car)
+library(ggpubr)
+
+
+##### Summary and ordering of data   ####
+#Check for missing values in a specific field
+missing <- colSums(is.na(Pots2[,]))
+print(missing)
+
+#Change columns in a dataframe to factors/categorical values, str displays 
+Trt_order <- c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse",
+               "MBMAFine", "Phosphorus")
+Pots2$Block <- factor(Pots2$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
+Pots2$Treatment <- factor(Pots2$Treatment,levels = Trt_order)
+Pots2$Grain <- as.numeric(as.character(Pots2$Grain))
+Pots2$Straw <- as.numeric(as.character(Pots2$Straw))
+summary(Pots2)
+str(Pots2) #displays the structure of the object
+
+# Summary data (means, SD, etc.) for each treatment and variable
+Pots2Mean <- summary_by(.~Soil+Treatment, data=Pots2, FUN=mean) #overall means for the data set
+Pots2SD <- summary_by(.~Soil+Treatment, data=Pots2, FUN=sd) #overall SD for the dataset
+View(Pots2Mean)
+View(Pots2SD)
+Straw_summary <- Pots2 %>% #summary data specifically for Straw variable
+  group_by(Treatment) %>%
+  summarize(Mean=mean(Straw),
+            SD=sd(Straw),
+            SE=sd(Straw)/sqrt(n()))
+View(Straw_summary) #summary data specifically for Grain variable
+Grain_summary <- Pots2 %>%
+  group_by(Treatment) %>%
+  summarize(Mean=mean(Grain),
+            SD=sd(Grain),
+            SE=sd(Grain)/sqrt(n()))
+View(Grain_summary)
+
+
+#####   Check for outliers   ####
+#Grain
+ggplot(Pots2Raw, aes(x = Treatment, y = Grain, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Grain")
+ggsave("OutliersWheat_Grain.jpg", width = 10, height = 10, dpi = 200)
+#Straw
+ggplot(Pots2Raw, aes(x = Treatment, y = Straw, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Straw")
+ggsave("OutliersWheat_Straw.jpg", width = 10, height = 10, dpi = 200)
+#Biomass
+ggplot(Pots2Raw, aes(x = Treatment, y = Biomass, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Biomass")
+ggsave("OutliersWheat_Biomass.jpg", width = 10, height = 10, dpi = 200)
+# Nuptake
+ggplot(Pots2Raw, aes(x = Treatment, y = Nuptake, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "N uptake")
+ggsave("OutliersWheat_Nuptake.jpg", width = 10, height = 10, dpi = 200)
+# P uptake
+ggplot(Pots2Raw, aes(x = Treatment, y = Puptake, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "P uptake")
+ggsave("OutliersWheat_Puptake.jpg", width = 10, height = 10, dpi = 200)
+# Soil NO3
+ggplot(Pots2Raw, aes(x = Treatment, y = SNO3, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Soil NO3")
+ggsave("OutliersWheat_SNO3.jpg", width = 10, height = 10, dpi = 200)
+# Soil NH4
+ggplot(Pots2Raw, aes(x = Treatment, y = SNH4, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Soil NH4")
+ggsave("OutliersWheat_SNH4.jpg", width = 10, height = 10, dpi = 200)
+# Soil PO4
+ggplot(Pots2Raw, aes(x = Treatment, y = SPO4, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Soil PO4")
+ggsave("OutliersWheat_SPO4.jpg", width = 10, height = 10, dpi = 200)
+# Resin P
+ggplot(Pots2Raw, aes(x = Treatment, y = ResinP, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Resin P")
+ggsave("OutliersWheat_ResinP.jpg", width = 10, height = 10, dpi = 200)
+# Water Soluble P
+ggplot(Pots2Raw, aes(x = Treatment, y = WatSolP, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Water Soluble P")
+ggsave("OutliersWheat_WatSolP.jpg", width = 10, height = 10, dpi = 200)
+# Total Soil P
+ggplot(Pots2Raw, aes(x = Treatment, y = TotalP, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Total Soil P")
+ggsave("OutliersWheat_TotalP.jpg", width = 10, height = 10, dpi = 200)
+# pH
+ggplot(Pots2Raw, aes(x = Treatment, y = pH, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "pH")
+ggsave("OutliersWheat_pH.jpg", width = 10, height = 10, dpi = 200)
+# EC
+ggplot(Pots2Raw, aes(x = Treatment, y = EC, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Electric Conductivity")
+ggsave("OutliersWheat_EC.jpg", width = 10, height = 10, dpi = 200)
+# OC
+ggplot(Pots2Raw, aes(x = Treatment, y = OC, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "% Organic Carbon")
+ggsave("OutliersWheat_OC.jpg", width = 10, height = 10, dpi = 200)
+# Leachate NO3
+ggplot(Pots2Raw, aes(x = Treatment, y = LNO3, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Leachate NO3")
+ggsave("OutliersWheat_LNO3.jpg", width = 10, height = 10, dpi = 200)
+# Leachate NH4
+ggplot(Pots2Raw, aes(x = Treatment, y = LNH4, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Leachate NH4")
+ggsave("OutliersWheat_LNH4.jpg", width = 10, height = 10, dpi = 200)
+# Leachate PO4
+ggplot(Pots2Raw, aes(x = Treatment, y = LPO4, fill=Treatment)) +
+  geom_boxplot() +
+  facet_wrap(~ Treatment, scales = "free") +
+  labs(x = "Treatment", y = "Leachate PO4")
+ggsave("OutliersWheat_LPO4.jpg", width = 10, height = 10, dpi = 200)
+
+
+#####   GRAIN   #####
+ModP2Grain_Mean <- summary_by(Grain~Treatment+Block, data=Pots2, FUN=mean) 
+ModP2Grain_Mean <- as.numeric(ModP2Grain_Mean$Grain)
+ModP2Grain_skew <- skewness(ModP2Grain_Mean)
+ModP2Grain_kur <- kurtosis(ModP2Grain_Mean)
+cat("Skewness:", ModP2Grain_skew, "\n") # 0.4478962 
+cat("Kurtosis:", ModP2Grain_kur, "\n") # -0.09995475  
+hist(Pots2$Grain) #  slightly right skewed
+shapiro.test(Pots2$Grain) # p=0.6225
+leveneTest(Grain ~ Treatment, data = Pots2)  # 0.379
+hist(log(Pots2$Grain)) #  right skewed
+shapiro.test(log(Pots2$Grain)) # p=0.02587
+leveneTest(log(Grain) ~ Treatment, data = Pots2)  # 0.2947
+hist(log10(Pots2$Grain)) #  slightly right skewed
+shapiro.test(log10(Pots2$Grain)) # p=0.02587
+leveneTest(log10(Grain) ~ Treatment, data = Pots2)  # 0.2947
+hist(sqrt(Pots2$Grain)) #  right skewed
+shapiro.test(sqrt(Pots2$Grain)) # p=0.1911
+leveneTest(sqrt(Grain) ~ Treatment, data = Pots2)  # 0.3263
+hist(1/(Pots2$Grain)) #  very left skewed
+shapiro.test(1/(Pots2$Grain)) # p=0.0001527
+leveneTest(1/(Grain) ~ Treatment, data = Pots2)  # 0.28
+#ModP2G1 aov
+ModP2G1 <- aov(Grain~Treatment+Block,data=Pots2)
+anova(ModP2G1)
+summary(ModP2G1)
+residS1 <- resid(ModP2G1) 
+hist(residS1)  # data is normally distributed
+shapiro.test(resid(ModP2G1))  # p=0.3836
+plot(fitted(ModP2G1),resid(ModP2G1),pch=16)  # 
+qqnorm(resid(ModP2G1)) # slight tails
+qqline(resid(ModP2G1))
+# lm model with weighted least squares
+ModP2Gvar <- tapply(Pots2$Grain, Pots2$Treatment, var) # Calculate the variances for each treatment
+weightsGrain <- 1 / ModP2Gvar # Create a vector of weights
+weightsGrain_full <- rep(weightsGrain, each = length(Pots2$Grain) / length(weightsGrain))
+ModP2G2 <- lm(Grain ~ Treatment + Block, data=Pots2, weights=weightsGrain_full) # Fit a WLS model
+hist(resid(ModP2G2))  # right skew
+shapiro.test(resid(ModP2G2))  # p=0.2325
+plot(fitted(ModP2G2),resid(ModP2G2),pch=16) 
+qqnorm(resid(ModP2G2)) # left tail
+qqline(resid(ModP2G2))
+rsq(ModP2G2)  # 0.7286155
+#emmeans for ModP2G1
+ModP2Gem <- emmeans(ModP2G2,~Treatment, type="response")
+ModP2Gem_cld <- cld(ModP2Gem, Letters = letters, type="response") 
+View(ModP2Gem_cld)
+write.csv(ModP2Gem_cld, file="Pots2_Grain.csv")
+##Developing visualizations
+par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
+ggplot(ModP2Gem_cld, aes(x = Treatment, y = emmean, fill=Treatment))  +
+  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+                   pattern_density=0.05, pattern_spacing=0.01)+
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE), size=4, vjust=-1)+
+  labs(x = "Treatment", y = "Wheat grain yield (g)") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
+                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
+  theme_bw() +
+  theme(plot.title = element_text(size = 18))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
+        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+ggsave("Pots2_grain.jpg", width = 8, height = 8, dpi = 600)
+
+
+
+#####   STRAW   #############
+ModP2Straw_Mean <- summary_by(Straw~Treatment+Block, data=Pots2, FUN=mean) # calculate means of Straw
+ModP2Straw_Mean <- as.numeric(ModP2Straw_Mean$Straw)
+ModP2Straw_skew <- skewness(ModP2Straw_Mean)
+ModP2Straw_kur <- kurtosis(ModP2Straw_Mean)
+cat("Skewness:", ModP2Straw_skew, "\n") # -0.08877305
+cat("Kurtosis:", ModP2Straw_kur, "\n") # -1.095164 
+hist(Pots2$Straw) #  
+shapiro.test(Pots2$Straw) # p=0.5918
+leveneTest(Straw ~ Treatment, data = Pots2)  # 0.8324
+#ModP2S1 lmer - model preferred due to blocking effect
+ModP2S1 <- aov(Straw~Treatment+Block,data=Pots2)
+anova(ModP2S1)
+summary(ModP2S1)
+hist(resid(ModP2S1))  # data is normally distributed
+shapiro.test(resid(ModP2S1))  # p= 0.9415
+plot(fitted(ModP2S1),resid(ModP2S1),pch=16)  # data is normally distributed
+qqnorm(resid(ModP2S1)) # data is normally distributed
+qqline(resid(ModP2S1))
+# lm model with weighted least squares
+ModP2Svar <- tapply(Pots2$Straw, Pots2$Treatment, var) # Calculate the variances for each treatment
+weightsStraw <- 1 / ModP2Svar # Create a vector of weights
+weightsStraw_full <- rep(weightsStraw, each = length(Pots2$Straw) / length(weightsStraw))
+ModP2S2 <- lm(Straw ~ Treatment + Block, data=Pots2, weights=weightsStraw_full) # Fit a WLS model
+hist(resid(ModP2S2))  # left skew
+shapiro.test(resid(ModP2S2))  # p=0.8112
+plot(fitted(ModP2S2),resid(ModP2S2),pch=16) 
+qqnorm(resid(ModP2S2)) # right tail
+qqline(resid(ModP2S2))
+rsq(ModP2S2)  # 0.7827512
+#emmeans for ModP2S1
+ModP2emS <- emmeans(ModP2S1,~Treatment)
+ModP2emS1_cld <- cld(ModP2emS, Letters = letters) 
+View(ModP2emS1_cld)
+write.csv(ModP2emS1_cld, file="Pots2_Straw.csv")
+##Developing visualizations
+par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
+ggplot(ModP2emS1_cld, aes(x=Treatment, y=emmean)) +
+  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+                   pattern_density=0.05, pattern_spacing=0.01)+
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE), size=4, vjust=-1)+
+  labs(x = "Treatment", y = "Wheat straw yield (g)") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
+                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
+  theme_bw() +
+  theme(plot.title = element_text(size = 18))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
+        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+ggsave("Pots2_straw.jpg", width = 8, height = 8, dpi = 600)
+
+
+
+#####   BIOMASS   #####
+PotBio_Mean <- summary_by(Biomass~Treatment+Block, data=Pots2, FUN=mean)
+PotBio_Mean <- as.numeric(PotBio_Mean$Biomass)
+PotBio_skew <- skewness(PotBio_Mean,na.rm=TRUE)
+PotBio_kur <- kurtosis(PotBio_Mean,na.rm=TRUE)
+cat("Skewness:", PotBio_skew, "\n") # 0.04157241 
+cat("Kurtosis:", PotBio_kur, "\n") # -1.08367 
+shapiro.test(Pots2$Biomass) # p=0.6171
+hist(Pots2$Biomass) #  
+car::leveneTest(Biomass~Treatment, data=Pots2)  # p=0.451
+ggplot(Pots2, aes(x = Block, y = Biomass)) + #checking treatments in boxplots to see if variances are equal across blocks
+  geom_boxplot() +
+  labs(x = "Block", y = "Biomass") +
+  theme_bw()
+#ModP2Bio1
+ModP2Bio1 <- aov(Biomass~Treatment+Block, data=Pots2)
+anova(ModP2Bio1)
+summary(ModP2Bio1)
+hist(resid(ModP2Bio1))
+shapiro.test(resid(ModP2Bio1))  # p=0.1125
+plot(fitted(ModP2Bio1),resid(ModP2Bio1),pch=16)
+qqnorm(resid(ModP2Bio1)) # slight tails
+qqline(resid(ModP2Bio1))
+ModP2Bio1_tidy <- tidy(ModP2Bio1)
+ModP2Bio1sum_sq_reg <- ModP2Bio1_tidy$sumsq[1] 
+ModP2Bio1sum_sq_resid <- ModP2Bio1_tidy$sumsq[2] 
+ModP2Bio1sum_sq_reg / (ModP2Bio1sum_sq_reg + ModP2Bio1sum_sq_resid) # 0.874
+# lm model with weighted least squares
+ModP2Biovar <- tapply(Pots2$Biomass, Pots2$Treatment, var) # Calculate the variances for each treatment
+weightsBio <- 1 / ModP2Biovar # Create a vector of weights
+weightsBio_full <- rep(weightsBio, each = length(Pots2$Biomass) / length(weightsBio))
+ModP2Bio2 <- lm(Biomass ~ Treatment + Block, data=Pots2, weights=weightsBio_full) # Fit a WLS model
+hist(resid(ModP2Bio2))  # left skew
+shapiro.test(resid(ModP2Bio2))  # p=0.1394
+plot(fitted(ModP2Bio2),resid(ModP2Bio2),pch=16) 
+qqnorm(resid(ModP2Bio2)) # longer left tail
+qqline(resid(ModP2Bio2))
+rsq(ModP2Bio2)  # 0.7748827
+#emmeans 
+ModP2emBio <- emmeans(ModP2Bio2,~Treatment, type="response")
+ModP2emBio_cld <- cld(ModP2emBio, Letters = letters) 
+View(ModP2emBio_cld)
+write.csv(ModP2emBio_cld, file="Pots2_Biomass.csv")
+
+#creating stacked plot of grain and straw with individual error bars
+ModP2Gem_cld$origin <- "Grain"
+ModP2emS1_cld$origin <- "Straw"
+BiomassEm <- rbind(ModP2emS1_cld,ModP2Gem_cld)
+BiomassEm <- as.data.frame(BiomassEm)
+BiomassEm <- select(BiomassEm, Treatment, emmean, SE, .group, origin)
+View(BiomassEm)
+#reshape dataframe to longer format
+BiomassEm_long <- BiomassEm|> pivot_longer(cols = c("emmean", "SE"), names_to = "name", values_to = "value")|>
+  mutate(name = forcats::fct_rev(name))
+View(BiomassEm_long)
+# Plot option 1 (GGplot)
+BiomassEm_long|>
+  group_by(Treatment, origin, name) |>
+  summarise(mean = mean(value), SE = sd(value) / sqrt(length(value))) |>
+  mutate(cum_mean = cumsum(mean), cum_SE = cumsum(SE))|>
+  ggplot(aes(Treatment, y=mean, fill = origin)) +
+  geom_bar(stat="identity", position = "stack") +
+  geom_errorbar(aes(ymin = ymin_cum, ymax = ymax_cum), width = .25)+
+  labs(title = "Biomass by Treatment and Origin", x = "Treatment", y = "Biomass") +
+  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
+  theme_bw()
+# PLot option 2 (ggbarplot)
+ggbarplot(data = BiomassEm_long, x = "Treatment", y = "value", fill = "origin", add="mean_se")+
+  geom_errorbar(aes(ymin = value, ymax = value), width = .25) +
+  labs(x = "Treatment", y = "Total grain and straw yield (g)", fill = "") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
+                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
+  theme_bw() +
+  theme(plot.title = element_text(size = 18))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
+        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+
+# Plot option 3 - side by side
+ggplot(BiomassEm, aes(x=Treatment, y=emmean, pattern=origin)) +
+  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+                   pattern_density=0.05, pattern_spacing=0.01)+
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE), size=6, vjust=-1, position = position_dodge(width = 0.9))+
+  labs(x = "Treatment", y = "Total grain and straw yield (g)", pattern="") +
+  scale_pattern_manual(values = c("Grain" = "stripe", "Straw" = "crosshatch"), 
+                       labels = c("Grain", "Straw"))+
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
+                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
+  scale_y_continuous(limits = c(0, 10))+
+  theme_bw() +
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
+        legend.text=element_text(size=12))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=20, face="bold", colour="black"),
+        axis.title.x = element_blank(), axis.title.y = element_text(size = 24, face="bold")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+ggsave("Pots2_biomass.jpg", width = 12, height = 8, dpi = 600)
+
+
+
+#####   N UPTAKE  #####
+Pots2Nup_Mean <- summary_by(Nuptake~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2Nup_Mean <- as.numeric(Pots2Nup_Mean$Nuptake)
+Pots2Nup_skew <- skewness(Pots2Nup_Mean,na.rm=TRUE)
+Pots2Nup_kur <- kurtosis(Pots2Nup_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2Nup_skew, "\n") # 0.56394 
+cat("Kurtosis:", Pots2Nup_kur, "\n") # -0.2916061
+shapiro.test(Pots2$Nuptake) # p=0.1701
+hist(Pots2$Nuptake) #  left skew
+leveneTest(Nuptake~Treatment, data=Pots2)  # 0.7617
+#ModP2Nup1 - all SE values are identical
+ModP2Nup1 <- aov(Nuptake~Treatment+Block, data=Pots2)
+anova(ModP2Nup1)
+summary(ModP2Nup1)
+hist(resid(ModP2Nup1))
+shapiro.test(resid(ModP2Nup1))  # p=0.1458
+plot(fitted(ModP2Nup1),resid(ModP2Nup1),pch=16) #slightly left  skewed but very random
+qqnorm(resid(ModP2Nup1)) #left tail somewhat longer
+qqline(resid(ModP2Nup1))
+ModP2Nup1_tidy <- tidy(ModP2Nup1)
+ModP2Nup1sum_sq_reg <- ModP2Nup1_tidy$sumsq[1] 
+ModP2Nup1sum_sq_resid <- ModP2Nup1_tidy$sumsq[2]
+ModP2Nup1sum_sq_reg / (ModP2Nup1sum_sq_reg + ModP2Nup1sum_sq_resid) # rsq =0.5212608
+# lm model with weighted least squares
+ModP2Nupvar <- tapply(Pots2$Nuptake, Pots2$Treatment, var) # Calculate the variances for each treatment
+weightsNup <- 1 / ModP2Nupvar # Create a vector of weights
+weightsNup_full <- rep(weightsNup, each = length(Pots2$Nuptake) / length(weightsNup))
+ModP2Nup2 <- lm(Nuptake ~ Treatment + Block, data=Pots2, weights=weightsNup_full) # Fit a WLS model
+anova(ModP2Nup2)
+hist(resid(ModP2Nup2))  # slight left skew
+shapiro.test(resid(ModP2Nup2))  # p=0.1592
+plot(fitted(ModP2Nup2),resid(ModP2Nup2),pch=16) #slightly left  skewed but very random
+qqnorm(resid(ModP2Nup2)) #left tail somewhat longer
+qqline(resid(ModP2Nup2))
+rsq(ModP2Nup2)  # 0.5543654
+#emmeans 
+ModP2emNup <- emmeans(ModP2Nup2,~Treatment, alpha = 0.1, type="response")
+ModP2emNup_cld <- cld(ModP2emNup, Letters = letters) 
+View(ModP2emNup_cld)
+write.csv(ModP2emNup_cld, file="Pots2_Nuptake.csv")
+# Plotting the summary data
+ggplot(ModP2emNup_cld, aes(x=Treatment, y=emmean)) +
+  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+                   pattern_density=0.05, pattern_spacing=0.01)+
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE), size=6, vjust=-1)+
+  labs(x = "Treatment", y = "Wheat N uptake (ug)") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
+                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
+  scale_y_continuous(limits = c(0, 210))+
+  theme_bw() +
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
+        legend.text=element_text(size=12))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=20, face="bold", colour="black"),
+        axis.title.x = element_blank(), axis.title.y = element_text(size = 24, face="bold")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+ggsave("Pots2_Nuptake.jpg", width = 12, height = 8, dpi = 600)
+
+
+
+#####   P UPTAKE   #####
+Pots2Pup_Mean <- summary_by(Puptake~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2Pup_Mean <- as.numeric(Pots2Pup_Mean$Puptake)
+Pots2Pup_skew <- skewness(Pots2Pup_Mean,na.rm=TRUE)
+Pots2Pup_kur <- kurtosis(Pots2Pup_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2Pup_skew, "\n") # -0.1449922 
+cat("Kurtosis:", Pots2Pup_kur, "\n") # -0.8374298
+shapiro.test(Pots2$Puptake) # p=0.5904
+hist(Pots2$Puptake) 
+leveneTest(Puptake~Treatment, data=Pots2)  # 0.1659
+#ModP2Pup1
+ModP2Pup1 <- aov(Puptake~Treatment+Block, data=Pots2)
+anova(ModP2Pup1)
+summary(ModP2Pup1)
+hist(resid(ModP2Pup1))
+shapiro.test(resid(ModP2Pup1))  # p=0.6417
+plot(fitted(ModP2Pup1),resid(ModP2Pup1),pch=16) #slightly left skewed but very random
+qqnorm(resid(ModP2Pup1))
+qqline(resid(ModP2Pup1))
+ModP2Pup1_tidy <- tidy(ModP2Pup1)
+ModP2Pup1sum_sq_reg <- ModP2Pup1_tidy$sumsq[1] 
+ModP2Pup1sum_sq_resid <- ModP2Pup1_tidy$sumsq[2]
+ModP2Pup1sum_sq_reg / (ModP2Pup1sum_sq_reg + ModP2Pup1sum_sq_resid) # 0.7522534
+# lm model with weighted least squares
+ModP2Pupvar <- tapply(Pots2$Puptake, Pots2$Treatment, var, na.rm=TRUE)
+weightsPup <- 1 / ModP2Pupvar
+weightsPup_full <- rep(weightsPup, each = length(Pots2$Puptake) / length(weightsPup))
+ModP2Pup2 <- lm(Puptake ~ Treatment + Block, data=Pots2, weights=weightsPup_full) 
+hist(resid(ModP2Pup2))  # slight left skew
+shapiro.test(resid(ModP2Pup2))  # p= 0.2411
+plot(fitted(ModP2Pup2),resid(ModP2Pup2),pch=16) #slightly left  skewed but very random
+qqnorm(resid(ModP2Pup2)) #left tail somewhat longer
+qqline(resid(ModP2Pup2))
+rsq(ModP2Pup2)  # 0.6712941
+#emmeans on lm model
+ModP2emPup <- emmeans(ModP2Pup2,~Treatment, alpha=0.1, type="response")
+ModP2emPup_cld <- cld(ModP2emPup, Letters = letters) 
+View(ModP2emPup_cld)
+write.csv(ModP2emPup_cld, file="Pots2_Puptake.csv")
+# Plotting the summary data
+ggplot(ModP2emPup_cld, aes(x=Treatment, y=emmean)) +
+  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+                   pattern_density=0.05, pattern_spacing=0.01)+
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE), size=6, vjust=-1)+
+  labs(x = "Treatment", y = "Wheat P uptake (ug)") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
+                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
+  scale_y_continuous(limits = c(0, 30))+
+  theme_bw() +
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
+        legend.text=element_text(size=12))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=20, face="bold", colour="black"),
+        axis.title.x = element_blank(), axis.title.y = element_text(size = 24, face="bold")) +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+ggsave("Pots2_Puptake.jpg", width = 12, height = 8, dpi = 600)
+
+
+#####   SOIL NO3   #####
+Pots2SNO3_Mean <- summary_by(SNO3~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2SNO3_Mean <- as.numeric(Pots2SNO3_Mean$SNO3)
+Pots2SNO3_skew <- skewness(Pots2SNO3_Mean,na.rm=TRUE)
+Pots2SNO3_kur <- kurtosis(Pots2SNO3_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2SNO3_skew, "\n") # 2.721196 
+cat("Kurtosis:", Pots2SNO3_kur, "\n") # 9.18808 
+shapiro.test(Pots2$SNO3) # p=2.965e-06
+hist(Pots2$SNO3) #  extreme left skew
+leveneTest(SNO3~Treatment, data=Pots2)  # P=0.3258
+#trnasformations
+shapiro.test(log(Pots2$SNO3)) # p=0.2487
+hist(log(Pots2$SNO3)) #  left skew
+leveneTest(log(SNO3)~Treatment, data=Pots2)  # P=0.2182
+#ModP2SNO31
+ModP2SNO31 <- aov(log(SNO3)~Treatment+Block, data=Pots2)
+anova(ModP2SNO31)
+summary(ModP2SNO31)
+hist(resid(ModP2SNO31))
+shapiro.test(resid(ModP2SNO31))  # p=0.07536
+plot(fitted(ModP2SNO31),resid(ModP2SNO31),pch=16) 
+qqnorm(resid(ModP2SNO31)) # long right tail
+qqline(resid(ModP2SNO31))
+ModP2SNO31_tidy <- tidy(ModP2SNO31)
+ModP2SNO31sum_sq_reg <- ModP2SNO31_tidy$sumsq[1] 
+ModP2SNO31sum_sq_resid <- ModP2SNO31_tidy$sumsq[2]
+ModP2SNO31sum_sq_reg / (ModP2SNO31sum_sq_reg + ModP2SNO31sum_sq_resid) # rsq=0.3888387
+# lm model
+ModP2SNO32 <- lm(log(SNO3)~Treatment+Block, data=Pots2)
+anova(ModP2SNO32)
+summary(ModP2SNO32)
+hist(resid(ModP2SNO32))
+shapiro.test(resid(ModP2SNO32))  # p=0.07536
+plot(fitted(ModP2SNO32),resid(ModP2SNO32),pch=16) 
+qqnorm(resid(ModP2SNO32)) # long right tail
+qqline(resid(ModP2SNO32))
+rsq(ModP2SNO32) # rsq=0.6791344
+#emmeans 
+ModP2emSNO3 <- emmeans(ModP2SNO32,~Treatment, type="response")
+ModP2emSNO3_cld <- cld(ModP2emSNO3, Letters = letters) 
+View(ModP2emSNO3_cld)
+write.csv(ModP2emSNO3_cld, file="Pots2_SoilNO3.csv")
+
+
+#####   SOIL NH4   #####
+Pots2SNH4_Mean <- summary_by(SNH4~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2SNH4_Mean <- as.numeric(Pots2SNH4_Mean$SNH4)
+Pots2SNH4_skew <- skewness(Pots2SNH4_Mean,na.rm=TRUE)
+Pots2SNH4_kur <- kurtosis(Pots2SNH4_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2SNH4_skew, "\n") # 1.083862 
+cat("Kurtosis:", Pots2SNH4_kur, "\n") # 0.7036936 
+shapiro.test(Pots2$SNH4) # p=0.003774
+hist(Pots2$SNH4) 
+leveneTest(SNH4~Treatment, data=Pots2)  # P=0.5493
+#ModP2SNH41
+ModP2SNH41 <- aov(SNH4~Treatment+Block, data=Pots2)
+anova(ModP2SNH41)
+summary(ModP2SNH41)
+hist(resid(ModP2SNH41))
+shapiro.test(resid(ModP2SNH41))  # p=0.435
+plot(fitted(ModP2SNH41),resid(ModP2SNH41),pch=16) 
+qqnorm(resid(ModP2SNH41))
+qqline(resid(ModP2SNH41))
+ModP2SNH41_tidy <- tidy(ModP2SNH41)
+ModP2SNH41sum_sq_reg <- ModP2SNH41_tidy$sumsq[1] 
+ModP2SNH41sum_sq_resid <- ModP2SNH41_tidy$sumsq[2]
+ModP2SNH41sum_sq_reg / (ModP2SNH41sum_sq_reg + ModP2SNH41sum_sq_resid) #0.2443073
+# lm model
+ModP2SNH4var <- tapply(Pots2$SNH4, Pots2$Treatment, var, na.rm=TRUE)
+weightsSNH4 <- 1 / ModP2SNH4var
+weightsSNH4_full <- rep(weightsSNH4, each = length(Pots2$SNH4) / length(weightsSNH4))
+ModP2SNH42 <- lm(SNH4 ~ Treatment + Block, data=Pots2, weights=weightsSNH4_full) 
+anova(ModP2SNH42)
+summary(ModP2SNH42)
+hist(resid(ModP2SNH42))
+shapiro.test(resid(ModP2SNH42))  # p=0.1163
+plot(fitted(ModP2SNH42),resid(ModP2SNH42),pch=16) 
+qqnorm(resid(ModP2SNH42)) 
+qqline(resid(ModP2SNH42))
+rsq(ModP2SNH42) # rsq=0.4700318
+#emmeans 
+ModP2emSNH4 <- emmeans(ModP2SNH42,~Treatment, type="response")
+ModP2emSNH4_cld <- cld(ModP2emSNH4, Letters = letters) 
+View(ModP2emSNH4_cld)
+write.csv(ModP2emSNH4_cld, file="Pots2_SoilNH4.csv")
+
+
+
+#####   SOIL PO4   #####
+Pots2SPO4_Mean <- summary_by(SPO4~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2SPO4_Mean <- as.numeric(Pots2SPO4_Mean$SPO4)
+Pots2SPO4_skew <- skewness(Pots2SPO4_Mean,na.rm=TRUE)
+Pots2SPO4_kur <- kurtosis(Pots2SPO4_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2SPO4_skew, "\n") # 0.7319427 
+cat("Kurtosis:", Pots2SPO4_kur, "\n") # -0.7178281 
+shapiro.test(Pots2$SPO4) # p=0.007283
+hist(Pots2$SPO4) #  left skew
+leveneTest(SPO4~Treatment, data=Pots2)  # P=0.5364
+# transform
+shapiro.test(log(Pots2$SPO4)) # p=0.1813
+hist(log(Pots2$SPO4)) 
+leveneTest(log(SPO4)~Treatment, data=Pots2)  # P=0.8856
+#ModP2SPO41
+ModP2SPO41 <- aov(log(SPO4)~Treatment+Block, data=Pots2)
+anova(ModP2SPO41)
+summary(ModP2SPO41)
+hist(resid(ModP2SPO41))
+shapiro.test(resid(ModP2SPO41))  # p= 0.3196
+plot(fitted(ModP2SPO41),resid(ModP2SPO41),pch=16) 
+qqnorm(resid(ModP2SPO41))
+qqline(resid(ModP2SPO41))
+ModP2SPO41_tidy <- tidy(ModP2SPO41)
+ModP2SPO41sum_sq_reg <- ModP2SPO41_tidy$sumsq[1] 
+ModP2SPO41sum_sq_resid <- ModP2SPO41_tidy$sumsq[2]
+ModP2SPO41sum_sq_reg / (ModP2SPO41sum_sq_reg + ModP2SPO41sum_sq_resid) #0.8786474
+#emmeans 
+ModP2emSPO4 <- emmeans(ModP2SPO41,~Treatment, type="response")
+ModP2emSPO4_cld <- cld(ModP2emSPO4, Letters = letters) 
+View(ModP2emSPO4_cld)
+write.csv(ModP2emSPO4_cld, file="Pots2_SoilPO4.csv")
+
+
+
+#####   SOIL RESIN P   #####
+Pots2ResP_Mean <- summary_by(ResinP~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2ResP_Mean <- as.numeric(Pots2ResP_Mean$ResinP)
+Pots2ResP_skew <- skewness(Pots2ResP_Mean,na.rm=TRUE)
+Pots2ResP_kur <- kurtosis(Pots2ResP_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2ResP_skew, "\n") # 1.404125 
+cat("Kurtosis:", Pots2ResP_kur, "\n") # 2.710147  
+shapiro.test(Pots2$ResinP) # p=0.001659
+hist(Pots2$ResinP) #  left skew
+leveneTest(ResinP~Treatment, data=Pots2)  # P=0.0674
+shapiro.test(log(Pots2$ResinP))  #p=0.2711
+leveneTest(log(ResinP)~Treatment, data=Pots2)  # p=0.0627
+#ModP2esP1
+ModP2esP1 <- aov(log(ResinP)~Treatment+Block, data=Pots2)
+anova(ModP2esP1)
+summary(ModP2esP1)
+hist(resid(ModP2esP1))
+shapiro.test(resid(ModP2esP1))  # p=0.4569
+plot(fitted(ModP2esP1),resid(ModP2esP1),pch=16) 
+qqnorm(resid(ModP2esP1))
+qqline(resid(ModP2esP1))
+ModP2esP1_tidy <- tidy(ModP2esP1)
+ModP2esP1sum_sq_reg <- ModP2esP1_tidy$sumsq[1] 
+ModP2esP1sum_sq_resid <- ModP2esP1_tidy$sumsq[2]
+ModP2esP1sum_sq_reg / (ModP2esP1sum_sq_reg + ModP2esP1sum_sq_resid) #0.539
+#emmeans 
+ModP2emResP1 <- emmeans(ModP2esP1,~Treatment, type="response")
+ModP2emResP1_cld <- cld(ModP2emNup, Letters = letters) 
+View(ModP2emResP1_cld)
+write.csv(ModP2emResP1_cld, file="Pots2_resinP.csv")
+
+
+
+
+#####   WATER SOLUBLE P   #####
+Pots2WSP_Mean <- summary_by(WatSolP~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2WSP_Mean <- as.numeric(Pots2WSP_Mean$WatSolP)
+Pots2WSP_skew <- skewness(Pots2WSP_Mean,na.rm=TRUE)
+Pots2WSP_kur <- kurtosis(Pots2WSP_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2WSP_skew, "\n") # 1.575096 
+cat("Kurtosis:", Pots2WSP_kur, "\n") # 3.261601 
+shapiro.test(Pots2$WatSolP) # p=0.001116
+hist(Pots2$WatSolP) #  left skew
+leveneTest(WatSolP~Treatment, data=Pots2)  # P=0.3716
+# transform
+shapiro.test(log(Pots2$WatSolP)) # p=0.1204
+hist(log(Pots2$WatSolP)) #  slight left skew
+leveneTest(log(WatSolP)~Treatment, data=Pots2)  # P=0.4992
+#ModP2WSP1
+ModP2WSP1 <- aov(log(WatSolP)~Treatment+Block, data=Pots2)
+anova(ModP2WSP1)
+summary(ModP2WSP1)
+hist(resid(ModP2WSP1))
+shapiro.test(resid(ModP2WSP1))  # p=0.4645
+plot(fitted(ModP2WSP1),resid(ModP2WSP1),pch=16) 
+qqnorm(resid(ModP2WSP1))
+qqline(resid(ModP2WSP1))
+ModP2WSP1_tidy <- tidy(ModP2WSP1)
+ModP2WSP1sum_sq_reg <- ModP2WSP1_tidy$sumsq[1] 
+ModP2WSP1sum_sq_resid <- ModP2WSP1_tidy$sumsq[2]
+ModP2WSP1sum_sq_reg / (ModP2WSP1sum_sq_reg + ModP2WSP1sum_sq_resid) #0.9799464
+#emmeans 
+ModP2emWSP <- emmeans(ModP2WSP1,~Treatment, type="response")
+ModP2emWSP_cld <- cld(ModP2emWSP, Letters = letters) 
+View(ModP2emWSP_cld)
+write.csv(ModP2emWSP_cld, file="Pots2_WatSolP.csv")
+
+
+#####   TOTAL P   #####
+Pots2TotalP_Mean <- summary_by(TotalP~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2TotalP_Mean <- as.numeric(Pots2TotalP_Mean$TotalP)
+Pots2TotalP_skew <- skewness(Pots2TotalP_Mean,na.rm=TRUE)
+Pots2TotalP_kur <- kurtosis(Pots2TotalP_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2TotalP_skew, "\n") # 1.146251 
+cat("Kurtosis:", Pots2TotalP_kur, "\n") # 0.6666898 
+shapiro.test(Pots2$TotalP) # p=0.001441
+hist(Pots2$TotalP) #  left skew
+leveneTest(TotalP~Treatment, data=Pots2)  # P=0.202
+# transform
+shapiro.test(log(Pots2$TotalP)) # p=0.006947
+hist(log(Pots2$TotalP)) #  left skew
+leveneTest(log(TotalP)~Treatment, data=Pots2)  # P=0.1899
+shapiro.test(log10(Pots2$TotalP)) # p=0.006947
+hist(log10(Pots2$TotalP)) #  more normal
+leveneTest(log10(TotalP)~Treatment, data=Pots2)  # P=0.1899
+shapiro.test(sqrt(Pots2$TotalP)) # p=0.003228
+hist(sqrt(Pots2$TotalP)) #  left skew
+leveneTest(sqrt(TotalP)~Treatment, data=Pots2)  # P=0.1952
+shapiro.test(1/(Pots2$TotalP)) # p=0.0271
+hist(1/(Pots2$TotalP)) #  right skew
+leveneTest(1/(TotalP)~Treatment, data=Pots2)  # P=0.1842
+#ModP2TotalP1
+ModP2TotalP1 <- aov(log(TotalP)~Treatment+Block, data=Pots2)
+anova(ModP2TotalP1)
+summary(ModP2TotalP1)
+hist(resid(ModP2TotalP1))
+shapiro.test(resid(ModP2TotalP1))  # p=0.8654
+plot(fitted(ModP2TotalP1),resid(ModP2TotalP1),pch=16) 
+qqnorm(resid(ModP2TotalP1))
+qqline(resid(ModP2TotalP1))
+ModP2TotalP1_tidy <- tidy(ModP2TotalP1)
+ModP2TotalP1sum_sq_reg <- ModP2TotalP1_tidy$sumsq[1] 
+ModP2TotalP1sum_sq_resid <- ModP2TotalP1_tidy$sumsq[2]
+ModP2TotalP1sum_sq_reg / (ModP2TotalP1sum_sq_reg + ModP2TotalP1sum_sq_resid) #0.6312668
+#emmeans 
+ModP2emTotalP <- emmeans(ModP2TotalP1,~Treatment, type="response")
+ModP2emTotalP_cld <- cld(ModP2emTotalP, Letters = letters) 
+View(ModP2emTotalP_cld)
+write.csv(ModP2emTotalP_cld, file="Pots2_TotalP.csv")
+
+
+#####   pH   #####
+Pots2pH_Mean <- summary_by(pH~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2pH_Mean <- as.numeric(Pots2pH_Mean$pH)
+Pots2pH_skew <- skewness(Pots2pH_Mean,na.rm=TRUE)
+Pots2pH_kur <- kurtosis(Pots2pH_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2pH_skew, "\n") # 0.8153002 
+cat("Kurtosis:", Pots2pH_kur, "\n") # -0.06151628  
+shapiro.test(Pots2$pH) # p=0.01752
+hist(Pots2$pH) # left skew
+leveneTest(pH~Treatment, data=Pots2)  # P=0.9357
+#transform
+shapiro.test(log(Pots2$pH)) # p=0.02644
+hist(log(Pots2$pH)) # left skew
+leveneTest(log(pH)~Treatment, data=Pots2)  # P=0.9321
+shapiro.test(sqrt(Pots2$pH)) # p=0.02156
+hist(sqrt(Pots2$pH)) # left skew
+leveneTest(sqrt(pH)~Treatment, data=Pots2)  # P=0.934
+#ModP2pH1
+ModP2pH1 <- aov(pH~Treatment+Block, data=Pots2)
+anova(ModP2pH1)
+summary(ModP2pH1)
+hist(resid(ModP2pH1))
+shapiro.test(resid(ModP2pH1))  # p=0.1862
+plot(fitted(ModP2pH1),resid(ModP2pH1),pch=16) # clusters to each side
+qqnorm(resid(ModP2pH1)) # medium tails
+qqline(resid(ModP2pH1))
+ModP2pH1_tidy <- tidy(ModP2pH1)
+ModP2pH1sum_sq_reg <- ModP2pH1_tidy$sumsq[1] 
+ModP2pH1sum_sq_resid <- ModP2pH1_tidy$sumsq[2]
+ModP2pH1sum_sq_reg / (ModP2pH1sum_sq_reg + ModP2pH1sum_sq_resid) #0.05141096
+# weighted lm model
+ModP2pHvar <- tapply(Pots2$pH, Pots2$Treatment, var, na.rm=TRUE)
+weightspH <- 1 / ModP2pHvar
+weightspH_full <- rep(weightspH, each = length(Pots2$pH) / length(weightspH))
+ModP2pH2 <- lm(pH ~ Treatment + Block, data=Pots2, weights=weightspH_full) 
+anova(ModP2pH2)
+summary(ModP2pH2)
+hist(resid(ModP2pH2)) 
+shapiro.test(resid(ModP2pH2))  # p=0.4605
+plot(fitted(ModP2pH2),resid(ModP2pH2),pch=16) 
+qqnorm(resid(ModP2pH2)) # tails, especially on right
+qqline(resid(ModP2pH2))
+rsq(ModP2pH2) # rsq=0.4528747
+#emmeans 
+ModP2empH1 <- emmeans(ModP2pH2,~Treatment, type="response")
+ModP2empH1_cld <- cld(ModP2empH1, Letters = letters) 
+View(ModP2empH1_cld)
+write.csv(ModP2empH1_cld, file="Pots2_pH.csv")
+
+
+
+#####   ELECTRICAL CONDUCTIVITY   #####
+Pots2EC_Mean <- summary_by(EC~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2EC_Mean <- as.numeric(Pots2EC_Mean$EC)
+Pots2EC_skew <- skewness(Pots2EC_Mean,na.rm=TRUE)
+Pots2EC_kur <- kurtosis(Pots2EC_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2EC_skew, "\n") # 1.293181 
+cat("Kurtosis:", Pots2EC_kur, "\n") # 0.7705139
+hist(Pots2$EC) # slight left skew
+shapiro.test(Pots2$EC) # p=0.0001406
+leveneTest(EC~Treatment, data=Pots2)  # P=0.8016
+# transform
+shapiro.test(log(Pots2$EC))  # p=0.05701
+leveneTest(log(EC)~Treatment, data=Pots2)  # p =  0.7405
+shapiro.test(log10(Pots2$EC))  # p=0.05701
+leveneTest(log10(EC)~Treatment, data=Pots2)  # p =  0.7405
+shapiro.test(sqrt(Pots2$EC))  # p=0.003086
+leveneTest(sqrt(EC)~Treatment, data=Pots2)  # p = 0.7786
+#ModP2EC1
+ModP2EC1 <- aov(log(EC)~Treatment+Block, data=Pots2)
+anova(ModP2EC1)
+summary(ModP2EC1)
+hist(resid(ModP2EC1))
+shapiro.test(resid(ModP2EC1))  # p=0.1893
+plot(fitted(ModP2EC1),resid(ModP2EC1),pch=16) 
+qqnorm(resid(ModP2EC1)) # medium right tail
+qqline(resid(ModP2EC1))
+ModP2EC1_tidy <- tidy(ModP2EC1)
+ModP2EC1sum_sq_reg <- ModP2EC1_tidy$sumsq[1] 
+ModP2EC1sum_sq_resid <- ModP2EC1_tidy$sumsq[2]
+ModP2EC1sum_sq_reg / (ModP2EC1sum_sq_reg + ModP2EC1sum_sq_resid) # 0.3595186
+# weighted lm model
+ModP2ECvar <- tapply(Pots2$EC, Pots2$Treatment, var, na.rm=TRUE)
+weightsEC <- 1 / ModP2ECvar
+weightsEC_full <- rep(weightsEC, each = length(Pots2$EC) / length(weightsEC))
+ModP2EC2 <- lm(EC ~ Treatment + Block, data=Pots2, weights=weightsEC_full) 
+anova(ModP2EC2)
+summary(ModP2EC2)
+hist(resid(ModP2EC2)) # left skew
+shapiro.test(resid(ModP2EC2))  # p=0.002185
+plot(fitted(ModP2EC2),resid(ModP2EC2),pch=16) # cluster towards middel bottom
+qqnorm(resid(ModP2EC2)) # big right tail
+qqline(resid(ModP2EC2))
+rsq(ModP2EC2) # rsq=0.5976484
+#emmeans 
+ModP2emEC1 <- emmeans(ModP2EC2,~Treatment, type="response")
+ModP2emEC1_cld <- cld(ModP2emEC1, Letters = letters) 
+View(ModP2emEC1_cld)
+write.csv(ModP2emEC1_cld, file="Pots2_EC.csv")
+
+
+
+#####   ORGANIC CARBON   #####
+Pots2OC_Mean <- summary_by(OC~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2OC_Mean <- as.numeric(Pots2OC_Mean$OC)
+Pots2OC_skew <- skewness(Pots2OC_Mean,na.rm=TRUE)
+Pots2OC_kur <- kurtosis(Pots2OC_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2OC_skew, "\n") # 2.122192 
+cat("Kurtosis:", Pots2OC_kur, "\n") # 4.694283 
+shapiro.test(Pots2$OC) # p=5.96e-06
+hist(Pots2$OC) #  heavy left skew
+leveneTest(OC~Treatment, data=Pots2)  # P=1.097e-05
+#Transforming
+shapiro.test(log(Pots2$OC)) # p=0.0002123
+leveneTest(log(OC)~Treatment, data=Pots2)  # P=0.0008862
+shapiro.test(log10(Pots2$OC)) # p=0.0002123
+leveneTest(log10(OC)~Treatment, data=Pots2)  # P=0.0008862
+shapiro.test(sqrt(Pots2$OC)) # p=3.431e-05
+leveneTest(sqrt(OC)~Treatment, data=Pots2)  # P=0.000106 
+#ModP2OC1
+ModP2OC1 <- aov(log(OC)~Treatment+Block, data=Pots2)
+anova(ModP2OC1)
+summary(ModP2OC1)
+hist(resid(ModP2OC1))
+shapiro.test(resid(ModP2OC1))  # p=0.3491
+plot(fitted(ModP2OC1),resid(ModP2OC1),pch=16) # heavy left cluster
+qqnorm(resid(ModP2OC1)) # slight left tail
+qqline(resid(ModP2OC1))
+ModP2OC1_tidy <- tidy(ModP2OC1)
+ModP2OC1sum_sq_reg <- ModP2OC1_tidy$sumsq[1] 
+ModP2OC1sum_sq_resid <- ModP2OC1_tidy$sumsq[2]
+ModP2OC1sum_sq_reg / (ModP2OC1sum_sq_reg + ModP2OC1sum_sq_resid) # 0.9227297
+#emmeans 
+ModP2emOC1 <- emmeans(ModP2OC1,~Treatment, type="response")
+ModP2emOC1_cld <- cld(ModP2emNup, Letters = letters) 
+View(ModP2emOC1_cld)
+write.csv(ModP2emOC1_cld, file="Pots2_OC.csv")
+
+
+
+#####   LEACHATE PO4   #####
+Pots2LPO4_Mean <- summary_by(LPO4~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2LPO4_Mean <- as.numeric(Pots2LPO4_Mean$LPO4)
+Pots2LPO4_skew <- skewness(Pots2LPO4_Mean,na.rm=TRUE)
+Pots2LPO4_kur <- kurtosis(Pots2LPO4_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2LPO4_skew, "\n") # 0.9148318 
+cat("Kurtosis:", Pots2LPO4_kur, "\n") # -0.2687111 
+shapiro.test(Pots2$LPO4) # p=0.0003759
+hist(Pots2$LPO4) # heavy left skew
+leveneTest(LPO4~Treatment, data=Pots2)  # P=0.1088
+# transform
+shapiro.test(log(Pots2$LPO4)) # p=0.06458
+hist(log(Pots2$LPO4)) # slight right skew
+leveneTest(log(LPO4)~Treatment, data=Pots2)  # P=0.5318
+#ModP2LPO41
+ModP2LPO41 <- aov(log(LPO4)~Treatment+Block, data=Pots2)
+anova(ModP2LPO41)
+summary(ModP2LPO41)
+hist(resid(ModP2LPO41))
+shapiro.test(resid(ModP2LPO41))  # p=0.6565
+plot(fitted(ModP2LPO41),resid(ModP2LPO41),pch=16) 
+qqnorm(resid(ModP2LPO41)) #slight left tail
+qqline(resid(ModP2LPO41))
+ModP2LPO41_tidy <- tidy(ModP2LPO41)
+ModP2LPO41sum_sq_reg <- ModP2LPO41_tidy$sumsq[1] 
+ModP2LPO41sum_sq_resid <- ModP2LPO41_tidy$sumsq[2]
+ModP2LPO41sum_sq_reg / (ModP2LPO41sum_sq_reg + ModP2LPO41sum_sq_resid) #0.9115165
+#emmeans 
+ModP2emLPO4 <- emmeans(ModP2LPO41,~Treatment, alpha=0.1, type="response")
+ModP2emLPO4_cld <- cld(ModP2emLPO4, Letters = letters, type="response") 
+View(ModP2emLPO4_cld)
+write.csv(ModP2emLPO4_cld, file="Pots2_LeachatePO4.csv")
+
+
+
+#####   LEACHATE NO3   #####
+Pots2LNO3_Mean <- summary_by(LNO3~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2LNO3_Mean <- as.numeric(Pots2LNO3_Mean$LNO3)
+Pots2LNO3_skew <- skewness(Pots2LNO3_Mean,na.rm=TRUE)
+Pots2LNO3_kur <- kurtosis(Pots2LNO3_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2LNO3_skew, "\n") # 1.3047 
+cat("Kurtosis:", Pots2LNO3_kur, "\n") # 0.5656862 
+shapiro.test(Pots2$LNO3) # p=6.908e-05
+hist(Pots2$LNO3) #  heavy left skew
+leveneTest(LNO3~Treatment, data=Pots2)  # P=0.2194
+#transform
+shapiro.test(log(Pots2$LNO3)) # p=0.005626
+hist(log(Pots2$LNO3)) #  heavy right skew
+leveneTest(log(LNO3)~Treatment, data=Pots2)  # P=0.7185
+shapiro.test(sqrt(Pots2$LNO3)) # p=0.06668
+hist(sqrt(Pots2$LNO3)) #  slight left skew
+leveneTest(sqrt(LNO3)~Treatment, data=Pots2)  # P=0.5208
+#ModP2LNO31
+ModP2LNO31 <- aov(sqrt(LNO3)~Treatment+Block, data=Pots2)
+anova(ModP2LNO31)
+summary(ModP2LNO31, level=0.1)
+hist(resid(ModP2LNO31))
+shapiro.test(resid(ModP2LNO31))  # p=0.45
+plot(fitted(ModP2LNO31),resid(ModP2LNO31),pch=16) # slight left cluster
+qqnorm(resid(ModP2LNO31)) # slight tails
+qqline(resid(ModP2LNO31))
+ModP2LNO31_tidy <- tidy(ModP2LNO31)
+ModP2LNO31sum_sq_reg <- ModP2LNO31_tidy$sumsq[1] 
+ModP2LNO31sum_sq_resid <- ModP2LNO31_tidy$sumsq[2]
+ModP2LNO31sum_sq_reg / (ModP2LNO31sum_sq_reg + ModP2LNO31sum_sq_resid) # 0.9095553
+#emmeans 
+ModP2emLNO3 <- emmeans(ModP2LNO31,~Treatment, type="response") # check at 10% level and still no sig dif, use "alpha=0.1"
+ModP2emLNO3_cld <- cld(ModP2emLNO3, Letters = letters, alpha=0.1, type="response") 
+View(ModP2emLNO3_cld)
+write.csv(ModP2emLNO3_cld, file="Pots2_LeachateNO3.csv")
+
+
+#####   LEACHATE NH4   #####
+Pots2LNH4_Mean <- summary_by(LNH4~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2LNH4_Mean <- as.numeric(Pots2LNH4_Mean$LNH4)
+Pots2LNH4_skew <- skewness(Pots2LNH4_Mean,na.rm=TRUE)
+Pots2LNH4_kur <- kurtosis(Pots2LNH4_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2LNH4_skew, "\n") # 1.734622 
+cat("Kurtosis:", Pots2LNH4_kur, "\n") # 3.487211
+shapiro.test(Pots2$LNH4) # p=0.0001512
+hist(Pots2$LNH4) #  heavy left skew
+leveneTest(LNH4~Treatment, data=Pots2)  # P=0.01512 
+# transform
+shapiro.test(log(Pots2$LNH4)) # p=0.6571
+hist(log(Pots2$LNH4)) #  slight left skew
+leveneTest(log(LNH4)~Treatment, data=Pots2)  # P=0.006684
+shapiro.test(sqrt(Pots2$LNH4)) # p=0.02646
+hist(sqrt(Pots2$LNH4)) #  slight left skew
+leveneTest(sqrt(LNH4)~Treatment, data=Pots2)  # P=0.005966
+#ModP2LNH41
+ModP2LNH41 <- aov(log(LNH4)~Treatment+Block, data=Pots2)
+anova(ModP2LNH41)
+summary(ModP2LNH41)
+hist(resid(ModP2LNH41))
+shapiro.test(resid(ModP2LNH41))  # p=0.9384
+plot(fitted(ModP2LNH41),resid(ModP2LNH41),pch=16) 
+qqnorm(resid(ModP2LNH41))
+qqline(resid(ModP2LNH41))
+ModP2LNH41_tidy <- tidy(ModP2LNH41)
+ModP2LNH41sum_sq_reg <- ModP2LNH41_tidy$sumsq[1] 
+ModP2LNH41sum_sq_resid <- ModP2LNH41_tidy$sumsq[2]
+ModP2LNH41sum_sq_reg / (ModP2LNH41sum_sq_reg + ModP2LNH41sum_sq_resid) # 0.6988937
+#emmeans 
+ModP2emLNH4 <- emmeans(ModP2LNH41,~Treatment, type="response")
+ModP2emLNH4_cld <- cld(ModP2emLNH4, alpha=0.1, Letters = letters) 
+View(ModP2emLNH4_cld)
+write.csv(ModP2emLNH4_cld, file="Pots2_LNH4.csv")
+
+# Plotting Leachate NO3, PO4 and NH4 load
+#create and combine data frames for the three emmeans functions
+P2emNO3 <- as.data.frame(ModP2emLNO3_cld)
+P2emNH4 <- as.data.frame(ModP2emLNH4_cld)
+P2emPO4 <- as.data.frame(ModP2emLPO4_cld)
+P2em_labels <- list("EM1" = "NO3", "EM2" = "NH4", "EM3" = "PO4")
+P2em_all <- bind_rows(list(EM1 = P2emNO3, EM2 = P2emNH4, EM3 = P2emPO4), .id = "EM") 
+P2em_all$EM <- factor(P2em_all$EM, levels = names(em_labels), labels = unlist(em_labels))
+P2em_all <- P2em_all %>% rename(emmean = "response")
+View(P2em_all)
+# define function to calculate position adjustment for secondary axis
+ggplot(P2em_all, aes(x=Treatment, y=emmean, pattern=EM)) +
+  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white",
+                   pattern_density=0.005, pattern_spacing=0.01)+
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) + 
+  scale_pattern_manual(values = c("NO3" = "stripe", "NH4" = "crosshatch", "PO4" = "wave"))+
+  facet_wrap(~ EM, scales = "free_y", ) +
+  labs(y="Nutrient load in leachte (ug/g)") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "MBMA Coarse",
+                               "MBMA Fine", "TSP"))+
+  theme_bw() +
+  theme(legend.title = element_blank() , legend.key.size=unit(10,"mm"), legend.text=element_text(size=12),
+        strip.text.x.top = element_text(size = 18, face = "bold"))+
+  theme(plot.title = element_text(size = 16))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
+        axis.title.x = element_blank(), axis.title.y = element_text(size = 24, face="bold")) +
+  theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), 
+        axis.line = element_line(colour = "black"))
+ggsave("Pots2_Leachate.jpg", width = 12, height = 8, dpi = 150)
+
+# 
+
+
+
