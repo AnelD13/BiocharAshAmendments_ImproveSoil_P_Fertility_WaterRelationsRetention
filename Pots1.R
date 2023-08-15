@@ -51,7 +51,10 @@ library(factoextra)
 library(reshape2)
 library(writexl)
 library(glmmTMB)
-
+library(corrplot)
+library(viridis)
+library(patchwork)
+library(wCorr)
 
 #### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -408,7 +411,8 @@ rsq(Mod3b) # 0.842
 # Sqrt transformation
 Mod3c<- lmer(sqrt(Nuptake)~Treatment*Soil+(1|Soil),data=Pots1, na.action=na.exclude)
 rsq(Mod3c) # 0.8086
-vif(Mod3c)
+vif(Mod3c) # variance inflation factor - measures how easily factor X is predicted by a regression 
+    # using other factors. VIF detects multicollinearity
 anova(Mod3c)
 summary(Mod3c)
 shapiro.test(resid(Mod3c)) # s-w p=5.286e-05, Sqrt transformation worsened normality
@@ -1906,8 +1910,14 @@ YieldCovHav_df3 <- lapply(seq_along(YieldCov_Hav), function(i) {
 })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovHav_dfAll <- do.call(rbind, YieldCovHav_df3)
-YieldCovHav_dfAll$Var1 <- factor(YieldCovHav_dfAll$Var1, levels=YieldCovVar)
-YieldCovHav_dfAll$variable <- factor(YieldCovHav_dfAll$variable, levels=rev(YieldCovVar))
+YieldCovHav_dfAll$Var1 <- factor(YieldCovHav_dfAll$Var1, levels=YieldCovVar,
+                                 labels=c("Yield"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", 
+                                          "ResinP"="Resin P", "WaterSolP"="SRP", "TotalP2"="Total P", 
+                                          "pH"="pH", "EC"="EC", "OC"="% SOC"))
+YieldCovHav_dfAll$variable <- factor(YieldCovHav_dfAll$variable, levels=YieldCovVar,
+                                     labels=c("Yield"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", 
+                                              "ResinP"="Resin P", "WaterSolP"="SRP", "TotalP2"="Total P", 
+                                              "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovHav_dfAll$treatment <- factor(YieldCovHav_dfAll$treatment, 
         levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                  "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2001,11 +2011,11 @@ UptakeCovHav_df <- lapply(seq_along(UptakeCov_Hav), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 UptakeCovHav_dfAll <- do.call(rbind, UptakeCovHav_df)
 UptakeCovHav_dfAll$Var1 <- factor(UptakeCovHav_dfAll$Var1, levels=UptakeCovVar, labels=c("Puptake"="P Uptake", 
-          "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+          "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
           "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovHav_dfAll$variable <- factor(UptakeCovHav_dfAll$variable, levels=UptakeCovVar, labels=
           c("Puptake"="P Uptake", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-            "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+            "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovHav_dfAll$treatment <- factor(UptakeCovHav_dfAll$treatment, 
        levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
              "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2068,11 +2078,11 @@ RecoveryCovHav_df <- lapply(seq_along(RecoveryCov_Hav), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 RecoveryCovHav_dfAll <- do.call(rbind, RecoveryCovHav_df)
 RecoveryCovHav_dfAll$Var1 <- factor(RecoveryCovHav_dfAll$Var1, levels=RecoveryCovVar, labels=c("Precovery"="P Recovery", 
-         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
          "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovHav_dfAll$variable <- factor(RecoveryCovHav_dfAll$variable, levels=RecoveryCovVar, labels=
          c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-         "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+         "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovHav_dfAll$treatment <- factor(RecoveryCovHav_dfAll$treatment, 
          levels=c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                   "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2134,11 +2144,11 @@ YieldCovOx_df <- lapply(seq_along(YieldCov_Ox), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovOx_dfAll <- do.call(rbind, YieldCovOx_df)
 YieldCovOx_dfAll$Var1 <- factor(YieldCovOx_dfAll$Var1, levels=YieldCovVar, labels=c("Yield"="Yield", 
-            "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+            "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
             "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovOx_dfAll$variable <- factor(YieldCovOx_dfAll$variable, levels=YieldCovVar, labels=
             c("Yield"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-              "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+              "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovOx_dfAll$treatment <- factor(YieldCovOx_dfAll$treatment, 
         levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                  "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2200,11 +2210,11 @@ UptakeCovOx_df <- lapply(seq_along(UptakeCov_Ox), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 UptakeCovOx_dfAll <- do.call(rbind, UptakeCovOx_df)
 UptakeCovOx_dfAll$Var1 <- factor(UptakeCovOx_dfAll$Var1, levels=UptakeCovVar, labels=c("Puptake"="P Uptake", 
-         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
          "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovOx_dfAll$variable <- factor(UptakeCovOx_dfAll$variable, levels=UptakeCovVar, labels=
          c("Puptake"="P Uptake", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-         "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+         "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovOx_dfAll$treatment <- factor(UptakeCovOx_dfAll$treatment, 
          levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                   "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2268,10 +2278,10 @@ RecoveryCovOx_df <- lapply(seq_along(RecoveryCov_Ox), function(i) {
 RecoveryCovOx_dfAll <- do.call(rbind, RecoveryCovOx_df)
 RecoveryCovOx_dfAll$Var1 <- factor(RecoveryCovOx_dfAll$Var1, levels=RecoveryCovVar, labels=
                c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-                 "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+                 "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovOx_dfAll$variable <- factor(RecoveryCovOx_dfAll$variable, levels=RecoveryCovVar, labels=
                    c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-                     "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+                     "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovOx_dfAll$treatment <- factor(RecoveryCovOx_dfAll$treatment, 
              levels=c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                       "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2410,8 +2420,8 @@ ggsave(OxContours, file="Pots1_YieldContour_Oxbow.jpg", width=20, height=20, dpi
 
 #### Correlation & eigenvalues  ####
 ## for all treatments and both soils
-Pots1EigenMatrix <- Pots1[complete.cases(Pots1), c("Nuptake", "Puptake", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", 
-                                              "pH", "EC", "OC"),]
+Pots1EigenMatrix <- Pots1[complete.cases(Pots1), c("Nuptake", "Puptake", "NO3", "NH4", "PO4", "ResinP", 
+                                                   "WaterSolP", "TotalP2", "pH", "EC", "OC"),]
 Pots1EigenCor <- cor(Pots1EigenMatrix)
 Pots1EigenPCA <- PCA(Pots1EigenMatrix, scale.unit = TRUE, ncp = length(Pots1EigenMatrix)-1)
 Pots1EigenPrin <-princomp(Pots1EigenCor) 
@@ -2422,7 +2432,6 @@ Pots1EigenPrin$loadings[, 1:2]
 HavEigenMatrix <- Pots1[complete.cases(Pots1) & Pots1$Soil == "Haverhill", #sets up matrix per soil type
                         c("Nuptake", "Puptake", "NO3", "NH4", "PO4", "ResinP", #sets relevant variables
                           "WaterSolP", "TotalP2", "pH", "EC", "OC")] #exlude yield
-HavEigenMatrix <- 
 #have to use above code instead of subset to use complete.cases
 HavEigenCor <- cor(HavEigenMatrix) #sets up correlation matrix
 HavEigenPCA <- PCA(HavEigenMatrix, scale.unit = TRUE, ncp = length(HavEigenMatrix)-1, ) #do PCA with histograme
@@ -2432,9 +2441,9 @@ HavEigenPrin$loadings[, 1:2] # print loadings linke dto variables
 # model the most important variables
 # variables for Haverhill: Nuptake, NO3, NH4, PO4, ResinP & WaterSolP
 HavSubEig <- Pots1[Pots1$Soil == "Haverhill", c("Yield", "Nuptake", "NO3", "NH4", "PO4", "ResinP", "WaterSolP")] 
-colnames(HavSubEig) <- c("Yield", "N Uptake", "NO3", "NH4", "PO4", "Resin P", "Water Soluble P")
+colnames(HavSubEig) <- c("Yield", "N Uptake", "NO3", "NH4", "PO4", "Resin P", "SRP")
 View(HavSubEig)
-HavModEig <- lm(Yield ~ `N Uptake`+NO3+NH4+PO4+`Resin P`+`Water Soluble P`, data = HavSubEig)
+HavModEig <- lm(Yield ~ `N Uptake`+NO3+NH4+PO4+`Resin P`+`SRP`, data = HavSubEig)
 summary(HavModEig)
 # scatterplot of the most prominant variables against yield
 HavEigScatter <- function(data, model, targetColumn = 'Yield') {
@@ -2463,9 +2472,9 @@ OxEigenPrin$loadings[, 1:2]
 # model the most important variables
 # variables for Haverhill: Nuptake, Puptake, NO3, NH4, WaterSolP, EC
 OxSubEig <- Pots1[Pots1$Soil == "Oxbow", c("Yield", "Nuptake", "Puptake", "NO3", "NH4", "WaterSolP", "EC")] 
-colnames(OxSubEig) <- c("Yield", "N Uptake", "P Uptake", "NO3", "NH4", "Water Soluble P", "Electrical Conductivity")
+colnames(OxSubEig) <- c("Yield", "N Uptake", "P Uptake", "NO3", "NH4", "SRP", "Electrical Conductivity")
 View(OxSubEig)
-OxModEig <- lm(Yield ~ `N Uptake`+`P Uptake`+NO3+NH4+`Water Soluble P`+`Electrical Conductivity`, data = OxSubEig)
+OxModEig <- lm(Yield ~ `N Uptake`+`P Uptake`+NO3+NH4+`SRP`+`Electrical Conductivity`, data = OxSubEig)
 summary(OxModEig)
 # scatterplot of the most prominant variables against yield
 OxEigScatter <- function(data, model, targetColumn = 'Yield') {
@@ -2483,6 +2492,187 @@ OxEigScatter(OxSubEig, OxModEig)
 ggsave(OxEigScatter(OxSubEig, OxModEig), file="Pots1_EigenScatter_Oxbow.jpg", width=10, height=10, dpi=150)
 
 
+
+####  Correlate char P to residual soil P  ####
+# set up new data frame with columns from original dataset
+Pots1CharPdf <- data.frame(Soil = Pots1$Soil,
+  Treatment = Pots1$Treatment,
+  PO4 = Pots1$PO4,
+  CharPRate = Pots1$CharPRate,
+  CharPerc = Pots1$CharPerc)
+Pots1CharExcl <- c("Control1", "Control2")
+Pots1CharPdf <- subset(Pots1CharPdf, !Treatment %in% Pots1CharExcl)
+View(Pots1CharPdf)
+# set up a weighted correlation - weighing PO4 and % P in char by the total P added in each treatment
+  ## Rows & Pots2 are calculated only by %P in char as it was all added at 25kg P/ha
+weighted_cor <- function(PO4, CharPerc, CharPRate) {
+  # Calculate weighted means
+  Pots1PO4Mean <- sum(PO4 * CharPRate) / sum(CharPRate)
+  Pots1CharPercMean <- sum(CharPerc * CharPRate) / sum(CharPRate)
+  # Calculate weighted deviations
+  dev_PO4 <- PO4 - Pots1PO4Mean
+  dev_CharPerc <- CharPerc - Pots1CharPercMean
+  # Calculate weighted covariance
+  Pots1Char_WeightedCov <- sum(CharPRate * dev_PO4 * dev_CharPerc) / sum(CharPRate)
+  # Calculate weighted standard deviations
+  sd_PO4 <- sqrt(sum(CharPRate * dev_PO4^2) / sum(CharPRate))
+  sd_CharPerc <- sqrt(sum(CharPRate * dev_CharPerc^2) / sum(CharPRate))
+  # Calculate weighted correlation
+  correlation <- Pots1Char_WeightedCov / (sd_PO4 * sd_CharPerc)
+  return(correlation)
+}
+# get a single correlation value for each PO4/CharPerc combination per treatment using the weighting calculated above
+Pots1CharCor <- Pots1CharPdf %>%
+  group_by(Soil, Treatment) %>%
+  filter(complete.cases(CharPerc, PO4, CharPRate)) %>% # have to filter out the NA's as complete.obs does not work
+  summarize(Correlation = weighted_cor(CharPerc, PO4, CharPRate), .groups="drop") #override original grouping argument
+Pots1CharCor$Treatment <- factor(Pots1CharCor$Treatment, levels=c("CanolaMeal50kgha","CanolaHull50kgha", 
+                                                        "Manure50kgha", "Willow50kgha", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", 
+                                                        "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP", "Manure10thaTSP", 
+                                                        "Willow10thaTSP", "TripleSuperPhosphate"),
+                       labels=c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure\n50kg P/ha", 
+                                "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
+                                "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
+                                "Willow\n10t/ha & TSP", "Phosphorus\nFertilizer"))
+View(Pots1CharCor)
+# visualize correlation using heatmap
+(Pots1CharHeatPlot <- ggplot(Pots1CharCor, aes(x=Treatment, y=Soil, fill=Correlation)) +
+    geom_point(data=Pots1CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(15, 30)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=round(Correlation, 3)))+
+    scale_x_discrete(position="top")+
+    theme(legend.title=element_text(size=10, face="bold"),
+          legend.text=element_text(size=8), 
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_text(size=11, colour="black"),
+          axis.text.x=element_text(angle=45, size=11, colour="black", hjust=-0.1),
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(10, 10, 10, 10))+
+    guides(size = "none")+
+    labs(x="Percentage P in treatment", y="Soil residual PO4"))
+ggsave(Pots1CharHeatPlot, file="Pots1_CharPO4Heat.jpg", width=15, height=4, dpi=150)
+
+
+##  correlate P recovery to to %P in char
+Pots1CharRecdf <- data.frame(Soil = Pots1$Soil, Treatment = Pots1$Treatment, Precovery = Pots1$Precovery,
+                 CharPRate = Pots1$CharPRate, CharPerc = Pots1$CharPerc)
+Pots1CharRecExcl <- c("Control1", "Control2")
+Pots1CharRecdf <- subset(Pots1CharRecdf, !Treatment %in% Pots1CharExcl)
+View(Pots1CharRecdf)
+# set up a weighted correlation - weighing PO4 and % P in char by the total P added in each treatment
+## Rows & Pots2 are calculated only by %P in char as it was all added at 25kg P/ha
+Pots1CharRecWght_cor <- function(Precovery, CharPerc, CharPRate) {
+  Pots1PrecMean <- sum(Precovery * CharPRate) / sum(CharPRate)
+  Pots1CharPercMean <- sum(CharPerc * CharPRate) / sum(CharPRate)
+  dev_Prec <- Precovery - Pots1PrecMean
+  dev_CharPerc <- CharPerc - Pots1CharPercMean
+  Pots1Prec_WeightedCov <- sum(CharPRate * dev_Prec * dev_CharPerc) / sum(CharPRate)
+  sd_Prec <- sqrt(sum(CharPRate * dev_Prec^2) / sum(CharPRate))
+  sd_CharPerc <- sqrt(sum(CharPRate * dev_CharPerc^2) / sum(CharPRate))
+  correlation <- Pots1Prec_WeightedCov / (sd_Prec * sd_CharPerc)
+  return(correlation)
+}
+# get a single correlation value for each PO4/CharPerc combination per treatment using the weighting calculated above
+Pots1PrecCor <- Pots1CharRecdf %>%
+  group_by(Soil, Treatment) %>%
+  filter(complete.cases(CharPerc, Precovery, CharPRate)) %>% # have to filter out the NA's as complete.obs does not work
+  summarize(Correlation = Pots1CharRecWght_cor(CharPerc, Precovery, CharPRate), .groups="drop") #override original grouping argument
+Pots1PrecCor$Treatment <- factor(Pots1PrecCor$Treatment, levels=c("CanolaMeal50kgha","CanolaHull50kgha", 
+                                                                  "Manure50kgha", "Willow50kgha", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", 
+                                                                  "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP", "Manure10thaTSP", 
+                                                                  "Willow10thaTSP", "TripleSuperPhosphate"),
+                                 labels=c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure\n50kg P/ha", 
+                                          "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
+                                          "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
+                                          "Willow\n10t/ha & TSP", "Phosphorus\nFertilizer"))
+View(Pots1PrecCor)
+# visualize correlation using heatmap
+(Pots1CharPrecPlot <- ggplot(Pots1PrecCor, aes(x=Treatment, y=Soil, fill=Correlation)) +
+    geom_point(data=Pots1PrecCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(15, 30)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=round(Correlation, 3)))+
+    scale_x_discrete(position="top")+
+    theme(legend.title=element_text(size=10, face="bold"),
+          legend.text=element_text(size=8), 
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_text(size=11, colour="black"),
+          axis.text.x=element_text(angle=45, size=11, colour="black", hjust=-0.1),
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(10, 10, 10, 10))+
+    guides(size = "none")+
+    labs(x="Percentage P in treatment", y="% P Recovery"))
+ggsave(Pots1CharPrecPlot, file="Pots1_CharPrec_Heat.jpg", width=15, height=4, dpi=150)
+
+
+## correlate P recovery to residual PO4
+Pots1PO4Recdf <- data.frame(Soil = Pots1$Soil, Treatment = Pots1$Treatment, Precovery = Pots1$Precovery,
+                             PO4 = Pots1$PO4, CharPRate = Pots1$CharPRate)
+Pots1PO4RecExcl <- c("Control1", "Control2")
+Pots1PO4Recdf <- subset(Pots1PO4Recdf, !Treatment %in% Pots1PO4RecExcl)
+View(Pots1PO4Recdf)
+# set up a weighted correlation - weighing PO4 and % P in char by the total P added in each treatment
+## Rows & Pots2 are calculated only by %P in char as it was all added at 25kg P/ha
+Pots1PO4RecWght_cor <- function(Precovery, PO4, CharPRate) {
+  Pots1PrecMean <- sum(Precovery * CharPRate) / sum(CharPRate)
+  Pots1PO4Mean <- sum(PO4 * CharPRate) / sum(CharPRate)
+  dev_Prec <- Precovery - Pots1PrecMean
+  dev_PO4 <- PO4 - Pots1PO4Mean
+  Pots1PrecPO4_WghtCov <- sum(CharPRate * dev_Prec * dev_PO4) / sum(CharPRate)
+  sd_Prec <- sqrt(sum(CharPRate * dev_Prec^2) / sum(CharPRate))
+  sd_PO4 <- sqrt(sum(CharPRate * dev_PO4^2) / sum(CharPRate))
+  correlation <- Pots1PrecPO4_WghtCov / (sd_Prec * sd_PO4)
+  return(correlation)
+}
+# get a single correlation value for each PO4/CharPerc combination per treatment using the weighting calculated above
+Pots1PrecPO4Cor <- Pots1PO4Recdf %>%
+  group_by(Soil, Treatment) %>%
+  filter(complete.cases(Precovery, PO4, CharPRate)) %>% # have to filter out the NA's as complete.obs does not work
+  summarize(Correlation = Pots1PO4RecWght_cor(Precovery, PO4, CharPRate), .groups="drop") #override original grouping argument
+Pots1PrecPO4Cor$Treatment <- factor(Pots1PrecPO4Cor$Treatment, levels=c("CanolaMeal50kgha","CanolaHull50kgha", 
+                                                                  "Manure50kgha", "Willow50kgha", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", 
+                                                                  "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP", "Manure10thaTSP", 
+                                                                  "Willow10thaTSP", "TripleSuperPhosphate"),
+                                 labels=c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure\n50kg P/ha", 
+                                          "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
+                                          "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
+                                          "Willow\n10t/ha & TSP", "Phosphorus\nFertilizer"))
+View(Pots1PrecPO4Cor)
+# visualize correlation using heatmap
+(Pots1PO4PrecPlot <- ggplot(Pots1PrecPO4Cor, aes(x=Treatment, y=Soil, fill=Correlation)) +
+    geom_point(data=Pots1PrecPO4Cor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(15, 30)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=round(Correlation, 3)))+
+    scale_x_discrete(position="top")+
+    theme(legend.title=element_text(size=10, face="bold"),
+          legend.text=element_text(size=8), 
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_text(size=11, colour="black"),
+          axis.text.x=element_text(angle=45, size=11, colour="black", hjust=-0.1),
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(10, 10, 10, 10))+
+    guides(size = "none")+
+    labs(x="Percentage P Recovery", y="Soil residual PO4"))
+ggsave(Pots1PO4PrecPlot, file="Pots1_PO4Prec_Heat.jpg", width=15, height=4, dpi=150)
+
+
+## combined plot
+CharRecPO4_plot <- gridExtra::grid.arrange(Pots1CharHeatPlot, Pots1CharPrecPlot, Pots1PO4PrecPlot, nrow = 3)
+ggsave(CharRecPO4_plot, file="Pots1_CharPO4Prec_combined.jpg", width=15, height=12, dpi=150)
 
 
 ####  Extract ANOVA tables  ####

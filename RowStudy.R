@@ -28,6 +28,7 @@ library(rsq)
 library(mum)
 library(writexl)
 library(glmmTMB)
+library(corrplot)
 
 ##### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -1008,9 +1009,9 @@ YieldCovRows_df <- lapply(seq_along(YieldCov_Rows), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovRows_dfAll <- do.call(rbind, YieldCovRows_df)
 YieldCovRows_dfAll$Var1 <- factor(YieldCovRows_dfAll$Var1, levels=RowsCovVar, labels=c("Biomass"="Yield", "NO3"="NO3", 
-                  "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                  "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovRows_dfAll$variable <- factor(YieldCovRows_dfAll$variable, levels=RowsCovVar, labels=
-                  c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P",
+                  c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P",
                     "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovRows_dfAll$treatment <- factor(YieldCovRows_dfAll$treatment, 
            levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
@@ -1069,10 +1070,10 @@ UptakeCovRows_df <- lapply(seq_along(UptakeCov_Rows), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 UptakeCovRows_dfAll <- do.call(rbind, UptakeCovRows_df)
 UptakeCovRows_dfAll$Var1 <- factor(UptakeCovRows_dfAll$Var1, levels=UptakeCovVar, labels=c("Biomass"="Yield", 
-                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
+                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
                   "OC"="% SOC"))
 UptakeCovRows_dfAll$variable <- factor(UptakeCovRows_dfAll$variable, levels=UptakeCovVar, labels= c("Biomass"="Yield", 
-                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
+                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
                   "OC"="% SOC"))
 UptakeCovRows_dfAll$treatment <- factor(UptakeCovRows_dfAll$treatment, 
             levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
@@ -1130,12 +1131,13 @@ RecoveryCovRows_df <- lapply(seq_along(RecoveryCov_Rows), function(i) {
 })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 RecoveryCovRows_dfAll <- do.call(rbind, RecoveryCovRows_df)
-RecoveryCovRows_dfAll$Var1 <- factor(RecoveryCovRows_dfAll$Var1, levels=RecoveryCovVar, labels= c("Biomass"="Yield", 
-                      "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
-                      "OC"="% SOC"))
-RecoveryCovRows_dfAll$variable <- factor(RecoveryCovRows_dfAll$variable, levels=RecoveryCovVar, labels=c("Biomass"="Yield", 
-                      "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P",
-                      "pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovRows_dfAll$Var1 <- factor(RecoveryCovRows_dfAll$Var1, levels=RecoveryCovVar, 
+                                     labels= c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", 
+                                               "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovRows_dfAll$variable <- factor(RecoveryCovRows_dfAll$variable, levels=RecoveryCovVar, 
+                                         labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
+                                                  "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC",
+                                                  "OC"="% SOC"))
 RecoveryCovRows_dfAll$treatment <- factor(RecoveryCovRows_dfAll$treatment, 
                  levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                  labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
@@ -1213,6 +1215,115 @@ View(RowsContour_grid)
           axis.title.y=element_text(size=30, face="bold"),
           panel.spacing = unit(0.5, "cm")))
 ggsave(RowsContours, file="Rows_YieldContour.jpg", width=20, height=20, dpi=150)
+
+
+
+#### Correlation & eigenvalues  ####
+RowsEigenMatrix <- Rows[complete.cases(Rows), c("Nuptake", "Puptake", "NO3", "PO4", "WatSolP", "ResinP", 
+                                                "pH", "EC", "OC"),]
+RowsEigenCor <- cor(RowsEigenMatrix)
+RowsEigenPCA <- PCA(RowsEigenMatrix, scale.unit = TRUE, ncp = length(RowsEigenMatrix)-1)
+RowsEigenPrin <-princomp(RowsEigenCor)
+summary(RowsEigenPrin, digits=3)
+round(RowsEigenPrin$loadings[, 1:2], 3)
+
+
+
+
+####  Correlate char P to residual soil P  ####
+#set up new dataframe with repeated values for treatment & char %. Does not correlate
+RowsCharPdf <- data.frame(
+  Treatment=c(rep("Canola Meal", 4), rep("Manure", 4), rep("Willow", 4), rep("Meat and Bone Meal Coarse", 4),
+              rep("Meat and Bone Meal Fine", 4), rep("Phosphorus Fertilizer", 4)),
+  CharPerc=c(rep(3.04, 4), rep(0.23, 4), rep(0.17, 4), rep(12.7, 4), rep(17.7, 4), rep(19.4, 4)),
+  PO4=c(17.67, 15.66, 18.79, 7.72, 10.94, 20.49, 16.09, 15.64, 14.14, 11.43, 9.3, 14.1, 
+        13.29, 16.34, 18.56, 16.06, 12.18, 11.75, 10.91, 19.44, 12.66, 27.5, 6.36, 12.3)
+)
+print(RowsCharPdf)
+RowsCharCor <- cor(RowsCharPdf$CharPerc, RowsCharPdf$PO4) #overall correlation yields single value
+print(RowsCharCor)
+
+# set up dataframe using PO4 means
+## Means does not work as correlation needs multiple observations per treatment
+## tried using unique identifiers and results are the same as using means, effectively having one observation per trt
+### Unique identifier for each obs in a trt: Observation = rep(1:4, times = 6)  
+##ended up making very small changes to the char P % 
+RowsPO4Mean <- aggregate(PO4 ~ Treatment, data = Rows, FUN = mean, na.rm = TRUE)
+print(RowsPO4Mean)
+View(RowsPO4Mean)
+RowsCharPdf2 <- data.frame(
+  Treatment = rep(c("Canola Meal", "Manure", "Willow", "Meat and Bone\nMeal Coarse", "Meat and Bone\nMeal Fine",
+                    "Phosphorus\nFertilizer"), each = 4),
+  CharPerc = c(3.04, 3.05,3.03,3.04, 0.23, 0.231, 0.229, 0.23, 
+               0.17, 0.18, 0.16, 0.17, 12.7, 12.71, 12.69, 12.7, 
+               17.7, 17.71, 17.69, 17.7, 19.39, 19.38, 19.42, 19.41),
+  PO4=c(17.67, 15.66, 18.79, 7.72, 10.94, 20.49, 16.09, 15.64, 14.14, 11.43, 9.3, 14.1, 
+        13.29, 16.34, 18.56, 16.06, 12.18, 11.75, 10.91, 19.44, 12.66, 27.5, 6.36, 12.3)
+)
+print(RowsCharPdf2)
+# get a single correlation value for each PO4/CharPerc combination per treatment 
+## works well enough but can be simplified
+RowsCharCor2 <- numeric(length(unique(RowsCharPdf2$Treatment)))
+for (i in 1:length(RowsCharCor2)) { # Loop over each treatment
+  treatment <- unique(RowsCharPdf2$Treatment)[i]
+  subset_df <- RowsCharPdf2[RowsCharPdf2$Treatment == treatment, ]
+  RowsCharCor2[i] <- cor(subset_df$CharPerc, subset_df$PO4)
+}
+# set up the correlation values in a matrix adding treatment names back in
+RowsCharMatrix <- data.frame(Treatment = unique(RowsCharPdf2$Treatment), Correlation = RowsCharCor2)
+print(RowsCharMatrix) 
+# change to single row format
+RowsCharHeatMat <- matrix(RowsCharMatrix$Correlation, nrow = 1, dimnames = list(NULL, RowsCharMatrix$Treatment))
+print(RowsCharHeatMat)
+
+## simplest way to set up correlation matrix
+RowsCharCor3 <- RowsCharPdf2 %>%
+  group_by(Treatment) %>%
+  summarize(Correlation = cor(CharPerc, PO4, use = "complete.obs"), .groups = "drop")
+
+# visualize correlation using heatmap
+(RowsCharHeatPlot <- ggplot(RowsCharCor3, aes(x=Treatment, y=1, fill=Correlation)) +
+    geom_point(data=RowsCharCor3, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(20, 35)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=round(Correlation, 3)))+
+    scale_x_discrete(position="top")+
+    theme(legend.title=element_text(size=10, face="bold"),
+          legend.text=element_text(size=8), 
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_blank(),
+          axis.text.x=element_text(angle=45, size=11, colour="black", hjust=-0.1),
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(10, 10, 10, 10))+
+    guides(size = "none")+
+    labs(x="Percentage P in treatment", y="Soil residual PO4"))
+ggsave(RowsCharHeatPlot, file="Rows_CharHeat.jpg", width=10, height=3, dpi=150)
+
+## heatmap didn't work - needs more than one row        
+#heatmap(RowsCharHeatMat, col=viridis(n = 100, option = "D"), cex.main = 1.5, cex.axis = 0.8, cex.lab = 0.8,
+# key.title = "Correlation", key.xlab = "", key.ylab = "", trace = "none", margin = c(6, 10)))
+
+# correlation matrix by treatment
+## doesn't work with plot
+#print(RowsCharCor3 <- by(RowsCharPdf2, RowsCharPdf2$Treatment, function(x) cor(x$CharPerc, x$PO4, 
+  #                         use = "pairwise.complete.obs")))
+# Correlation matrix - no treatment names, code not completed
+#RowsCharCor4 <- cor(RowsCharPdf2[, c("CharPerc", "PO4")])
+#print(RowsCharCor2)
+# visualize correlation
+#jpeg("Rows_CharCorPlot.jpg", width = 8, height = 5, units = "in", res = 300)
+#corrplot(RowsCharCor4, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
+#         col=viridis(n = 100, option = "D"))
+#axis_labels <- levels(RowsCharPdf2$Treatment)
+#axis(1, at = 1:length(axis_labels), labels = axis_labels, las = 2)
+#axis(2, at = 1:length(axis_labels), labels = axis_labels, las = 2)
+#dev.off()
+
+
 
 
 ####  Extract ANOVA tables  ####

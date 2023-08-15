@@ -1421,7 +1421,7 @@ Pots2PCor <- cor(Pots2PCorMatrix)
 View(Pots2PCor)
 #select only LPO4 in the row
 Pots2PCorSub<-cor(Pots2PCor[, 5:6], Pots2PCor[, 1:5], method = "spearman", use = "pairwise.complete.obs")
-colnames(Pots2PCorSub)[1:5] <- c("Soil PO4", "Soil Resin P", "Soil Water Soluble P", "Soil Total P", "Crop P uptake")
+colnames(Pots2PCorSub)[1:5] <- c("Soil PO4", "Soil Resin P", "Soil SRP", "Soil Total P", "Crop P uptake")
 rownames(Pots2PCorSub)[1:2] <- c("Crop P uptake", "Leachate PO4")
 Pots2PCorSub[1,5] <- NA
 View(Pots2PCorSub)
@@ -1435,6 +1435,26 @@ dev.off()
 #heatmap
 #heatmap(Pots2PCorSub, Rowv = NA, Colv = NA, col = colorRampPalette(c("blue", "white", "red"))(100), scale = "none",
 #        main = "Correlation Heatmap", xlab = "Variables", ylab = "Leachate PO4")
+
+
+## Plotting only Leachate PO4 against soil P
+Pots2PCorMatrix2 <- Pots2[complete.cases(Pots2), c("SPO4", "ResinP", "WatSolP", "TotalP", "LPO4")]
+# full matrix
+Pots2PCor2 <- cor(Pots2PCorMatrix2)
+View(Pots2PCor2)
+#select only LPO4 in the row
+Pots2PCorSub2<-cor(x=Pots2PCor2[5,], y=Pots2PCor2[,1:4], method = "spearman", use = "pairwise.complete.obs")
+colnames(Pots2PCorSub2)[1:4] <- c("Soil PO4", "Soil Resin P", "Soil SRP", "Soil Total P")
+rownames(Pots2PCorSub2)[1] <- c("Leachate PO4")
+View(Pots2PCorSub)
+
+# heatmap & correllelogram requires at least 2 columns and two rows
+#Correlellogram
+jpeg("Pots2_Pcorplot_LPO4.jpg", width = 8, height = 5, units = "in", res = 300)
+corrplot(Pots2PCorSub2, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
+         col=viridis(n = 100, option = "D"))
+dev.off()
+
 
 
 
@@ -1504,10 +1524,10 @@ YieldCovPots2_df <- lapply(seq_along(YieldCov_Pots2), function(i) {
 YieldCovPots2_dfAll <- do.call(rbind, YieldCovPots2_df)
 YieldCovPots2_dfAll$Var1 <- factor(YieldCovPots2_dfAll$Var1, levels=Pots2CovVar, labels=c("Biomass"="Yield", 
                                    "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", 
-                                   "WatSolP"="Water Soluble P", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
+                                   "WatSolP"="SRP", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
                                    "OC"="% SOC"))
 YieldCovPots2_dfAll$variable <- factor(YieldCovPots2_dfAll$variable, levels=Pots2CovVar, labels=c("Biomass"="Yield", 
-                                   "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", "WatSolP"="Water Soluble P",
+                                   "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", "WatSolP"="SRP",
                                    "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovPots2_dfAll$treatment <- factor(YieldCovPots2_dfAll$treatment, 
                      levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", 
@@ -1568,11 +1588,11 @@ UptakeCovPots2_df <- lapply(seq_along(UptakeCov_Pots2), function(i) {
 UptakeCovPots2_dfAll <- do.call(rbind, UptakeCovPots2_df)
 UptakeCovPots2_dfAll$Var1 <- factor(UptakeCovPots2_dfAll$Var1, levels=UptakeCovVar, labels=c("Biomass"="Yield", 
                                     "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", 
-                                    "WatSolP"="Water Soluble P", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
+                                    "WatSolP"="SRP", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
                                     "OC"="% SOC"))
 UptakeCovPots2_dfAll$variable <- factor(UptakeCovPots2_dfAll$variable, levels=UptakeCovVar, 
                                         labels= c("Biomass"="Yield", "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", 
-                                                  "ResinP"="Resin P", "WatSolP"="Water Soluble P", 
+                                                  "ResinP"="Resin P", "WatSolP"="SRP", 
                                                   "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovPots2_dfAll$treatment <- factor(UptakeCovPots2_dfAll$treatment, 
                          levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", 
@@ -1653,6 +1673,54 @@ View(Pots2Contour_grid)
           panel.spacing = unit(0.5, "cm")))
 ggsave(Pots2Contours, file="Pots2_YieldContour.jpg", width=20, height=20, dpi=150)
 
+
+
+#### Correlation & eigenvalues  ####
+Pots2EigenMatrix <- Pots2[complete.cases(Pots2), c("Nuptake", "Puptake", "SNO3", "SNH4", "SPO4", "ResinP", 
+                                                   "WatSolP","TotalP", "pH", "EC", "OC"),]
+Pots2EigenCor <- cor(Pots2EigenMatrix)
+Pots2EigenPCA <- PCA(Pots2EigenMatrix, scale.unit = TRUE, ncp = length(Pots2EigenMatrix)-1)
+Pots2EigenPrin <-princomp(Pots2EigenCor)
+summary(Pots2EigenPrin, digits=3)
+round(Pots2EigenPrin$loadings[, 1:2], 3)
+
+
+####  Correlate char P to residual soil P  ####
+# set up new data frame 
+Pots2CharPdf <- data.frame(
+  Treatment = rep(c("Canola Meal", "Manure", "Willow", "Meat and Bone\nMeal Coarse", "Meat and Bone\nMeal Fine",
+                    "Phosphorus\nFertilizer"), each = 4),
+  CharPerc = c(3.04, 3.05,3.03,3.04, 0.23, 0.231, 0.229, 0.23, 
+               0.17, 0.18, 0.16, 0.17, 12.7, 12.71, 12.69, 12.7, 
+               17.7, 17.71, 17.69, 17.7, 19.39, 19.38, 19.42, 19.41),
+  PO4=c(6.53, NA, 4.75, 6.7, 12.68, 17.23, 11, 5.87, 11.81, 6.79, 7.73, 4.42, 9.13, 14.54, 17.04, 10.84, 
+        6.36, 7.31, 14.59, 4.49, 14.03, 8.53, 12.69, 18.76))
+print(Pots2CharPdf)
+# get a single correlation value for each PO4/CharPerc combination per treatment 
+Pots2CharCor <- Pots2CharPdf %>%
+  group_by(Treatment) %>%
+  summarize(Correlation = cor(CharPerc, PO4, use = "complete.obs"), .groups = "drop")
+# visualize correlation using heatmap
+(Pots2CharHeatPlot <- ggplot(Pots2CharCor, aes(x=Treatment, y=1, fill=Correlation)) +
+    geom_point(data=Pots2CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(20, 35)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=round(Correlation, 3)))+
+    scale_x_discrete(position="top")+
+    theme(legend.title=element_text(size=10, face="bold"),
+          legend.text=element_text(size=8), 
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_blank(),
+          axis.text.x=element_text(angle=45, size=11, colour="black", hjust=-0.1),
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(10, 10, 10, 10))+
+    guides(size = "none")+
+    labs(x="Percentage P in treatment", y="Soil residual PO4"))
+ggsave(Pots2CharHeatPlot, file="Pots2_CharHeat.jpg", width=10, height=3, dpi=150)
 
 
 ####  Extract ANOVA tables  ####
