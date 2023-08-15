@@ -31,6 +31,8 @@ library(writexl)
 library(glmmTMB)
 library(corrplot)
 library(RColorBrewer)
+library(writexl)
+library(openxlsx)
 
 ##### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -977,7 +979,7 @@ print(PrecRowsOC)
 ModRemOC1 <- emmeans(ModROC5,~Treatment, type="response")
 ModRemOC1_cld <- cld(ModRemOC1, Letters=trimws(letters), reversed = TRUE)
 View(ModRemOC1_cld)
-write.csv(ModRemOC1_cld, file="Rows_OC.csv")
+write.xlsx(ModRemOC1_cld, file="Rows_OC.xlsx")
 
 
 
@@ -1011,14 +1013,14 @@ YieldCovRows_df <- lapply(seq_along(YieldCov_Rows), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovRows_dfAll <- do.call(rbind, YieldCovRows_df)
 YieldCovRows_dfAll$Var1 <- factor(YieldCovRows_dfAll$Var1, levels=RowsCovVar, labels=c("Biomass"="Yield", "NO3"="NO3", 
-                  "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                  "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovRows_dfAll$variable <- factor(YieldCovRows_dfAll$variable, levels=RowsCovVar, labels=
-                  c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P",
+                  c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P",
                     "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovRows_dfAll$treatment <- factor(YieldCovRows_dfAll$treatment, 
            levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
            labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
-                    "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+                    "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovRows_RmTrt <- c("Control 1", "Control 2")
 YieldCovRows_dfAll <- YieldCovRows_dfAll[!YieldCovRows_dfAll$treatment %in% YieldCovRows_RmTrt, ]
 write.csv(YieldCovRows_dfAll, file="Rows_YieldCov.csv")
@@ -1026,9 +1028,9 @@ write.csv(YieldCovRows_dfAll, file="Rows_YieldCov.csv")
 (YieldCovRowsHeat <- ggplot(YieldCovRows_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
-    facet_wrap(~ treatment, nrow=3, scales="fixed") +
+    facet_wrap(~ treatment, nrow=2, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
-    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+    scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
     theme(legend.title=element_text(size=20, face="bold"),
           legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
@@ -1042,7 +1044,7 @@ write.csv(YieldCovRows_dfAll, file="Rows_YieldCov.csv")
           axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(1, "cm"))+
     labs(x="", y=""))
-ggsave(YieldCovRowsHeat, file="Rows_YieldCovHeat.jpg", width=20, height=20, dpi=150)
+ggsave(YieldCovRowsHeat, file="Rows_YieldCovHeat.jpg", width=24, height=14, dpi=150)
 
 
 
@@ -1076,15 +1078,15 @@ UptakeCovRows_df <- lapply(seq_along(UptakeCov_Rows), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 UptakeCovRows_dfAll <- do.call(rbind, UptakeCovRows_df)
 UptakeCovRows_dfAll$Var1 <- factor(UptakeCovRows_dfAll$Var1, levels=UptakeCovVar, labels=c("Biomass"="Yield", 
-                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
+                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
                   "OC"="% SOC"))
 UptakeCovRows_dfAll$variable <- factor(UptakeCovRows_dfAll$variable, levels=UptakeCovVar, labels= c("Biomass"="Yield", 
-                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
+                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
                   "OC"="% SOC"))
 UptakeCovRows_dfAll$treatment <- factor(UptakeCovRows_dfAll$treatment, 
             levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
             labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
-                     "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+                     "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovRows_RmTrt <- c("Control 1", "Control 2")
 UptakeCovRows_dfAll <- UptakeCovRows_dfAll[!UptakeCovRows_dfAll$treatment %in% YieldCovRows_RmTrt, ]
 write.csv(UptakeCovRows_dfAll, file="Rows_UptakeCov.csv")
@@ -1142,16 +1144,16 @@ RecoveryCovRows_df <- lapply(seq_along(RecoveryCov_Rows), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 RecoveryCovRows_dfAll <- do.call(rbind, RecoveryCovRows_df)
 RecoveryCovRows_dfAll$Var1 <- factor(RecoveryCovRows_dfAll$Var1, levels=RecoveryCovVar, 
-                                     labels= c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="SRP", 
+                                     labels= c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", 
                                                "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovRows_dfAll$variable <- factor(RecoveryCovRows_dfAll$variable, levels=RecoveryCovVar, 
                                          labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
-                                                  "WatSolP"="SRP", "ResinP"="Resin P","pH"="pH", "EC"="EC",
+                                                  "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC",
                                                   "OC"="% SOC"))
 RecoveryCovRows_dfAll$treatment <- factor(RecoveryCovRows_dfAll$treatment, 
                  levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                  labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
-                          "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+                          "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovRows_RmTrt <- c("Control 1", "Control 2")
 RecoveryCovRows_dfAll <- RecoveryCovRows_dfAll[!RecoveryCovRows_dfAll$treatment %in% YieldCovRows_RmTrt, ]
 write.csv(RecoveryCovRows_dfAll, file="Rows_RecoveryCov.csv")
@@ -1189,7 +1191,7 @@ View(RowsContourSub)
 RowsContourSub$Treatment <- factor(RowsContourSub$Treatment, levels=c("CanolaMeal", "Manure", "Willow", 
                                     "MBMACoarse", "MBMAFine", "Phosphorus"),
                labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", 
-                        "Phosphorus Fertilizer"))
+                        "TSP Fertilizer"))
 View(RowsContourSub)
 RowsContourExcl <- na.exclude(RowsContourSub)
 View(RowsContourExcl)
@@ -1283,7 +1285,7 @@ RowsCharCor3 <- RowsCharPdf %>%
   summarize(Correlation = cor(CharPerc, PO4, use = "complete.obs"), .groups = "drop")
 RowsCharCor3$Treatment <- factor(RowsCharCor3$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                                labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
-                                        "Phosphorus\nFertilizer"))
+                                        "TSP\nFertilizer"))
 print(RowsCharCor3)
 
 # visualize correlation using heatmap
@@ -1306,7 +1308,7 @@ print(RowsCharCor3)
           panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(5, 5, 5, 5))+
     guides(size = "none")+
-    labs(x="", y="", title="% P Recovery - Soil residual PO4"))
+    labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4]))))
 
 ## heatmap didn't work - needs more than one row        
   #heatmap(RowsCharHeatMat, col=viridis(n = 100, option = "D"), cex.main = 1.5, cex.axis = 0.8, cex.lab = 0.8,
@@ -1340,7 +1342,7 @@ RowsRecCor <- RowsRecPdf %>%
   summarize(Correlation = cor(Precovery, CharPerc, use = "complete.obs"), .groups = "drop")
 RowsRecCor$Treatment <- factor(RowsRecCor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                                labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
-                                        "Phosphorus\nFertilizer"))
+                                        "TSP\nFertilizer"))
 print(RowsRecCor)
   # visualize correlation using heatmap
 (RowsRecHeatPlot <- ggplot(RowsRecCor, aes(x=Treatment, y=0.5, fill=Correlation)) +
@@ -1348,7 +1350,7 @@ print(RowsRecCor)
     scale_size(range = c(30,45)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.2f",Correlation)), size=7)+
-    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+    theme(plot.title=element_text(hjust=0.5, face="bold",  size=22),
           legend.text=element_text(size=12),
           legend.title=element_text(size=16, face="bold"),
           legend.key.siz=unit(15,"mm"),
@@ -1362,7 +1364,7 @@ print(RowsRecCor)
           panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(5, 5, 5, 5))+
     guides(size = "none")+
-    labs(x="", y="", title="% P in treatment - % P Recovery"))
+    labs(x="", y="", title="Percentage P in treatment - Percentage P Recovery"))
 
 ## correlate P recovery to residual PO4
 RowsPO4Pdf <- data.frame(Treatment=Rows$Treatment,
@@ -1374,9 +1376,10 @@ print(RowsPO4Pdf)
 RowsPO4Cor <- RowsPO4Pdf %>%
   group_by(Treatment) %>%
   summarize(Correlation = cor(Precovery, PO4, use = "complete.obs"), .groups = "drop")
-RowsPO4Cor$Treatment <- factor(RowsPO4Cor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
-                                 labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
-                                          "Phosphorus\nFertilizer"))
+RowsPO4Cor$Treatment <- factor(RowsPO4Cor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse",
+                                                              "MBMAFine", "Phosphorus"),
+                                 labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse",
+                                          "Meat and\nBonemeal-\nFine", "TSP\nFertilizer"))
 print(RowsPO4Cor)
   # visualize correlation using heatmap
 (RowsPO4HeatPlot <- ggplot(RowsPO4Cor, aes(x=Treatment, y=0.5, fill=Correlation)) +
@@ -1399,11 +1402,11 @@ print(RowsPO4Cor)
           panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(5, 5, 5, 5))+
     guides(size = "none")+
-    labs(x="", y="", title="% P Recovery - Soil residual PO4"))
+    labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4]))))
 
 ## combined plot - combined legend and ggarrange uses ggpubr package, set legend in individual plots
-(RowsCharRecPO4_plot <-ggarrange(RowsCharHeatPlot, RowsRecHeatPlot, RowsPO4HeatPlot, nrow=3, common.legend=TRUE, legend="right", 
-                                 heights=c(0.8, 0.8, 1.1)))
+(RowsCharRecPO4_plot <-ggarrange(RowsCharHeatPlot, RowsRecHeatPlot, RowsPO4HeatPlot, nrow=3, common.legend=TRUE,
+                                 legend="right", heights=c(0.8, 0.8, 1.1)))
 ggsave(RowsCharRecPO4_plot, file="Rows_CharPO4Prec_combined.jpg", width=15, height=9, dpi=150)
 
 

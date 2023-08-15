@@ -19,7 +19,6 @@ library(plotrix)
 library(car)
 library(afex)
 library(onewaytests)
-library(multcomp)
 library(plyr)
 library(dplyr)
 library(tidyr)
@@ -279,6 +278,7 @@ Mod1em_split <- emmeans(Mod1b,~Treatment|Soil, subset=(Pots1$Yield))
 #MUST use trimws to trim the white spaces around the cld letters to ensure proper alignment
 Mod1cld_split <- cld(Mod1em_split, Letters=trimws(letters), reversed=TRUE, by="Soil") #reversed=letters in correct order
 View(Mod1cld_split)
+write.xlsx(Mod1cld_split, file="Pots1_Yield.xlsx")
 
 ##Developing visualizations
 ##select specific treatments and use those in the graph - repeat for all subsets
@@ -301,7 +301,7 @@ Yield_subVar <- Mod1cld_split %>%
                 y=emmean + SE + 0.5), size=6, position=position_dodge(width=0.9))+
   labs(x="Treatments at 25mg P/pot", y="Biomass yield (g)")+
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                            "Phosphorus\nFertilizer"))+
+                            "TSP\nFertilizer"))+
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
         legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"), #hjust right aligns text
@@ -330,7 +330,7 @@ Yield_subCon <- Mod1cld_split %>%
   labs(x="Treatments at 5g char/pot", y="Biomass yield (g)") +
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                             "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", 
-                            "Phosphorus\nFertilizer"))+
+                            "TSP\nFertilizer"))+
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
         legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -503,6 +503,7 @@ Mod3em <- emmeans(Mod3i,~Treatment|Soil, data=Pots1)
 Mod3cld <- cld(Mod3em, Letters=trimws(letters), reversed=TRUE, by="Soil", type="response") 
 #Mod3cld <- Mod3cld %>% rename(emmean="response")
 View(Mod3cld)
+write_xlsx(Mod3cld, path="Pots1_Nuptake.xlsx")
 
 ## Visualizations
 Nuptake_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha",
@@ -518,9 +519,9 @@ Nuptake_subVar <- Mod3cld %>%
                 width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE),
               size=6, position=position_dodge(width=0.9), vjust=-0.5)+
-    labs(x="Treatments at 25mg P/pot", y="Nitrogen uptake (ug/kg soil)")+
+    labs(x="Treatments at 25mg P/pot", y="Nitrogen uptake (mg/kg soil)")+
     scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Phosphorus\nFertilizer"))+
+                              "TSP\nFertilizer"))+
     scale_y_continuous(limits=c(0, 90))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
@@ -548,10 +549,10 @@ Nuptake_subCon <- Mod3cld %>%
                   width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE),
               size=6, position=position_dodge(width=0.9), vjust=-0.5)+
-    labs(x="Treatments at 5g char/pot", y="Nitrogen uptake (ug/kg soil)") +
+    labs(x="Treatments at 5g char/pot", y="Nitrogen uptake (mg/kg soil)") +
     scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                             "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP",
-                            "Phosphorus\nFertilizer"))+
+                            "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
           axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -693,6 +694,7 @@ print(NrecAB)
 Mod4em <- emmeans(Mod4g,~Treatment|Soil, subset=(Nrec_out$Nrecovery))
 Mod4em_cld <- cld(Mod4em, Letters=trimws(letters), reversed=TRUE, by="Soil")
 View(Mod4em_cld)
+write_xlsx(Mod4em_cld, path="Pots1_Nrecovery.xlsx")
 
 ## Visualizations
 ##select specific treatments and use those in the graph - repeat for all subsets
@@ -712,7 +714,7 @@ Nrec_subVar <- Mod4em_cld %>%
             size=6, position=position_dodge(width=0.9))+
   labs(x="Treatments at 25mg P/pot", y="Nitrogen recovery (%)") +
   scale_x_discrete(labels=c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", 
-                            "Phosphorus\nFertilizer"))+
+                            "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
           axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -741,7 +743,7 @@ Nrec_subCon <- Mod4em_cld %>%
   labs(x="Treatments at 5g char/pot", y="Nitrogen recovery (%)") +
   scale_x_discrete(labels=c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                             "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP",
-                            "Phosphorus\nFertilizer"))+
+                            "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
           axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -825,7 +827,7 @@ print(PupAB)
 Mod5em <- emmeans(Mod5c,~Treatment|Soil)
 Mod5em_cld <- cld(Mod5em, Letters=trimws(letters), reversed=TRUE, by="Soil", type="response")
 View(Mod5em_cld)
-
+write_xlsx(Mod5em_cld, path="Pots1_Puptake.xlsx")
 
 ## Visualizations
 Pup_trtVar <- c("Control1", "Control2","CanolaMeal50kgha","CanolaHull50kgha","Manure50kgha","Willow50kgha",
@@ -839,9 +841,9 @@ Pup_subVar <- Mod5em_cld %>% filter(Treatment %in% Pup_trtVar)
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
   geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+0.8),
             size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 25mg P/pot", y="Phosphorus uptake (ug/kg soil)") +
+  labs(x="Treatments at 25mg P/pot", y="Phosphorus uptake (mg/kg soil)") +
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", 
-                            "Phosphorus\nFertilizer"))+
+                            "TSP\nFertilizer"))+
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
         legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -866,10 +868,10 @@ Pup_subCon <- Mod5em_cld %>% filter(Treatment %in% Pup_charCon)
                 width=0.2, position=position_dodge(width=0.9)) +
   geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+1),
             size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 5g char/pot", y="Phosphorus uptake (ug/kg soil)") +
+  labs(x="Treatments at 5g char/pot", y="Phosphorus uptake (mg/kg soil)") +
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                               "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP",
-                            "Phosphorus\nFertilizer"))+
+                            "TSP\nFertilizer"))+
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
         legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -970,6 +972,7 @@ Mod6Em_cld <- cld(Mod6Em, Letters=trimws(letters), reversed=TRUE, by="Soil")
 #Mod6c resulted in Se values of 0 with df=0 and NaN for the upper and lower CIL
 View(Mod6Em_cld)
 print(Mod6Em_cld)
+write_xlsx(Mod6Em_cld, path="Pots1_Precovery.xlsx")
 
 ##Developing visualizations
 Prec_trtVar <- c("CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
@@ -986,7 +989,7 @@ Prec_subVar <- Mod6Em_cld %>%
   geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2.5),
               size=6, position=position_dodge(width=0.9))+
   labs(x="Treatments at 25mg P/pot", y="Phosphorus recovery (%)") +
-  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Phosphorus\nFertilizer"))+
+  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
           axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -1013,7 +1016,7 @@ Prec_subCon <- Mod6Em_cld %>%
               size=6, position=position_dodge(width=0.9))+
   labs(x="Treatments at 5g char/pot", y="Phosphorus recovery (%)") +
   scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", 
-                            "Canola Hull\n& TSP","Manure\n& TSP", "Willow\n& TSP", "Phosphorus\nFertilizer"))+
+                            "Canola Hull\n& TSP","Manure\n& TSP", "Willow\n& TSP", "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
           axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -1025,6 +1028,72 @@ Prec_subCon <- Mod6Em_cld %>%
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Prec10tha, file="Pots1_Prec_10t_ha.jpg", width=12, height=8, dpi=150)
 
+
+####  Nutrient use efficiency  ####
+## Nitrogen
+NUE_Mean <- summary_by(NUE~Soil+Treatment, data=Pots1, FUN=mean)
+NUE_Mean <- as.numeric(NUE_Mean$NUE)
+NUE_df <- subset(Pots1, select = c("Soil", "Treatment", "NUE"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+NUE_df <- NUE_df[!NUE_df$Treatment %in% "Control1", ]
+print(NUE_df)
+NUE_skew <- skewness(NUE_Mean,na.rm=TRUE)
+NUE_kur <- kurtosis(NUE_Mean,na.rm=TRUE)
+cat("Skewness:", NUE_skew, "\n") ## 0.512
+cat("Kurtosis:", NUE_kur, "\n") ## -0.907
+shapiro.test(Pots1$NUE)  #p=0.039
+hist(Pots1$NUE) # slight left skew
+leveneTest(NUE ~ Treatment*Soil, data=Pots1)  # p=0.6
+NUEmod1 <- glmmTMB(NUE~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(NUEmod1, type="III")
+summary(NUEmod1)
+performance::r2(NUEmod1) # 0.837
+shapiro.test(resid(NUEmod1)) # p= 0.0034
+plot(fitted(NUEmod1),resid(NUEmod1),pch=16) # slightly above the line
+qqnorm(resid(NUEmod1)) # heavy  tails
+qqline(resid(NUEmod1))
+NUEmodEm<- emmeans(NUEmod1,~Treatment|Soil, subset=(Pots1$NUE), type="response")
+NUEmod_cld <- cld(NUEmodEm, Letters=trimws(letters), reversed=TRUE, by="Soil", alpha=0.001) 
+View(NUEmod_cld)
+print(NUEmod_cld)
+write.csv(NUEmod_cld, file="Pots1_NUE.csv")
+
+## Phosphorus
+PUE_Mean <- summary_by(PUE~Soil+Treatment, data=Pots1, FUN=mean)
+PUE_Mean <- as.numeric(PUE_Mean$PUE)
+PUE_df <- subset(Pots1, select = c("Soil", "Treatment", "PUE"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+PUE_df$Treatment <- factor(PUE_df$Treatment, 
+                           levels=c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
+                                    "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
+                                    "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate"),
+                           labels=c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", 
+                                    "Manure 50kg P/ha", "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", 
+                                    "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
+                                    "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer"))
+levels(PUE_df$Treatment)
+PUE_skew <- skewness(PUE_Mean,na.rm=TRUE)
+PUE_kur <- kurtosis(PUE_Mean,na.rm=TRUE)
+cat("Skewness:", PUE_skew, "\n") ## 1.478
+cat("Kurtosis:", PUE_kur, "\n") ## 2.61
+shapiro.test(Pots1$PUE)  #p=1.372e-08
+hist(Pots1$PUE) #  left skewed
+leveneTest(PUE ~ Treatment*Soil, data=Pots1)  # 0.059
+shapiro.test(log(Pots1$PUE))  #p=0.0126  ## log doesn't work on negative values
+hist(log(Pots1$PUE)) # more centered
+leveneTest(log(PUE) ~ Treatment*Soil, data=Pots1)  # 0.061
+PUEmod1 <- glmmTMB(PUE~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude,
+                   control = glmmTMBControl(optimizer = optim, optArgs = list(method = "BFGS")))
+glmmTMB:::Anova.glmmTMB(PUEmod1, type="III")
+summary(PUEmod1)
+performance::r2(PUEmod1) # 0.761
+shapiro.test(resid(PUEmod1)) # p= 3.51e-11
+plot(fitted(PUEmod1),resid(PUEmod1),pch=16) # very left skewed but equal around the line
+qqnorm(resid(PUEmod1)) # very heavy  tails
+qqline(resid(PUEmod1))
+PUEmodEm<- emmeans(PUEmod1,~Treatment|Soil, subset=(Pots1$PUE), type="response")
+PUEmod_cld <- cld(PUEmodEm, Letters=trimws(letters), reversed=TRUE, by="Soil", alpha=0.001) 
+View(PUEmod_cld)
+print(PUEmod_cld)
+write.csv(PUEmod_cld, file="Pots1_PUE.csv")
 
 
 ####   NO3   ####
@@ -1876,7 +1945,7 @@ ggsave(Pots1WHCbars, file="Pots1_WatHolCapacity.jpg", width=8, height=8, dpi=150
 
 
 
-####  Co-variance ####
+####  CO-VARIANCE ####
 #####  Haverhill  #####
 ######  Yield ######
 #Split and scale data
@@ -1925,11 +1994,11 @@ YieldCovHav_df3 <- lapply(seq_along(YieldCov_Hav), function(i) {
 YieldCovHav_dfAll <- do.call(rbind, YieldCovHav_df3)
 YieldCovHav_dfAll$Var1 <- factor(YieldCovHav_dfAll$Var1, levels=YieldCovVar,
                                  labels=c("Yield"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", 
-                                          "ResinP"="Resin P", "WaterSolP"="SRP", "TotalP2"="Total P", 
+                                          "ResinP"="Resin P", "WaterSolP"="Soluble P", "TotalP2"="Total P", 
                                           "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovHav_dfAll$variable <- factor(YieldCovHav_dfAll$variable, levels=YieldCovVar,
                                      labels=c("Yield"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", 
-                                              "ResinP"="Resin P", "WaterSolP"="SRP", "TotalP2"="Total P", 
+                                              "ResinP"="Resin P", "WaterSolP"="Soluble P", "TotalP2"="Total P", 
                                               "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovHav_dfAll$treatment <- factor(YieldCovHav_dfAll$treatment, 
         levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
@@ -1938,8 +2007,8 @@ YieldCovHav_dfAll$treatment <- factor(YieldCovHav_dfAll$treatment,
         labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", 
                  "Manure 50kg P/ha", "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", 
                  "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
-                 "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
-YieldCovHav_RmTrt <- c("Control 1", "Control 2", "Phosphorus Fertilizer")
+                 "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer"))
+YieldCovHav_RmTrt <- c("Control 1", "Control 2", "TSP Fertilizer")
 YieldCovHav_dfAll <- YieldCovHav_dfAll[!YieldCovHav_dfAll$treatment %in% YieldCovHav_RmTrt, ]
 View(YieldCovHav_dfAll)
 write.csv(YieldCovHav_dfAll, file="Pots1_Haverhill_YieldCov.csv")
@@ -2028,11 +2097,11 @@ UptakeCovHav_df <- lapply(seq_along(UptakeCov_Hav), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 UptakeCovHav_dfAll <- do.call(rbind, UptakeCovHav_df)
 UptakeCovHav_dfAll$Var1 <- factor(UptakeCovHav_dfAll$Var1, levels=UptakeCovVar, labels=c("Puptake"="P Uptake", 
-          "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
+          "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Soluble P", 
           "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovHav_dfAll$variable <- factor(UptakeCovHav_dfAll$variable, levels=UptakeCovVar, labels=
           c("Puptake"="P Uptake", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-            "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+            "WaterSolP"="Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovHav_dfAll$treatment <- factor(UptakeCovHav_dfAll$treatment, 
        levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
              "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2040,8 +2109,8 @@ UptakeCovHav_dfAll$treatment <- factor(UptakeCovHav_dfAll$treatment,
        labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
                   "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
                   "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
-                  "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
-UptakeCovHav_RmTrt <- c("Control 1", "Control 2", "Phosphorus Fertilizer")
+                  "Willow 10t/ha & TSP", "TSP Fertilizer"))
+UptakeCovHav_RmTrt <- c("Control 1", "Control 2", "TSP Fertilizer")
 UptakeCovHav_dfAll <- UptakeCovHav_dfAll[!UptakeCovHav_dfAll$treatment %in% UptakeCovHav_RmTrt, ]
 View(UptakeCovHav_dfAll)
 write.csv(UptakeCovHav_dfAll, file="Pots1_Haverhill_UptakeCov.csv")
@@ -2098,11 +2167,11 @@ RecoveryCovHav_df <- lapply(seq_along(RecoveryCov_Hav), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 RecoveryCovHav_dfAll <- do.call(rbind, RecoveryCovHav_df)
 RecoveryCovHav_dfAll$Var1 <- factor(RecoveryCovHav_dfAll$Var1, levels=RecoveryCovVar, labels=c("Precovery"="P Recovery", 
-         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
+         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Soluble P", 
          "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovHav_dfAll$variable <- factor(RecoveryCovHav_dfAll$variable, levels=RecoveryCovVar, labels=
          c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-         "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+         "WaterSolP"="Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovHav_dfAll$treatment <- factor(RecoveryCovHav_dfAll$treatment, 
          levels=c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                   "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2110,8 +2179,8 @@ RecoveryCovHav_dfAll$treatment <- factor(RecoveryCovHav_dfAll$treatment,
          labels=c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
                   "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
                   "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
-                  "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
-RecCovHav_RmTrt <- c("Phosphorus Fertilizer")
+                  "Willow 10t/ha & TSP", "TSP Fertilizer"))
+RecCovHav_RmTrt <- c("TSP Fertilizer")
 RecoveryCovHav_dfAll <- RecoveryCovHav_dfAll[!RecoveryCovHav_dfAll$treatment %in% RecCovHav_RmTrt, ]
 View(RecoveryCovHav_dfAll)
 write.csv(RecoveryCovHav_dfAll, file="Pots1_Haverhill_RecoveryCov.csv")
@@ -2168,11 +2237,11 @@ YieldCovOx_df <- lapply(seq_along(YieldCov_Ox), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovOx_dfAll <- do.call(rbind, YieldCovOx_df)
 YieldCovOx_dfAll$Var1 <- factor(YieldCovOx_dfAll$Var1, levels=YieldCovVar, labels=c("Yield"="Yield", 
-            "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
+            "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Soluble P", 
             "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovOx_dfAll$variable <- factor(YieldCovOx_dfAll$variable, levels=YieldCovVar, labels=
             c("Yield"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-              "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+              "WaterSolP"="Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovOx_dfAll$treatment <- factor(YieldCovOx_dfAll$treatment, 
         levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                  "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2180,8 +2249,8 @@ YieldCovOx_dfAll$treatment <- factor(YieldCovOx_dfAll$treatment,
         labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
                  "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
                  "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
-                 "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
-YieldCovOx_RmTrt <- c("Control 1", "Control 2", "Phosphorus Fertilizer")
+                 "Willow 10t/ha & TSP", "TSP Fertilizer"))
+YieldCovOx_RmTrt <- c("Control 1", "Control 2", "TSP Fertilizer")
 YieldCovOx_dfAll <- YieldCovOx_dfAll[!YieldCovOx_dfAll$treatment %in% YieldCovOx_RmTrt, ]
 View(YieldCovOx_dfAll)
 write.csv(YieldCovOx_dfAll, file="Pots1_Oxbow_YieldCov.csv")
@@ -2238,11 +2307,11 @@ UptakeCovOx_df <- lapply(seq_along(UptakeCov_Ox), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 UptakeCovOx_dfAll <- do.call(rbind, UptakeCovOx_df)
 UptakeCovOx_dfAll$Var1 <- factor(UptakeCovOx_dfAll$Var1, levels=UptakeCovVar, labels=c("Puptake"="P Uptake", 
-         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="SRP", 
+         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Soluble P", 
          "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovOx_dfAll$variable <- factor(UptakeCovOx_dfAll$variable, levels=UptakeCovVar, labels=
          c("Puptake"="P Uptake", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-         "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+         "WaterSolP"="Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 UptakeCovOx_dfAll$treatment <- factor(UptakeCovOx_dfAll$treatment, 
          levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                   "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2250,8 +2319,8 @@ UptakeCovOx_dfAll$treatment <- factor(UptakeCovOx_dfAll$treatment,
          labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
                   "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
                   "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
-                  "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
-UptakeCovOx_RmTrt <- c("Control 1", "Control 2", "Phosphorus Fertilizer")
+                  "Willow 10t/ha & TSP", "TSP Fertilizer"))
+UptakeCovOx_RmTrt <- c("Control 1", "Control 2", "TSP Fertilizer")
 UptakeCovOx_dfAll <- UptakeCovOx_dfAll[!UptakeCovOx_dfAll$treatment %in% UptakeCovOx_RmTrt, ]
 View(YieldCovOx_dfAll)
 write.csv(UptakeCovOx_dfAll, file="Pots1_Oxbow_UptakeCov.csv")
@@ -2309,10 +2378,10 @@ RecoveryCovOx_df <- lapply(seq_along(RecoveryCov_Ox), function(i) {
 RecoveryCovOx_dfAll <- do.call(rbind, RecoveryCovOx_df)
 RecoveryCovOx_dfAll$Var1 <- factor(RecoveryCovOx_dfAll$Var1, levels=RecoveryCovVar, labels=
                c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-                 "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+                 "WaterSolP"="Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovOx_dfAll$variable <- factor(RecoveryCovOx_dfAll$variable, levels=RecoveryCovVar, labels=
                    c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
-                     "WaterSolP"="SRP", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+                     "WaterSolP"="Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 RecoveryCovOx_dfAll$treatment <- factor(RecoveryCovOx_dfAll$treatment, 
              levels=c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
                       "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
@@ -2320,8 +2389,8 @@ RecoveryCovOx_dfAll$treatment <- factor(RecoveryCovOx_dfAll$treatment,
              labels=c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
                       "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
                       "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
-                      "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
-RecCovOx_RmTrt <- c("Phosphorus Fertilizer")
+                      "Willow 10t/ha & TSP", "TSP Fertilizer"))
+RecCovOx_RmTrt <- c("TSP Fertilizer")
 RecoveryCovOx_dfAll <- RecoveryCovOx_dfAll[!RecoveryCovOx_dfAll$treatment %in% RecCovOx_RmTrt, ]
 View(RecoveryCovOx_dfAll)
 write.csv(RecoveryCovOx_dfAll, file="Pots1_Oxbow_RecoveryCov.csv")
@@ -2473,9 +2542,9 @@ HavEigenPrin$loadings[, 1:2] # print loadings linke dto variables
 # model the most important variables
 # variables for Haverhill: Nuptake, NO3, NH4, PO4, ResinP & WaterSolP
 HavSubEig <- Pots1[Pots1$Soil == "Haverhill", c("Yield", "Nuptake", "NO3", "NH4", "PO4", "ResinP", "WaterSolP")] 
-colnames(HavSubEig) <- c("Yield", "N Uptake", "NO3", "NH4", "PO4", "Resin P", "SRP")
+colnames(HavSubEig) <- c("Yield", "N Uptake", "NO3", "NH4", "PO4", "Resin P", "Soluble P")
 View(HavSubEig)
-HavModEig <- lm(Yield ~ `N Uptake`+NO3+NH4+PO4+`Resin P`+`SRP`, data=HavSubEig)
+HavModEig <- lm(Yield ~ `N Uptake`+NO3+NH4+PO4+`Resin P`+`Soluble P`, data=HavSubEig)
 summary(HavModEig)
 # scatterplot of the most prominant variables against yield
 HavEigScatter <- function(data, model, targetColumn='Yield') {
@@ -2504,9 +2573,9 @@ OxEigenPrin$loadings[, 1:2]
 # model the most important variables
 # variables for Haverhill: Nuptake, Puptake, NO3, NH4, WaterSolP, EC
 OxSubEig <- Pots1[Pots1$Soil == "Oxbow", c("Yield", "Nuptake", "Puptake", "NO3", "NH4", "WaterSolP", "EC")] 
-colnames(OxSubEig) <- c("Yield", "N Uptake", "P Uptake", "NO3", "NH4", "SRP", "Electrical Conductivity")
+colnames(OxSubEig) <- c("Yield", "N Uptake", "P Uptake", "NO3", "NH4", "Soluble P", "Electrical Conductivity")
 View(OxSubEig)
-OxModEig <- lm(Yield ~ `N Uptake`+`P Uptake`+NO3+NH4+`SRP`+`Electrical Conductivity`, data=OxSubEig)
+OxModEig <- lm(Yield ~ `N Uptake`+`P Uptake`+NO3+NH4+`Soluble P`+`Electrical Conductivity`, data=OxSubEig)
 summary(OxModEig)
 # scatterplot of the most prominant variables against yield
 OxEigScatter <- function(data, model, targetColumn='Yield') {
@@ -2565,21 +2634,21 @@ Pots1CharCor$Treatment <- factor(Pots1CharCor$Treatment, levels=c("CanolaMeal50k
                        labels=c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure\n50kg P/ha", 
                                 "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
                                 "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
-                                "Willow\n10t/ha & TSP", "Phosphorus\nFertilizer"))
+                                "Willow\n10t/ha & TSP", "TSP\nFertilizer"))
 View(Pots1CharCor)
 # visualize correlation using heatmap
 (Pots1CharHeatPlot <- ggplot(Pots1CharCor, aes(x=Treatment, y=Soil, fill=Correlation)) +
     geom_point(data=Pots1CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
     scale_size(range=c(15, 30)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
-    geom_text(aes(label=round(Correlation, 2)), size=5)+
-    theme(plot.title=element_text(hjust=0.5, face="bold", size=18),
-          legend.text=element_text(size=12),
+    geom_text(aes(label=sprintf("%.2f", Correlation)), size=5)+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=20),
+          legend.text=element_text(size=14),
           legend.title=element_text(size=16, face="bold"),
           legend.key.siz=unit(15,"mm"),
           axis.title.y=element_blank(),
           axis.title.x=element_blank(),
-          axis.text.y=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_text(size=16, colour="black", face="bold"),
           axis.text.x=element_blank(),
           axis.ticks.y=element_blank(),
           axis.ticks.x=element_blank(),
@@ -2587,7 +2656,7 @@ View(Pots1CharCor)
           panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(10, 10, 10, 10))+
     guides(size="none")+
-    labs(x="", y="", title="Percentage P in treatment - Soil residual PO4"))
+    labs(x="", y="", title=expression(bold("Percentage P in treatment - Soil residual PO"[4]))))
 ggsave(Pots1CharHeatPlot, file="Pots1_CharPO4Heat.jpg", width=15, height=4, dpi=150)
 
 
@@ -2622,21 +2691,21 @@ Pots1PrecCor$Treatment <- factor(Pots1PrecCor$Treatment, levels=c("CanolaMeal50k
                                  labels=c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure\n50kg P/ha", 
                                           "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
                                           "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
-                                          "Willow\n10t/ha & TSP", "Phosphorus\nFertilizer"))
+                                          "Willow\n10t/ha & TSP", "TSP\nFertilizer"))
 View(Pots1PrecCor)
 # visualize correlation using heatmap
 (Pots1CharPrecPlot <- ggplot(Pots1PrecCor, aes(x=Treatment, y=Soil, fill=Correlation)) +
     geom_point(data=Pots1PrecCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
     scale_size(range=c(15, 30)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
-    geom_text(aes(label=round(Correlation, 3)), size=5)+
-    theme(plot.title=element_text(hjust=0.5, face="bold", size=18),
-          legend.text=element_text(size=12),
+    geom_text(aes(label=sprintf("%.2f", Correlation)), size=5)+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=20),
+          legend.text=element_text(size=14),
           legend.title=element_text(size=16, face="bold"),
           legend.key.siz=unit(15,"mm"),
           axis.title.y=element_blank(),
           axis.title.x=element_blank(),
-          axis.text.y=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_text(size=16, colour="black", face="bold"),
           axis.text.x=element_blank(),
           axis.ticks.y=element_blank(),
           axis.ticks.x=element_blank(),
@@ -2644,7 +2713,7 @@ View(Pots1PrecCor)
           panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(10, 10, 10, 10))+
     guides(size="none")+
-    labs(x="", y="", title="Percentage P in treatment - % P Recovery"))
+    labs(x="", y="", title="Percentage P in treatment - Percentage P Recovery"))
 ggsave(Pots1CharPrecPlot, file="Pots1_CharPrec_Heat.jpg", width=15, height=4, dpi=150)
 
 
@@ -2679,22 +2748,22 @@ Pots1PrecPO4Cor$Treatment <- factor(Pots1PrecPO4Cor$Treatment, levels=c("CanolaM
                                  labels=c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure\n50kg P/ha", 
                                           "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
                                           "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
-                                          "Willow\n10t/ha & TSP", "Phosphorus\nFertilizer"))
+                                          "Willow\n10t/ha & TSP", "TSP\nFertilizer"))
 View(Pots1PrecPO4Cor)
 # visualize correlation using heatmap
 (Pots1PO4PrecPlot <- ggplot(Pots1PrecPO4Cor, aes(x=Treatment, y=Soil, fill=Correlation)) +
     geom_point(data=Pots1PrecPO4Cor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
     scale_size(range=c(15, 30)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
-    geom_text(aes(label=round(Correlation, 3)), size=5)+
+    geom_text(aes(label=sprintf("%.2f", Correlation)), size=5)+
     scale_x_discrete(position="bottom")+
-    theme(plot.title=element_text(hjust=0.5, face="bold", size=18),
-          legend.text=element_text(size=12),
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=20),
+          legend.text=element_text(size=14),
           legend.title=element_text(size=16, face="bold"),
           legend.key.siz=unit(15,"mm"),
           axis.title.y=element_blank(),
           axis.title.x=element_blank(),
-          axis.text.y=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_text(size=16, colour="black", face="bold"),
           axis.text.x=element_text(angle=45, size=16, colour="black", hjust=1),
           axis.ticks.y=element_blank(),
           axis.ticks.x=element_blank(),
@@ -2702,7 +2771,7 @@ View(Pots1PrecPO4Cor)
           panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(10, 10, 10, 10))+
     guides(size="none")+
-    labs(x="", y="", title="Percentage P Recovery - Soil residual PO4"))
+    labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4]))))
 ggsave(Pots1PO4PrecPlot, file="Pots1_PO4Prec_Heat.jpg", width=15, height=4, dpi=150)
 
 
@@ -2785,12 +2854,23 @@ ocAN <- glmmTMB:::Anova.glmmTMB(Mod15f, type="III")
 ocAN$RowNames <- row.names(ocAN)
 rownames(ocAN) <- NULL
 
+NUEmod1 <- glmmTMB(NUE~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+NUEAN <- glmmTMB:::Anova.glmmTMB(NUEmod1, type="III")
+NUEAN$RowNames <- row.names(NUEAN)
+rownames(NUEAN) <- NULL
+
+PUEmod1 <- glmmTMB(PUE~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude,
+                   control = glmmTMBControl(optimizer = optim, optArgs = list(method = "BFGS")))
+PUEAN <- glmmTMB:::Anova.glmmTMB(PUEmod1, type="III")
+PUEAN$RowNames <- row.names(PUEAN)
+rownames(PUEAN) <- NULL
+
 # Make list of anova table functions
 Pots1ANOVAtables <- list(YieldAN, NupAn, NrecAN, PupAN, PrecAN, NO3AN, NH4AN, PO4AN, ResPAN, WSPAN, TotPAN, pHAN,
-                         ecAN, ocAN)
+                         ecAN, ocAN, NUEAN, PUEAN)
 # Rename worksheets
 names(Pots1ANOVAtables) <- c("Yield", "Nuptake", "Nrecovery", "Puptake","Precovery", "NO3", "NH4", "PO4", 
-                             "ResinP", "WaterSolP", "TotalP", "pH", "EC", "OC")
+                             "ResinP", "WaterSolP", "TotalP", "pH", "EC", "OC", "NUE", "PUE")
 # Write anova tables to excel
 write_xlsx(Pots1ANOVAtables, path="Pots1ANOVAtables.xlsx")
 
