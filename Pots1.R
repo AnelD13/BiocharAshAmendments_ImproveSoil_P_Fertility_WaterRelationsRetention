@@ -49,6 +49,8 @@ library(corrr)
 library(FactoMineR)
 library(factoextra)
 library(reshape2)
+library(writexl)
+library(glmmTMB)
 
 
 #### Summary and ordering of data   ####
@@ -230,6 +232,7 @@ Mod1a_tidy <- tidy(Mod1a)
 Mod1a_tidy$sumsq[1] / (Mod1a_tidy$sumsq[1] + Mod1a_tidy$sumsq[2]) # 0.99
 # Mod1b glmm
 Mod1b <- glmmTMB(Yield~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod1b, type="III")# test.statistic ="F" is not currently available
 summary(Mod1b)
 performance::r2(Mod1b) # 0.895
 # Mod1c Lmer
@@ -396,12 +399,12 @@ qqline(resid(Mod3a))
 # Log-transforming Total N and checking normality of transformed data
 Mod3b<-lmer(log(Nuptake)~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude, 
             control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
-rsq(Mod3b) # 0.842
 anova(Mod3b)
 shapiro.test(resid(Mod3b)) # p=2.081e-08
 plot(fitted(Mod3b),resid(Mod3b),pch=16) # clustered at the right end
 qqnorm(resid(Mod3b)) # heavy tails
 qqline(resid(Mod3b))
+rsq(Mod3b) # 0.842
 # Sqrt transformation
 Mod3c<- lmer(sqrt(Nuptake)~Treatment*Soil+(1|Soil),data=Pots1, na.action=na.exclude)
 rsq(Mod3c) # 0.8086
@@ -458,14 +461,15 @@ plot(fitted(Mod3h),resid(Mod3h),pch=16)   # clusters forming
 qqnorm(resid(Mod3h)) # moderate tails
 qqline(resid(Mod3h))
 rsq(Mod3h) # 0.643
-# glmm model
+# glmm model - singularity issue
 Mod3i <- glmmTMB(Nuptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod3i, type="III")
 summary(Mod3i)
-performance::r2(Mod3i) # 0.752
 shapiro.test(resid(Mod3i)) # p=0.0008813
 plot(fitted(Mod3i),resid(Mod3i),pch=16) # loose cluster at the right end
 qqnorm(resid(Mod3i)) # moderate tails
 qqline(resid(Mod3i))
+performance::r2(Mod3i) # NA
 
 #Comparing models using various options:
 ## AIC & BIC indicate that Mod3b is the best fit.
@@ -487,7 +491,7 @@ print(N_AB) # Other mods not appropriate for the data
 # R squared values for Mod3a (lmer) =0.762; Mod3b (lmerlog)=0.841, Mod3c (lmersqrt)=0.8086; 
 # Mod3g (glmr)=0.807, Mod3h (weightedlm)=0.672, Mod3i (glmm)=0.752
 
-#Mod3b chosen as best fit
+#Mod3b (lmer(log)) chosen as best fit
 #emmeans 
 Mod3em <- emmeans(Mod3i,~Treatment|Soil, data=Pots1)
 Mod3cld <- cld(Mod3em, Letters=trimws(letters), reversed = TRUE, by="Soil", type="response") 
@@ -646,6 +650,7 @@ qqnorm(resid(Mod4f)) #data clustering at the top of the plot, moderate tails
 qqline(resid(Mod4f))
 # Mod 4g glmm
 Mod4g <- glmmTMB(Nrecovery~Treatment*Soil+(1|Soil), data=Nrec_out, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod4g, type="III")
 summary(Mod4g)
 performance::r2(Mod4g) # 0.764
 shapiro.test(resid(Mod4g)) # p=2.046e-06
@@ -676,7 +681,7 @@ print(NrecAB)
 # considering that none of the models fit very well, Mod4g was chosen as it had decent AIC, high rsq and 
 # the residuals were the least abnormal
 
-#run emmeans on Mod4 - showed significant differences
+#run emmeans on Mod4g - most suitable
 Mod4em <- emmeans(Mod4g,~Treatment|Soil, subset=(Nrec_out$Nrecovery))
 Mod4em_cld <- cld(Mod4em, Letters=trimws(letters), reversed = TRUE, by="Soil")
 View(Mod4em_cld)
@@ -788,6 +793,7 @@ Mod5b_P <- length(coefficients(Mod5b)) - 1  # Exclude the intercept
 (adj_rsq <- 1 - (1 - summary(Mod5b)$r.squared) * ((Mod5b_N - 1) / (Mod5b_N - Mod5b_P - 1))) # r=0.929
 # Mod5c glmm
 Mod5c <- glmmTMB(Puptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod5c, type="III")
 summary(Mod5c)
 performance::r2(Mod5c) # 0.938
 shapiro.test(resid(Mod5c)) # p=0.6237
@@ -929,6 +935,7 @@ rsq(Mod6c) # 0.88
 plot(ranef(Mod6c))
 # Mod6d glmm
 Mod6d <- glmmTMB(Precovery~Treatment*Soil+(1|Soil), data=Prec, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod6d, type="III")
 summary(Mod6d)
 performance::r2(Mod6d) # 0.874
 shapiro.test(resid(Mod6d)) # p= 3.472e-08
@@ -1053,6 +1060,7 @@ qqnorm(resid(Mod7a)) # medium tails
 qqline(resid(Mod7a))
 # Mod7b glmm
 Mod7b <- glmmTMB(NO3~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod7b, type="III")
 summary(Mod7b)
 performance::r2(Mod7b) # 0.767
 shapiro.test(resid(Mod7b)) # p= 1.408e-09
@@ -1123,6 +1131,7 @@ qqnorm(resid(Mod8a)) # medium tails
 qqline(resid(Mod8a))
 # Mod8b glmm
 Mod8b <- glmmTMB(NH4~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod8b, type="III")
 summary(Mod8b)
 performance::r2(Mod8b) # 0.864
 shapiro.test(resid(Mod8b)) # p= 1.249e-06
@@ -1244,6 +1253,7 @@ bf.test(PO4~Treatment, data=Pots1) # 0.0003149367
 rsq.glmm(Mod9g)
 # Mod9h glmm
 Mod9h <- glmmTMB(log(PO4)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod9h, type="III")
 summary(Mod9h)
 performance::r2(Mod9h) # 0.962
 shapiro.test(resid(Mod9h)) # p= 0.475
@@ -1324,6 +1334,7 @@ qqnorm(resid(Mod10a)) # small-medium tails
 qqline(resid(Mod10a))
 # Mod10b glmm
 Mod10b <- glmmTMB(log(ResinP)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod10b, type="III")
 summary(Mod10b)
 performance::r2(Mod10b) # 0.812
 shapiro.test(resid(Mod10b)) # p= 0.01133
@@ -1394,6 +1405,7 @@ qqnorm(resid(Mod11a)) # small tails
 qqline(resid(Mod11a))
 # Mod11b glmm
 Mod11b <- glmmTMB(log(WaterSolP)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod11b, type="III")
 summary(Mod11b)
 performance::r2(Mod11b) # 0.804
 shapiro.test(resid(Mod11b)) # p= 0.1704
@@ -1463,6 +1475,7 @@ qqline(resid(Mod12b))
 # Mod12c glmm - convergence issues
 Mod12c <- glmmTMB(TotalP2~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude,
                   control=glmmTMBControl(optimizer=optim, optArgs=list(parallel = TRUE, nthreads = 100)))
+glmmTMB:::Anova.glmmTMB(Mod12c, type="III")
 summary(Mod12c)
 performance::r2(Mod12c) # 0.764
 shapiro.test(resid(Mod12c)) # p= 2.019e-05
@@ -1556,6 +1569,7 @@ qqline(resid(Mod13c))
 # Mod13d glmm - convergence issues
 Mod13d <- glmmTMB(pH~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), 
                   control=glmmTMBControl(optimizer=optim, optArgs=list(parallel = TRUE, nthreads = 4)))
+glmmTMB:::Anova.glmmTMB(Mod13d, type="III")
 print(vif(Mod13d))
 summary(Mod13d)
 performance::r2(Mod13d) # 0.939
@@ -1632,6 +1646,7 @@ qqnorm(resid(Mod14a)) # small tails
 qqline(resid(Mod14a))
 # Mod14b glmm - convergence issues
 Mod14b <- glmmTMB(log(EC)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod14b, type="III")
 summary(Mod14b)
 performance::r2(Mod14b) # 0.818
 shapiro.test(resid(Mod14b)) # p= 0.4634
@@ -1740,6 +1755,7 @@ qqnorm(resid(Mod15e)) # fat tails
 qqline(resid(Mod15e))
 # Mod115f glmm - convergence issues
 Mod15f <- glmmTMB(OC~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Mod15f, type="III")
 summary(Mod15f)
 performance::r2(Mod15f) # 0.934
 shapiro.test(resid(Mod15f)) # p= 5.413e-09
@@ -2465,3 +2481,91 @@ OxEigScatter <- function(data, model, targetColumn = 'Yield') {
 }
 OxEigScatter(OxSubEig, OxModEig)
 ggsave(OxEigScatter(OxSubEig, OxModEig), file="Pots1_EigenScatter_Oxbow.jpg", width=10, height=10, dpi=150)
+
+
+
+
+####  Extract ANOVA tables  ####
+# List models and ANOVA table
+Mod1b <- glmmTMB(Yield~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+YieldAN <- glmmTMB:::Anova.glmmTMB(Mod1b, type="III")
+# Add row names (treatment, soil, etc.) in excel sheet
+YieldAN$RowNames <- row.names(YieldAN)
+rownames(YieldAN) <- NULL
+
+Mod3b<-lmer(log(Nuptake)~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude, 
+            control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
+NupAn <- anova(Mod3b)
+NupAn$RowNames <- row.names(NupAn)
+rownames(NupAn) <- NULL
+
+Mod4g <- glmmTMB(Nrecovery~Treatment*Soil+(1|Soil), data=Nrec_out, family=gaussian(), na.action=na.exclude)
+NrecAN <- glmmTMB:::Anova.glmmTMB(Mod4g, type="III")
+NrecAN$RowNames <- row.names(NrecAN)
+rownames(NrecAN) <- NULL
+
+Mod5c <- glmmTMB(Puptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+PupAN <- glmmTMB:::Anova.glmmTMB(Mod5c, type="III")
+PupAN$RowNames <- row.names(PupAN)
+rownames(PupAN) <- NULL
+
+Mod6d <- glmmTMB(Precovery~Treatment*Soil+(1|Soil), data=Prec, family=gaussian(), na.action=na.exclude)
+PrecAN <- glmmTMB:::Anova.glmmTMB(Mod6d, type="III")
+PrecAN$RowNames <- row.names(PrecAN)
+rownames(PrecAN) <- NULL
+
+Mod7b <- glmmTMB(NO3~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+NO3AN <- glmmTMB:::Anova.glmmTMB(Mod7b, type="III")
+NO3AN$RowNames <- row.names(NO3AN)
+rownames(NO3AN) <- NULL
+
+Mod8b <- glmmTMB(NH4~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+NH4AN <- glmmTMB:::Anova.glmmTMB(Mod8b, type="III")
+NH4AN$RowNames <- row.names(NH4AN)
+rownames(NH4AN) <- NULL
+
+Mod9h <- glmmTMB(log(PO4)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+PO4AN <- glmmTMB:::Anova.glmmTMB(Mod9h, type="III")
+PO4AN$RowNames <- row.names(PO4AN)
+rownames(PO4AN) <- NULL
+
+Mod10b <- glmmTMB(log(ResinP)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+ResPAN <- glmmTMB:::Anova.glmmTMB(Mod10b, type="III")
+ResPAN$RowNames <- row.names(ResPAN)
+rownames(ResPAN) <- NULL
+
+Mod11b <- glmmTMB(log(WaterSolP)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+WSPAN <- glmmTMB:::Anova.glmmTMB(Mod11b, type="III")
+WSPAN$RowNames <- row.names(WSPAN)
+rownames(WSPAN) <- NULL
+
+Mod12b <- lmer(TotalP2~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude) #didn't converge properly
+TotPAN <- anova(Mod12b) 
+TotPAN$RowNames <- row.names(TotPAN)
+rownames(TotPAN) <- NULL
+
+Mod13c <- glmer(pH~Treatment*Soil+(1|Soil),data=Pots1, family=gaussian(link="log")) #singularity issues
+pHAN <- anova(Mod13c)
+pHAN$RowNames <- row.names(pHAN)
+rownames(pHAN) <- NULL
+
+Mod14b <- glmmTMB(log(EC)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+ecAN <- glmmTMB:::Anova.glmmTMB(Mod14b, type="III")
+ecAN$RowNames <- row.names(ecAN)
+rownames(ecAN) <- NULL
+
+Mod15f <- glmmTMB(OC~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+ocAN <- glmmTMB:::Anova.glmmTMB(Mod15f, type="III")
+ocAN$RowNames <- row.names(ocAN)
+rownames(ocAN) <- NULL
+
+# Make list of anova table functions
+Pots1ANOVAtables <- list(YieldAN, NupAn, NrecAN, PupAN, PrecAN, NO3AN, NH4AN, PO4AN, ResPAN, WSPAN, TotPAN, pHAN,
+                         ecAN, ocAN)
+# Rename worksheets
+names(Pots1ANOVAtables) <- c("Yield", "Nuptake", "Nrecovery", "Puptake","Precovery", "NO3", "NH4", "PO4", 
+                             "ResinP", "WaterSolP", "TotalP", "pH", "EC", "OC")
+# Write anova tables to excel
+write_xlsx(Pots1ANOVAtables, path = "Pots1ANOVAtables.xlsx")
+
+

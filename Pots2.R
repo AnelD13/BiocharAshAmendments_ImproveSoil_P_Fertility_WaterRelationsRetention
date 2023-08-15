@@ -32,6 +32,10 @@ library(car)
 library(ggpubr)
 library(stringr)
 library(corrplot)
+library(writexl)
+library(glmmTMB)
+library(viridis)
+library(corrplot)
 
 
 ##### Summary and ordering of data   ####
@@ -226,6 +230,7 @@ qqline(resid(ModP2G3))
 rsq(ModP2G3) # 0.5607
 # ModP2G4 glmm - convergence issues related to non-positive values
 ModP2G4<- glmmTMB(Grain~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2G4, type="III")
 summary(ModP2G4)
 shapiro.test(resid(ModP2G4)) # p=0.528
 plot(fitted(ModP2G4),resid(ModP2G4),pch=16) # normal, slightly towards top
@@ -282,6 +287,7 @@ qqline(resid(ModP2S3))
 rsq(ModP2S3) # 0.635
 # ModP2S4 glmm - convergence issues related to non-positive values
 ModP2S4<- glmmTMB(Straw~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2S4, type="III")
 summary(ModP2S4)
 shapiro.test(resid(ModP2S4)) # p=0.567
 plot(fitted(ModP2S4),resid(ModP2S3),pch=16) # normal
@@ -337,6 +343,7 @@ qqline(resid(ModP2Bio2))
 rsq(ModP2Bio2)  # 0.7748827
 # ModP2Bio3 glmm - convergence issues related to non-positive values
 ModP2Bio3<- glmmTMB(Biomass~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2Bio3, type="III")
 summary(ModP2Bio3)
 shapiro.test(resid(ModP2Bio3)) # p=0.027
 plot(fitted(ModP2Bio3),resid(ModP2Bio3),pch=16) # normal
@@ -490,6 +497,7 @@ qqline(resid(ModP2Nup2))
 rsq(ModP2Nup2)  # 0.5543654
 # ModP2Nup3 glmm 
 ModP2Nup3<- glmmTMB(Nuptake~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2Nup3, type="III")
 summary(ModP2Nup3)
 shapiro.test(resid(ModP2Nup3)) # p=0.13
 plot(fitted(ModP2Nup3),resid(ModP2Nup3),pch=16) # left cluster
@@ -603,6 +611,7 @@ qqline(resid(ModP2Pup2))
 rsq(ModP2Pup2)  # 0.6712941
 # ModP2Pup3 glmm - possible singularity issues
 ModP2Pup3<- glmmTMB(Puptake~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2Pup3, type="III")
 summary(ModP2Pup3)
 shapiro.test(resid(ModP2Pup3)) # p=0.16
 plot(fitted(ModP2Pup3),resid(ModP2Pup3),pch=16) # normal
@@ -718,6 +727,7 @@ qqline(resid(ModP2SNO32))
 rsq(ModP2SNO32) # rsq=0.6791344
 # ModP2SNO33 glmm 
 ModP2SNO33<- glmmTMB(SNO3~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2SNO33, type="III")
 summary(ModP2SNO33)
 shapiro.test(resid(ModP2SNO33)) # p=0.027
 plot(fitted(ModP2SNO33),resid(ModP2SNO33),pch=16) # clustered below mid-line
@@ -770,6 +780,7 @@ qqline(resid(ModP2SNH42))
 rsq(ModP2SNH42) # rsq=0.4700318
 # ModP2SNH43 glmm 
 ModP2SNH43<- glmmTMB(SNH4~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2SNH43, type="III")
 summary(ModP2SNH43)
 shapiro.test(resid(ModP2SNH43)) # p=0.27
 plot(fitted(ModP2SNH43),resid(ModP2SNH43),pch=16) # normal
@@ -814,6 +825,7 @@ ModP2SPO41sum_sq_resid <- ModP2SPO41_tidy$sumsq[2]
 ModP2SPO41sum_sq_reg / (ModP2SPO41sum_sq_reg + ModP2SPO41sum_sq_resid) #0.8786474
 # ModP2SPO43 glmm
 ModP2SPO43<- glmmTMB(SPO4~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2SPO43, type="III")
 summary(ModP2SPO43)
 shapiro.test(resid(ModP2SPO43)) # p=0.36
 plot(fitted(ModP2SPO43),resid(ModP2SPO43),pch=16) # normalish
@@ -856,6 +868,7 @@ ModP2ResP1sum_sq_resid <- ModP2ResP1_tidy$sumsq[2]
 ModP2ResP1sum_sq_reg / (ModP2ResP1sum_sq_reg + ModP2ResP1sum_sq_resid) #0.548
 # ModP2ResP1 glmm 
 ModP2ResP2<- glmmTMB(log(ResinP)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2ResP2, type="III")
 summary(ModP2ResP2)
 shapiro.test(resid(ModP2ResP2)) # p=0.456
 plot(fitted(ModP2ResP2),resid(ModP2ResP2),pch=16) # normal
@@ -864,7 +877,7 @@ qqline(resid(ModP2ResP1))
 performance::r2(ModP2ResP2) # Na, possible singularity effect
 
 #emmeans 
-ModP2emResP1 <- emmeans(ModP2ResP1,~Treatment, type="response")
+ModP2emResP1 <- emmeans(ModP2ResP2,~Treatment, type="response")
 ModP2emResP1_cld <- cld(ModP2emNup, Letters = trimws(letters), reversed = TRUE) 
 View(ModP2emResP1_cld)
 write.csv(ModP2emResP1_cld, file="Pots2_resinP.csv")
@@ -901,6 +914,7 @@ ModP2WSP1sum_sq_resid <- ModP2WSP1_tidy$sumsq[2]
 ModP2WSP1sum_sq_reg / (ModP2WSP1sum_sq_reg + ModP2WSP1sum_sq_resid) #0.9799464
 # ModP2WSP2 glmm 
 ModP2WSP2<- glmmTMB(log(WatSolP)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2WSP2, type="III")
 summary(ModP2WSP2)
 shapiro.test(resid(ModP2WSP2)) # p=0.35
 plot(fitted(ModP2WSP2),resid(ModP2WSP2),pch=16) # normal
@@ -953,6 +967,7 @@ ModP2TotalP1sum_sq_resid <- ModP2TotalP1_tidy$sumsq[2]
 ModP2TotalP1sum_sq_reg / (ModP2TotalP1sum_sq_reg + ModP2TotalP1sum_sq_resid) #0.6312668
 # ModP2TotalP2 glmm 
 ModP2TotalP2<- glmmTMB(log(TotalP)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2TotalP2, type="III")
 summary(ModP2TotalP2)
 shapiro.test(resid(ModP2TotalP2)) # p=0.84
 plot(fitted(ModP2TotalP2),resid(ModP2TotalP2),pch=16) # normal
@@ -1012,6 +1027,7 @@ qqline(resid(ModP2pH2))
 rsq(ModP2pH2) # rsq=0.4528747
 # ModP2pH3 glmm 
 ModP2pH3<- glmmTMB(pH~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2pH3, type="III")
 summary(ModP2pH3)
 shapiro.test(resid(ModP2pH3)) # p=0.25
 plot(fitted(ModP2pH3),resid(ModP2pH3),pch=16) # normal
@@ -1072,6 +1088,7 @@ qqline(resid(ModP2EC2))
 rsq(ModP2EC2) # rsq=0.5976484
 # ModP2EC2 glmm 
 ModP2EC3<- glmmTMB(EC~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2EC3, type="III")
 summary(ModP2EC3)
 shapiro.test(resid(ModP2EC3)) # p=0.004
 plot(fitted(ModP2EC3),resid(ModP2EC3),pch=16) # clusrtered below mid-line
@@ -1147,6 +1164,7 @@ ModP2OC1sum_sq_resid <- ModP2OC1_tidy$sumsq[2]
 ModP2OC1sum_sq_reg / (ModP2OC1sum_sq_reg + ModP2OC1sum_sq_resid) # 0.9227297
 # ModP2OC2 glmm - singularity issues
 ModP2OC2<- glmmTMB(OC~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2OC2, type="III")
 summary(ModP2OC2)
 shapiro.test(resid(ModP2OC2)) # p=0.44
 plot(fitted(ModP2OC2),resid(ModP2OC2),pch=16) # clustered to left, equal around mid-line
@@ -1212,6 +1230,7 @@ ModP2LPO41sum_sq_resid <- ModP2LPO41_tidy$sumsq[2]
 ModP2LPO41sum_sq_reg / (ModP2LPO41sum_sq_reg + ModP2LPO41sum_sq_resid) #0.9115165
 # glmm model - singularity issues
 ModP2LPO42<- glmmTMB(log(LPO4)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2LPO42, type="III")
 summary(ModP2LPO42)
 shapiro.test(resid(ModP2LPO42)) # p=0.349
 plot(fitted(ModP2LPO42),resid(ModP2LPO42),pch=16) # normal, equal around mid-line
@@ -1287,6 +1306,7 @@ ModP2LNO31sum_sq_resid <- ModP2LNO31_tidy$sumsq[2]
 ModP2LNO31sum_sq_reg / (ModP2LNO31sum_sq_reg + ModP2LNO31sum_sq_resid) # 0.9095553
 # glmm model - singularity issues in rsq
 ModP2LNO32<- glmmTMB(sqrt(LNO3)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2LNO32, type="III")
 summary(ModP2LNO32)
 shapiro.test(resid(ModP2LNO32)) # p=0.79
 plot(fitted(ModP2LNO32),resid(ModP2LNO32),pch=16) # normal, equal around mid-line
@@ -1361,6 +1381,7 @@ ModP2LNH41sum_sq_resid <- ModP2LNH41_tidy$sumsq[2]
 ModP2LNH41sum_sq_reg / (ModP2LNH41sum_sq_reg + ModP2LNH41sum_sq_resid) # 0.6988937
 # glmm model
 ModP2LNH42<- glmmTMB(log(LNH4)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2LNH42, type="III")
 summary(ModP2LNH42)
 shapiro.test(resid(ModP2LNH42)) # p=0.96
 plot(fitted(ModP2LNH42),resid(ModP2LNH42),pch=16) # normal
@@ -1393,7 +1414,7 @@ View(ModP2emLNH4_cld)
 write.csv(ModP2emLNH4_cld, file="Pots2_LNH4.csv")
 
 
-####  Correlation between soil P and leachate P  ####
+####  CORRELATION OF P FRACTIONS  ####
 Pots2PCorMatrix <- Pots2[complete.cases(Pots2), c("SPO4", "ResinP", "WatSolP", "TotalP", "Puptake", "LPO4")]
 # full matrix
 Pots2PCor <- cor(Pots2PCorMatrix)
@@ -1408,7 +1429,8 @@ View(Pots2PCorSub)
 # heatmap & correllelogram requires at least 2 columns and two rows
 #Correlellogram
 jpeg("Pots2_Pcorplot.jpg", width = 8, height = 5, units = "in", res = 300)
-corrplot(Pots2PCorSub, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ")
+corrplot(Pots2PCorSub, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
+         col=viridis(n = 100, option = "D"))
 dev.off()
 #heatmap
 #heatmap(Pots2PCorSub, Rowv = NA, Colv = NA, col = colorRampPalette(c("blue", "white", "red"))(100), scale = "none",
@@ -1630,3 +1652,87 @@ View(Pots2Contour_grid)
           axis.title.y=element_text(size=30, face="bold"),
           panel.spacing = unit(0.5, "cm")))
 ggsave(Pots2Contours, file="Pots2_YieldContour.jpg", width=20, height=20, dpi=150)
+
+
+
+####  Extract ANOVA tables  ####
+ModP2Bio3<- glmmTMB(Biomass~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2YieldAN <- glmmTMB:::Anova.glmmTMB(ModP2Bio3, type="III")
+P2YieldAN$RowNames <- row.names(P2YieldAN)
+rownames(P2YieldAN) <- NULL
+
+ModP2Nup3<- glmmTMB(Nuptake~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2NupAN <- glmmTMB:::Anova.glmmTMB(ModP2Nup3, type="III")
+P2NupAN$RowNames <- row.names(P2NupAN)
+rownames(P2NupAN) <- NULL
+
+ModP2Pup4 <- lmer(Puptake~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
+P2PupAN <- anova(ModP2Pup4) 
+P2PupAN$RowNames <- row.names(P2PupAN)
+rownames(P2PupAN) <- NULL
+
+ModP2SNO33<- glmmTMB(SNO3~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2SNO3AN <- glmmTMB:::Anova.glmmTMB(ModP2SNO33, type="III")
+P2SNO3AN$RowNames <- row.names(P2SNO3AN)
+rownames(P2SNO3AN) <- NULL
+
+ModP2SNH43<- glmmTMB(SNH4~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2SNH4AN <- glmmTMB:::Anova.glmmTMB(ModP2SNH43, type="III")
+P2SNH4AN$RowNames <- row.names(P2SNH4AN)
+rownames(P2SNH4AN) <- NULL
+
+ModP2SPO43<- glmmTMB(SPO4~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2SPO4AN <- glmmTMB:::Anova.glmmTMB(ModP2SPO43, type="III")
+P2SPO4AN$RowNames <- row.names(P2SPO4AN)
+rownames(P2SPO4AN) <- NULL
+
+ModP2ResP2<- glmmTMB(log(ResinP)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2ResPAN <- glmmTMB:::Anova.glmmTMB(ModP2ResP2, type="III")
+P2ResPAN$RowNames <- row.names(P2ResPAN)
+rownames(P2ResPAN) <- NULL
+
+ModP2WSP2<- glmmTMB(log(WatSolP)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2WSPAN <- glmmTMB:::Anova.glmmTMB(ModP2WSP2, type="III")
+P2WSPAN$RowNames <- row.names(P2WSPAN)
+rownames(P2WSPAN) <- NULL
+
+ModP2TotalP2<- glmmTMB(log(TotalP)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2totPAN <- glmmTMB:::Anova.glmmTMB(ModP2TotalP2, type="III")
+P2totPAN$RowNames <- row.names(P2totPAN)
+rownames(P2totPAN) <- NULL
+
+ModP2pH3<- glmmTMB(pH~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2pHAN <- glmmTMB:::Anova.glmmTMB(ModP2pH3, type="III")
+P2pHAN$RowNames <- row.names(P2pHAN)
+rownames(P2pHAN) <- NULL
+
+ModP2EC5 <- lme(EC ~ Treatment, random=~1|Block, data=Pots2, na.action=na.exclude)
+P2ecAN <- anova(ModP2EC5)
+P2ecAN$RowNames <- row.names(P2ecAN)
+rownames(P2ecAN) <- NULL
+
+ModP2OC5 <- glmer(OC~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"), na.action=na.exclude)
+P2ocAN <- anova(ModP2OC5)
+P2ocAN$RowNames <- row.names(P2ocAN)
+rownames(P2ocAN) <- NULL
+
+ModP2LNO32<- glmmTMB(sqrt(LNO3)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2LNO3AN <- glmmTMB:::Anova.glmmTMB(ModP2LNO32, type="III")
+P2LNO3AN$RowNames <- row.names(P2LNO3AN)
+rownames(P2LNO3AN) <- NULL
+
+ModP2LNH42<- glmmTMB(log(LNH4)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2LNH4AN <- glmmTMB:::Anova.glmmTMB(ModP2LNH42, type="III")
+P2LNH4AN$RowNames <- row.names(P2LNH4AN)
+rownames(P2LNH4AN) <- NULL
+
+ModP2LPO42<- glmmTMB(log(LPO4)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+P2LPO4AN <- glmmTMB:::Anova.glmmTMB(ModP2LPO42, type="III")
+P2LPO4AN$RowNames <- row.names(P2LPO4AN)
+rownames(P2LPO4AN) <- NULL
+
+Pots2ANOVAtables <- list(P2YieldAN, P2NupAN, P2PupAN, P2SNO3AN, P2SNH4AN, P2SPO4AN, P2ResPAN, P2WSPAN, P2totPAN, 
+                        P2pHAN, P2ecAN, P2ocAN, P2LNO3AN, P2LNH4AN, P2LPO4AN)
+names(Pots2ANOVAtables) <- c("Yield", "Nuptake", "Puptake", "SoilNO3", "SoilNH4", "SoilPO4", 
+                            "ResinP", "WaterSolP", "TotalP", "pH", "EC", "OC", "LeachNO3", "LeachNH4", "LeachPO4")
+write_xlsx(Pots2ANOVAtables, path = "Pots2ANOVAtables.xlsx")

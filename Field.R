@@ -31,6 +31,8 @@ library(rsq)
 library(pgirmess)
 library(dunn.test)
 library(directlabels)
+library(writexl)
+library(glmmTMB)
 
 ##### Combining 0-30cm values   ####
 # Calculate mean of soil data from incremental depths to combined depth (0-30cm)
@@ -1729,3 +1731,55 @@ View(FieldContour_grid)
           panel.spacing = unit(0.5, "cm")))
 ggsave(FieldContours, file="Field_YieldContour.jpg", width=20, height=20, dpi=150)
 
+####  Extract ANOVA tables  ####
+
+FYieldAN$RowNames <- row.names(FYieldAN)
+rownames(FYieldAN) <- NULL
+
+FNupAN$RowNames <- row.names(FNupAN)
+rownames(FNupAN) <- NULL
+
+FPupAN$RowNames <- row.names(FPupAN)
+rownames(FPupAN) <- NULL
+
+FSNO3AN$RowNames <- row.names(FSNO3AN)
+rownames(FSNO3AN) <- NULL
+
+FSNH4AN$RowNames <- row.names(FSNH4AN)
+rownames(FSNH4AN) <- NULL
+
+FSPO4AN$RowNames <- row.names(FSPO4AN)
+rownames(FSPO4AN) <- NULL
+
+FResPAN$RowNames <- row.names(FResPAN)
+rownames(FResPAN) <- NULL
+
+FWSPAN$RowNames <- row.names(FWSPAN)
+rownames(FWSPAN) <- NULL
+
+FtotPAN$RowNames <- row.names(FtotPAN)
+rownames(FtotPAN) <- NULL
+
+FpHAN$RowNames <- row.names(FpHAN)
+rownames(FpHAN) <- NULL
+
+FecAN$RowNames <- row.names(FecAN)
+rownames(FecAN) <- NULL
+
+FocAN$RowNames <- row.names(FocAN)
+rownames(FocAN) <- NULL
+
+FLNO3AN$RowNames <- row.names(FLNO3AN)
+rownames(FLNO3AN) <- NULL
+
+FLNH4AN$RowNames <- row.names(FLNH4AN)
+rownames(FLNH4AN) <- NULL
+
+FLPO4AN$RowNames <- row.names(FLPO4AN)
+rownames(FLPO4AN) <- NULL
+
+FieldANOVAtables <- list(FYieldAN, FNupAN, FNrecAN, FPupAN, FPrecAN, FSNO3AN, FSPO4AN, FResPAN, FWSPAN, FpHAN, 
+                         FecAN, FocAN, FLNO3AN, FLNH4AN, FLPO4AN, FResPo4, FResNO3)
+names(FieldANOVAtables) <- c("Yield", "Nuptake", "Nrecovery", "Puptake", "Precovery", "SoilNO3", "SoilPO4", "ResinP", 
+                             "WaterSolP", "pH", "EC", "OC", "SnowNO3", "SnowNH4", "SnowPO4", "ResinPO4", "ResinNO3")
+write_xlsx(FieldANOVAtables, path = "FieldANOVAtables.xlsx")

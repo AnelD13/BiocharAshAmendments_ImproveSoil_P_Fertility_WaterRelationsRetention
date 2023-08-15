@@ -26,6 +26,8 @@ library(lsmeans)
 library(e1071)
 library(rsq)
 library(mum)
+library(writexl)
+library(glmmTMB)
 
 ##### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -163,6 +165,7 @@ summary(ModRBio2)$adj.r.squared # -0.2366
 # ModRBio3 glmm - convergence issues
 ModRBio3<- glmmTMB(Biomass~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude,
                   control=glmmTMBControl(optimizer=optim, optArgs=list(parallel = TRUE, nthreads = 100)))
+glmmTMB:::Anova.glmmTMB(ModRBio3, type="III")
 summary(ModRbio3)
 performance::r2(ModRbio3) # 0.942
 shapiro.test(resid(ModRbio3)) # p=0.5151
@@ -268,6 +271,7 @@ ModRNup1sum_sq_resid <- ModRNup1_tidy$sumsq[2]
 ModRNup1sum_sq_reg / (ModRNup1sum_sq_reg + ModRNup1sum_sq_resid) #calculate the R squared value: 0.58
 # ModRNup2 glmm
 ModRNup2<- glmmTMB(Nuptake~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRNup2, type="III")
 summary(ModRNup2)
 performance::r2(ModRNup2) # 0.872
 shapiro.test(resid(ModRNup2)) # p=0.1033
@@ -369,6 +373,7 @@ ModRNrec1sum_sq_resid <- ModRNrec1_tidy$sumsq[2]
 ModRNrec1sum_sq_reg / (ModRNrec1sum_sq_reg + ModRNrec1sum_sq_resid) #calculate the R squared value: 0.907
 # ModRNrec2 glmm
 ModRNrec2<- glmmTMB(Nrecovery~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRNrec2, type="III")
 summary(ModRNrec2)
 performance::r2(ModRNrec2) # Na - may have singularity issues
 shapiro.test(resid(ModRNrec2)) # p=0.8896
@@ -460,6 +465,7 @@ ModRPup1sum_sq_resid <- ModRPup1_tidy$sumsq[2]
 ModRPup1sum_sq_reg / (ModRPup1sum_sq_reg + ModRPup1sum_sq_resid) #calculate the R squared value: 0.35
 # ModRPup2 glmm
 ModRPup2<- glmmTMB(Puptake~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRPup2, type="III")
 summary(ModRPup2)
 performance::r2(ModRPup2) # 0.251
 shapiro.test(resid(ModRPup2)) # p=0.0465
@@ -552,12 +558,13 @@ ModRPrec1sum_sq_resid <- ModRPrec1_tidy$sumsq[2]
 ModRPrec1sum_sq_reg / (ModRPrec1sum_sq_reg + ModRPrec1sum_sq_resid) #calculate the R squared value: 0.266
 # ModRPrec2 glmm
 ModRPrec2<- glmmTMB(Precovery~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRPrec2, type="III")
 summary(ModRPrec2)
-performance::r2(ModRPrec2) # 0.267
 shapiro.test(resid(ModRPrec2)) # p=0.5276
 plot(fitted(ModRPrec2),resid(ModRPrec2),pch=16) # normal
 qqnorm(resid(ModRPrec2)) # slight tails
 qqline(resid(ModRPrec2))
+performance::r2(ModRPrec2) # 0.267
 #ModRPrec3 lmer
 ModRPrec3 <- lmer(Precovery~Treatment+(1|Block), data=Rows, na.action=na.exclude) 
 anova(ModRPrec3) 
@@ -569,8 +576,8 @@ qqline(resid(ModRPrec3))
 rsq(ModRPrec3)  # 0.214
 # ModRPrec4 lme model
 ModRPrec4 <- lme(Precovery ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
-summary(ModRPrec4)
 anova(ModRPrec4)
+summary(ModRPrec4)
 shapiro.test(resid(ModRPrec4)) # p= 0.5304
 plot(fitted(ModRPrec4),resid(ModRPrec4),pch=16) # normal
 qqnorm(resid(ModRPrec4)) # slight tails
@@ -589,7 +596,7 @@ print(PrecRowsPrec)
 #3 ModRPrec4   88.46554   95.13125
 
 #emmeans on glmm model - df looks fine, highest rsq
-ModRemPrec <- emmeans(ModRPrec3,~Treatment, type="response")
+ModRemPrec <- emmeans(ModRPrec2,~Treatment, type="response")
 ModRemPrec_cld <- cld(ModRemPrec, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemPrec_cld)
 write.csv(ModRemPrec_cld, file="Rows_Precovery.csv")
@@ -642,6 +649,7 @@ ModRNO31sum_sq_resid <- ModRNO31_tidy$sumsq[2]
 ModRNO31sum_sq_reg / (ModRNO31sum_sq_reg + ModRNO31sum_sq_resid) #0.76
 # ModRNO3 glmm
 ModRNO32<- glmmTMB(NO3~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRNO32, type="III")
 summary(ModRNO32)
 performance::r2(ModRNO32) # 0.625
 shapiro.test(resid(ModRNO32)) # p=0.6206
@@ -682,6 +690,7 @@ ModRPO41sum_sq_resid <- ModRPO41_tidy$sumsq[2]
 ModRPO41sum_sq_reg / (ModRPO41sum_sq_reg + ModRPO41sum_sq_resid) #0.5651
 # ModRPO42 glmm - possible singularity issue related to random effect
 ModRPO42<- glmmTMB(PO4~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRPO42, type="III")
 summary(ModRPO42)
 performance::r2(ModRPO42) # 0.625
 shapiro.test(resid(ModRPO42)) # p=0.2893
@@ -724,6 +733,7 @@ ModResP1sum_sq_resid <- ModResP1_tidy$sumsq[2]
 ModResP1sum_sq_reg / (ModResP1sum_sq_reg + ModResP1sum_sq_resid) #0.539
 # ModResP2 glmm 
 ModResP2<- glmmTMB(ResinP~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModResP2, type="III")
 summary(ModResP2)
 performance::r2(ModResP2) # 0.245
 shapiro.test(resid(ModResP2)) # p=0.261
@@ -765,6 +775,7 @@ ModRWSP1sum_sq_resid <- ModRWSP1_tidy$sumsq[2]
 ModRWSP1sum_sq_reg / (ModRWSP1sum_sq_reg + ModRWSP1sum_sq_resid) #0.756
 # ModRWSP2 glmm - possible singularity issue
 ModRWSP2<- glmmTMB(WatSolP~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRWSP2, type="III")
 summary(ModRWSP2)
 performance::r2(ModRWSP2) # NA
 shapiro.test(resid(ModRWSP2)) # p=0.167
@@ -806,6 +817,7 @@ ModRpH1sum_sq_resid <- ModRpH1_tidy$sumsq[2]
 ModRpH1sum_sq_reg / (ModRpH1sum_sq_reg + ModRpH1sum_sq_resid) #0.1980843
 # ModRpH2 glmm
 ModRpH2<- glmmTMB(pH~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModRpH2, type="III")
 summary(ModRpH2)
 performance::r2(ModRpH2) # 0.589
 shapiro.test(resid(ModRpH2)) # p=0.789
@@ -854,6 +866,7 @@ ModREC1sum_sq_resid <- ModREC1_tidy$sumsq[2]
 ModREC1sum_sq_reg / (ModREC1sum_sq_reg + ModREC1sum_sq_resid) #0.808
 # ModREC2 glmm
 ModREC2<- glmmTMB(EC~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModREC2, type="III")
 summary(ModREC2)
 performance::r2(ModREC2) # 0.496
 shapiro.test(resid(ModREC2)) # p=0.5597
@@ -920,6 +933,7 @@ ModROC2sum_sq_resid <- ModROC2_tidy$sumsq[2]
 ModROC2sum_sq_reg / (ModROC2sum_sq_reg + ModROC2sum_sq_resid) #0.6617664
 # ModROC3 glmm - possible singulary issues
 ModROC3<- glmmTMB(OC~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModROC3, type="III")
 summary(ModROC3)
 performance::r2(ModROC3) # NA
 shapiro.test(resid(ModROC3)) # p=0.654
@@ -1199,3 +1213,73 @@ View(RowsContour_grid)
           axis.title.y=element_text(size=30, face="bold"),
           panel.spacing = unit(0.5, "cm")))
 ggsave(RowsContours, file="Rows_YieldContour.jpg", width=20, height=20, dpi=150)
+
+
+####  Extract ANOVA tables  ####
+ModRBio5 <- lme(Biomass ~ Treatment, random=~1|Block, data=Rows)
+RYieldAN <- anova(ModRBio5)
+RYieldAN$RowNames <- row.names(RYieldAN)
+rownames(RYieldAN) <- NULL
+
+ModRNup2<- glmmTMB(Nuptake~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RNupAN <- glmmTMB:::Anova.glmmTMB(ModRNup2, type="III")
+RNupAN$RowNames <- row.names(RNupAN)
+rownames(RNupAN) <- NULL
+
+ModRNrec2<- glmmTMB(Nrecovery~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RNrecAN <- glmmTMB:::Anova.glmmTMB(ModRNrec2, type="III")
+RNrecAN$RowNames <- row.names(RNrecAN)
+rownames(RNrecAN) <- NULL
+
+ModRPup2<- glmmTMB(Puptake~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RPupAN <- glmmTMB:::Anova.glmmTMB(ModRPup2, type="III")
+RPupAN$RowNames <- row.names(RPupAN)
+rownames(RPupAN) <- NULL
+
+ModRPrec2<- glmmTMB(Precovery~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RPrecAN <- glmmTMB:::Anova.glmmTMB(ModRPrec2, type="III")
+RPrecAN$RowNames <- row.names(RPrecAN)
+rownames(RPrecAN) <- NULL
+
+ModRNO32<- glmmTMB(NO3~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RNO3AN <- glmmTMB:::Anova.glmmTMB(ModRNO32, type="III")
+RNO3AN$RowNames <- row.names(RNO3AN)
+rownames(RNO3AN) <- NULL
+
+ModRPO42<- glmmTMB(PO4~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RPO4AN <- glmmTMB:::Anova.glmmTMB(ModRPO42, type="III")
+RPO4AN$RowNames <- row.names(RPO4AN)
+rownames(RPO4AN) <- NULL
+
+ModResP2<- glmmTMB(ResinP~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RResPAN <- glmmTMB:::Anova.glmmTMB(ModResP2, type="III")
+RResPAN$RowNames <- row.names(RResPAN)
+rownames(RResPAN) <- NULL
+
+ModRWSP2<- glmmTMB(WatSolP~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RWSPAN <- glmmTMB:::Anova.glmmTMB(ModRWSP2, type="III")
+RWSPAN$RowNames <- row.names(RWSPAN)
+rownames(RWSPAN) <- NULL
+
+ModRpH2<- glmmTMB(pH~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RpHAN <- glmmTMB:::Anova.glmmTMB(ModRpH2, type="III")
+RpHAN$RowNames <- row.names(RpHAN)
+rownames(RpHAN) <- NULL
+
+ModREC2<- glmmTMB(EC~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+RecAN <- glmmTMB:::Anova.glmmTMB(ModREC2, type="III")
+RecAN$RowNames <- row.names(RecAN)
+rownames(RecAN) <- NULL
+
+ModROC5 <- lme(OC ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
+RocAN <- anova(ModROC5)
+RocAN$RowNames <- row.names(RocAN)
+rownames(RocAN) <- NULL
+
+
+RowsANOVAtables <- list(RYieldAN, RNupAN, RNrecAN, RPupAN, RPrecAN, RNO3AN, RPO4AN, RResPAN, RWSPAN,
+                         RpHAN, RecAN, RocAN)
+names(RowsANOVAtables) <- c("Yield", "Nuptake", "Nrecovery", "Puptake","Precovery", "NO3", "PO4", 
+                             "ResinP", "WaterSolP", "pH", "EC", "OC")
+write_xlsx(RowsANOVAtables, path = "RowsANOVAtables.xlsx")
+
