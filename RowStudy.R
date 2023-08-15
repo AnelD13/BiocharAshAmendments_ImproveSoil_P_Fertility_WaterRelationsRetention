@@ -25,6 +25,7 @@ library(emmeans)
 library(lsmeans)
 library(e1071)
 library(rsq)
+library(mum)
 
 ##### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -33,9 +34,9 @@ missing <- colSums(is.na(Rowsraw[,]))
 print(missing)
 
 #Change columns in a dataframe: set order that treatments appear in any analysis and in figures
-Trt_orderRow <- c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus")
 # set to factors/categorical values, str displays 
-Rows$Treatment <- factor(Rows$Treatment,levels = unique(Rows$Treatment))
+Rows$Treatment <- factor(Rows$Treatment,levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
+                                                 "MBMACoarse", "MBMAFine", "Phosphorus"))
 Rows$Block <- factor(Rows$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
 Rows$Biomass <- as.numeric(as.character(Rows$Biomass)) #only set if issues happen when running analysis
 summary(Rows)
@@ -50,73 +51,73 @@ ggplot(Rowsraw, aes(x = Treatment, y = Biomass, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "Biomass")
-ggsave("OutliersRows_Biomass.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_Biomass.jpg", width = 10, height = 10, dpi = 150)
 ## Nuptake
 ggplot(Rowsraw, aes(x = Treatment, y = Nuptake, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "N uptake")
-ggsave("OutliersRows_Nuptake.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_Nuptake.jpg", width = 10, height = 10, dpi = 150)
 ## N recovery
 ggplot(Rowsraw, aes(x = Treatment, y = Nrecovery, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "N recovery")
-ggsave("OutliersRows_Nrecovery.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_Nrecovery.jpg", width = 10, height = 10, dpi = 150)
 ## P uptake
 ggplot(Rowsraw, aes(x = Treatment, y = Puptake, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "P uptake")
-ggsave("OutliersRows_Puptake.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_Puptake.jpg", width = 10, height = 10, dpi = 150)
 ## P recovery
 ggplot(Rowsraw, aes(x = Treatment, y = Precovery, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "P recovery")
-ggsave("OutliersRows_Precovery.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_Precovery.jpg", width = 10, height = 10, dpi = 150)
 ## NO3
 ggplot(Rowsraw, aes(x = Treatment, y = NO3, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "NO3")
-ggsave("OutliersRows_NO3.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_NO3.jpg", width = 10, height = 10, dpi = 150)
 ## PO4
 ggplot(Rowsraw, aes(x = Treatment, y = PO4, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "PO4")
-ggsave("OutliersRows_PO4.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_PO4.jpg", width = 10, height = 10, dpi = 150)
 ## WatSolP
 ggplot(Rowsraw, aes(x = Treatment, y = WatSolP, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "Water Soluble P")
-ggsave("OutliersRows_WatSolP.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_WatSolP.jpg", width = 10, height = 10, dpi = 150)
 ## ResinP
 ggplot(Rowsraw, aes(x = Treatment, y = ResinP, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "ResinP")
-ggsave("OutliersRows_ResinP.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_ResinP.jpg", width = 10, height = 10, dpi = 150)
 ## pH
 ggplot(Rowsraw, aes(x = Treatment, y = pH, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "pH")
-ggsave("OutliersRows_pH.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_pH.jpg", width = 10, height = 10, dpi = 150)
 ## EC
 ggplot(Rowsraw, aes(x = Treatment, y = EC, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "EC")
-ggsave("OutliersRows_EC.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_EC.jpg", width = 10, height = 10, dpi = 150)
 ## %OC
 ggplot(Rowsraw, aes(x = Treatment, y = OC, fill=Treatment)) +
   geom_boxplot() +
   facet_wrap(~ Treatment, scales = "free") +
   labs(x = "Treatment", y = "OC")
-ggsave("OutliersRows_OC.jpg", width = 10, height = 10, dpi = 200)
+ggsave("OutliersRows_OC.jpg", width = 10, height = 10, dpi = 150)
 
 
 
@@ -139,7 +140,7 @@ Bio_kur <- kurtosis(Bio_Mean,na.rm=TRUE)
 cat("Skewness:", Bio_skew, "\n") ## data is not very skewed: -0.21
 cat("Kurtosis:", Bio_kur, "\n") ## data has low kurtosis: -0.61
 shapiro.test(Rows$Biomass) # p=0.5637
-hist(Rows$Biomass) #  left skewed
+hist(Rows$Biomass) #  pretty normal
 leveneTest(Biomass~Treatment, data=Rows)  # data has equal variance: 0.6632
 #ModRBio1 ANOVA - perfectly predicts response variable (no variation in residuals) - not a good fit
 ModRBio1 <- aov(Biomass~Treatment+Block, data=Rows)
@@ -159,30 +160,86 @@ ModRBio2<-lm(Biomass~Treatment+Block,data=Rows)
 hist(resid(ModRBio2))
 shapiro.test(resid(ModRBio2)) # p=0.1615
 summary(ModRBio2)$adj.r.squared # -0.2366
+# ModRBio3 glmm - convergence issues
+ModRBio3<- glmmTMB(Biomass~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude,
+                  control=glmmTMBControl(optimizer=optim, optArgs=list(parallel = TRUE, nthreads = 100)))
+summary(ModRbio3)
+performance::r2(ModRbio3) # 0.942
+shapiro.test(resid(ModRbio3)) # p=0.5151
+plot(fitted(ModRbio3),resid(ModRbio3),pch=16) # 2 clusters left and right, slight upper shift
+qqnorm(resid(ModRbio3)) # moderate right tail
+qqline(resid(ModRbio3))
+#ModRBio4
+ModRBio4 <- lmer(Biomass~Treatment+(1|Block), data=Rows, na.action=na.exclude) # singularity issue
+rsq(ModRBio4)  # 0.0938
+anova(ModRBio4) 
+summary(ModRBio4)
+shapiro.test(resid(ModRBio4)) # p=0.1226
+plot(fitted(ModRBio4),resid(ModRBio4),pch=16) # slightly staggered to right
+qqnorm(resid(ModRBio4)) # moderate left tail
+qqline(resid(ModRBio4))
+# ModRBio5 lme model
+ModRBio5 <- lme(Biomass ~ Treatment, random=~1|Block, data=Rows)
+summary(ModRBio5)
+anova(ModRBio5)
+shapiro.test(resid(ModRBio5)) # p= 0.1226
+plot(fitted(ModRBio5),resid(ModRBio5),pch=16) # clustered to left, equal around 0
+qqnorm(resid(ModRBio5)) # moderate tails
+qqline(resid(ModRBio5))
+rsq(ModRBio5) # 0.0938
+#ModRBio6 glmer
+ModRBio6 <- glmer(Biomass~Treatment+(1|Block),data=Rows,family=Gamma(link="log"))
+anova(ModRBio6)
+summary(ModRBio6)
+shapiro.test(resid(ModRBio6)) # p=0.2459
+bf.test(Biomass~Treatment, data=Rows) # p=0.917, variances equal
+rsq(ModRBio6) # r=0.088
+plot(fitted(ModRBio6),resid(ModRBio6),pch=16) # slight right cluster
+qqnorm(resid(ModRBio6)) # heavy left tail, small right tail
+qqline(resid(ModRBio6))
 
-#emmeans on aov model
-ModRemBio <- emmeans(ModRBio1,~Treatment, type="response")
-ModRemBio_cld <- cld(ModRemBio, Letters = letters) 
+#AIC and BIC values
+RowsBio_modlist <- list(ModRBio1, ModRBio2, ModRBio3, ModRBio4, ModRBio5, ModRBio6)
+AIC_values <- sapply(RowsBio_modlist, AIC)
+BIC_values <- sapply(RowsBio_modlist, BIC)
+PrecRowsBio <- data.frame(Model=c("ModRBio1", "ModRBio2", "ModRBio3", "ModRBio4", "ModRBio5", "ModRBio6"),
+                          AIC_values, BIC_values)
+print(PrecRowsBio)
+#Model AIC_values BIC_values
+#1 ModRBio1   422.9009   440.4897
+##2 ModRBio2   422.9009   440.4897
+#3 ModRbio3         NA         NA
+#4 ModRBio4   339.0548   353.7122
+#5 ModRBio5   339.0548   350.8354
+#6 ModRBio6   425.8654   440.5227
+
+#emmeans on ModRBio5 - no issues running emmeans or model
+ModRemBio <- emmeans(ModRBio5,~Treatment, type="response")
+ModRemBio_cld <- cld(ModRemBio, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemBio_cld)
 write.csv(ModRemBio_cld, file="Rows_Biomass.csv")
 
 # Plotting the summary data
-par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
-ggplot(ModRemBio_cld, aes(x=Treatment, y=emmean)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01, width=0.6)+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=6, vjust=-1)+
-  labs(x = "Treatment", y = "Canola biomass (g)") +
-  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
-                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
-  scale_y_continuous(limits = c(0, 800))+
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=20, face="bold", colour="black"),
-        axis.title.x = element_blank(), axis.title.y = element_text(size = 24, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Rows_biomass.jpg", width = 12, height = 8, dpi = 500)
+(RowsBioPlot <- ggplot(ModRemBio_cld, aes(x=Treatment, y=emmean)) +
+    geom_bar_pattern(stat="identity", width=0.5, position=position_dodge2(padding=0.5), colour="black", fill="white", 
+                     pattern_density=0.05, pattern_spacing=0.01)+
+    geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width = 0.2, position = position_dodge(width = 0.9)) +
+    geom_text(aes(label=trimws(.group), y=emmean+SE), size=9, vjust=-0.7)+
+    labs(x = "Treatment", y = "Canola biomass (g)") +
+    scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
+                                "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
+                                "Fertilizer\nPhosphorus"))+
+    scale_y_continuous(limits = c(0, 750))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(RowsBioPlot, file="Rows_biomass.jpg", width = 8, height = 8, dpi = 150)
 
 
 
@@ -192,7 +249,7 @@ RowNup_Mean <- as.numeric(RowNup_Mean$Nuptake)
 RowNup_skew <- skewness(RowNup_Mean,na.rm=TRUE)
 RowNup_kur <- kurtosis(RowNup_Mean,na.rm=TRUE)
 cat("Skewness:", RowNup_skew, "\n") ## data is not very skewed: -0.1011
-cat("Kurtosis:", RowNup_kur, "\n") ## data has medium-high kurtosis: -0.4737
+cat("Kurtosis:", RowNup_kur, "\n") ## data has low kurtosis: -0.4737
 shapiro.test(Rows$Nuptake) # p=0.8318
 hist(Rows$Nuptake) #  pretty normal
 leveneTest(Nuptake~Treatment, data=Rows)  # data has equal variance: 0.321
@@ -209,30 +266,82 @@ ModRNup1_tidy <- tidy(ModRNup1)
 ModRNup1sum_sq_reg <- ModRNup1_tidy$sumsq[1] 
 ModRNup1sum_sq_resid <- ModRNup1_tidy$sumsq[2]
 ModRNup1sum_sq_reg / (ModRNup1sum_sq_reg + ModRNup1sum_sq_resid) #calculate the R squared value: 0.58
+# ModRNup2 glmm
+ModRNup2<- glmmTMB(Nuptake~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRNup2)
+performance::r2(ModRNup2) # 0.872
+shapiro.test(resid(ModRNup2)) # p=0.1033
+plot(fitted(ModRNup2),resid(ModRNup2),pch=16) # skewed towards the right, little bit heavier below the line
+qqnorm(resid(ModRNup2)) # moderate tails
+qqline(resid(ModRNup2))
+#ModRNup3 lmer
+ModRNup3 <- lmer(Nuptake~Treatment+(1|Block), data=Rows, na.action=na.exclude) # singularity issue
+anova(ModRNup3) 
+summary(ModRNup3)
+shapiro.test(resid(ModRNup3)) # p=0.5875
+plot(fitted(ModRNup3),resid(ModRNup3),pch=16) # slightly staggered to right
+qqnorm(resid(ModRNup3)) # almost no tails
+qqline(resid(ModRNup3))
+rsq(ModRNup3)  # 0.146
+# ModRNup4 lme model
+ModRNup4 <- lme(Nuptake ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
+summary(ModRNup4)
+anova(ModRNup4)
+shapiro.test(resid(ModRNup4)) # p= 0.1226
+plot(fitted(ModRNup4),resid(ModRNup4),pch=16) # clustered to right, equal around 0
+qqnorm(resid(ModRNup4)) # almost no tails
+qqline(resid(ModRNup4))
+r.squaredGLMM(ModRNup4)
+#ModRNup5 glmer - results in infinite df values in emmeans
+ModRNup5 <- glmer(Nuptake~Treatment+(1|Block),data=Rows,family=Gamma(link="log"))
+anova(ModRNup5)
+summary(ModRNup5)
+shapiro.test(resid(ModRNup5)) # p=0.782
+bf.test(Nuptake~Treatment, data=Rows) # p=0.759, variances equal
+performance::r2(ModRNup5) # 0.22
+plot(fitted(ModRNup5),resid(ModRNup5),pch=16) # slight right cluster
+qqnorm(resid(ModRNup5)) # light tails
+qqline(resid(ModRNup5))
 
-#emmeans on aov model
-ModRemNup <- emmeans(ModRNup1,~Treatment, type="response")
-ModRemNup_cld <- cld(ModRemNup, Letters = letters) 
+
+#AIC and BIC values
+RowsNup_modlist <- list(ModRNup2, ModRNup3, ModRNup4, ModRNup5)
+AIC_values <- sapply(RowsNup_modlist, AIC)
+BIC_values <- sapply(RowsNup_modlist, BIC)
+PrecRowsNup <- data.frame(Model=c("ModRNup2", "ModRNup3", "ModRNup4", "ModRNup5"), AIC_values, BIC_values)
+print(PrecRowsNup)
+#Model AIC_values BIC_values
+#1 ModRNup2   203.4601   217.8000
+#2 ModRNup3   173.7836   188.1235
+#3 ModRNup4   173.7836   185.1385
+#4 ModRNup5   207.4792   221.8191
+
+#emmeans on glmm model - no convergence or singularity issues, works fine in emmeans, df looks good
+ModRemNup <- emmeans(ModRNup2,~Treatment, type="response")
+ModRemNup_cld <- cld(ModRemNup, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemNup_cld)
 write.csv(ModRemNup_cld, file="Rows_Nuptake.csv")
 
 # Plotting the summary data
-par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
-ggplot(ModRemNup_cld, aes(x=Treatment, y=emmean)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+(RowsNupPlot <- ggplot(ModRemNup_cld, aes(x=Treatment, y=emmean)) +
+  geom_bar_pattern(stat = "identity", width=0.5, position = position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE+0.5), size=4, position = position_dodge2(width = 0.9))+
-  labs(x = "Treatment", y = "N uptake (ug)") +
-  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
-                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Rows_Nuptake.jpg", width = 8, height = 8, dpi = 600)
+  geom_text(aes(label=trimws(.group), y=emmean+SE+1), size=9)+
+  labs(x = "Treatment", y = "N uptake (kg N/ha)") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
+                              "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
+                              "Fertilizer\nPhosphorus"))+
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+        axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(RowsNupPlot, file="Rows_Nuptake.jpg", width = 8, height = 8, dpi = 150)
 
 
 #####   N RECOVERY   ##########
@@ -258,31 +367,71 @@ ModRNrec1_tidy <- tidy(ModRNrec1)
 ModRNrec1sum_sq_reg <- ModRNrec1_tidy$sumsq[1] 
 ModRNrec1sum_sq_resid <- ModRNrec1_tidy$sumsq[2]
 ModRNrec1sum_sq_reg / (ModRNrec1sum_sq_reg + ModRNrec1sum_sq_resid) #calculate the R squared value: 0.907
+# ModRNrec2 glmm
+ModRNrec2<- glmmTMB(Nrecovery~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRNrec2)
+performance::r2(ModRNrec2) # Na - may have singularity issues
+shapiro.test(resid(ModRNrec2)) # p=0.8896
+plot(fitted(ModRNrec2),resid(ModRNrec2),pch=16) # normal
+qqnorm(resid(ModRNrec2)) # almostt no tails
+qqline(resid(ModRNrec2))
+#ModRNrec3 lmer
+ModRNrec3 <- lmer(Nrecovery~Treatment+(1|Block), data=Rows, na.action=na.exclude) # singularity issue
+anova(ModRNrec3) 
+summary(ModRNrec3)
+shapiro.test(resid(ModRNrec3)) # p=0.8896
+plot(fitted(ModRNrec3),resid(ModRNrec3),pch=16) # normal
+qqnorm(resid(ModRNrec3)) # slight tails
+qqline(resid(ModRNrec3))
+rsq(ModRNrec3)  # 0.2529
+# ModRNrec4 lme model
+ModRNrec4 <- lme(Nrecovery ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
+summary(ModRNrec4)
+anova(ModRNrec4)
+shapiro.test(resid(ModRNrec4)) # p= 0.8896
+plot(fitted(ModRNrec4),resid(ModRNrec4),pch=16) # normal
+qqnorm(resid(ModRNrec4)) # slight tails
+qqline(resid(ModRNrec4))
+rsq(ModRNrec4)  ## issues with function
 
-#emmeans on aov model
-ModRemNrec <- emmeans(ModRNrec1,~Treatment, type="response")
-ModRemNrec_cld <- cld(ModRemNrec, Letters = letters) 
+#AIC and BIC values
+RowsNrec_modlist <- list(ModRNrec2, ModRNrec3, ModRNrec4)
+AIC_values <- sapply(RowsNrec_modlist, AIC)
+BIC_values <- sapply(RowsNrec_modlist, BIC)
+PrecRowsNRec <- data.frame(Model=c("ModRNrec2", "ModRNrec3", "ModRNrec4"),AIC_values, BIC_values)
+print(PrecRowsNRec)
+#      Model AIC_values BIC_values
+#1 ModRNrec2   150.6296   161.9525
+#2 ModRNrec3   130.0098   141.3327
+#3 ModRNrec4   130.0098   138.5098
+
+#emmeans on glmm model - df looks decent (17 vs 19 or 3)
+ModRemNrec <- emmeans(ModRNrec4,~Treatment, type="response")
+ModRemNrec_cld <- cld(ModRemNrec, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemNrec_cld)
 write.csv(ModRemNrec_cld, file="Rows_Nrecovery.csv")
 
 
 # Plotting the summary data
-par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
-ggplot(ModRemNrec_cld, aes(x=Treatment, y=emmean)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+(RowsNrecPlot <- ggplot(ModRemNrec_cld, aes(x=Treatment, y=emmean)) +
+    geom_bar_pattern(stat = "identity", width=0.5, position = position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=9, position = position_dodge2(width = 0.9), vjust=-1)+
-  labs(x = "Treatment", y = "% Nitrogen recovery") +
-  scale_x_discrete(labels = c("Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
-                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Rows_Nrecovery.jpg", width = 12, height = 12, dpi = 600)
+    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
+    geom_text(aes(label=trimws(.group), y=emmean+SE+0.5), size=9)+
+    scale_y_continuous(limits=c(-1.5, 8.5))+
+    labs(x = "Treatment", y = "% Nitrogen recovery") +
+    scale_x_discrete(labels = c("Control2", "Canola\nMeal", "Manure", "Willow", "Meat and Bone\nMeal - Coarse",
+                                "Meat and Bone\nMeal - Fine", "Fertilizer\nPhosphorus"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+        axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(RowsNrecPlot, file="Rows_Nrecovery.jpg", width = 8, height = 8, dpi = 150)
 
 
 
@@ -309,30 +458,71 @@ ModRPup1_tidy <- tidy(ModRPup1)
 ModRPup1sum_sq_reg <- ModRPup1_tidy$sumsq[1] 
 ModRPup1sum_sq_resid <- ModRPup1_tidy$sumsq[2]
 ModRPup1sum_sq_reg / (ModRPup1sum_sq_reg + ModRPup1sum_sq_resid) #calculate the R squared value: 0.35
+# ModRPup2 glmm
+ModRPup2<- glmmTMB(Puptake~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRPup2)
+performance::r2(ModRPup2) # 0.251
+shapiro.test(resid(ModRPup2)) # p=0.0465
+plot(fitted(ModRPup2),resid(ModRPup2),pch=16) # normal
+qqnorm(resid(ModRPup2)) # slight tails
+qqline(resid(ModRPup2))
+#ModRPup3 lmer
+ModRPup3 <- lmer(Puptake~Treatment+(1|Block), data=Rows, na.action=na.exclude) 
+anova(ModRPup3) 
+summary(ModRPup3)
+shapiro.test(resid(ModRPup3)) # p=0.0469
+plot(fitted(ModRPup3),resid(ModRPup3),pch=16) # normal
+qqnorm(resid(ModRPup3)) # slight tails
+qqline(resid(ModRPup3))
+rsq(ModRPup3)  # 0.205
+# ModRPup4 lme model
+ModRPup4 <- lme(Puptake ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
+summary(ModRPup4)
+anova(ModRPup4)
+shapiro.test(resid(ModRPup4)) # p= 0.0469
+plot(fitted(ModRPup4),resid(ModRPup4),pch=16) # normal
+qqnorm(resid(ModRPup4)) # slight tails
+qqline(resid(ModRPup4))
+rsq(ModRPup4)  ## issues with function
 
-#emmeans on aov model
-ModRemPup <- emmeans(ModRPup1,~Treatment, type="response")
-ModRemPup_cld <- cld(ModRemPup, Letters = letters) 
+#AIC and BIC values
+RowsPup_modlist <- list(ModRPup2, ModRPup3, ModRPup4)
+AIC_values <- sapply(RowsPup_modlist, AIC)
+BIC_values <- sapply(RowsPup_modlist, BIC)
+PrecRowsPup <- data.frame(Model=c("ModRPup2", "ModRPup3", "ModRPup4"),AIC_values, BIC_values)
+print(PrecRowsPup)
+#Model AIC_values BIC_values
+#1 ModRPup2   46.99998   61.33986
+#2 ModRPup3   57.70818   72.04806
+#3 ModRPup4   57.70818   69.06313
+
+#emmeans on glmm model- best rsq, lowest AIC
+ModRemPup <- emmeans(ModRPup2,~Treatment, type="response")
+ModRemPup_cld <- cld(ModRemPup, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemPup_cld)
 write.csv(ModRemPup_cld, file="Rows_Puptake.csv")
 
 # Plotting the summary data
-par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
-ggplot(ModRemPup_cld, aes(x=Treatment, y=emmean)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+(RowsPupPlot <- ggplot(ModRemPup_cld, aes(x=Treatment, y=emmean)) +
+  geom_bar_pattern(stat = "identity", width=0.5, position = position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=4, vjust=-1)+
-  labs(x = "Treatment", y = "N uptake (ug)") +
-  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
-                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Rows_Puptake.jpg", width = 8, height = 8, dpi = 600)
+  geom_text(aes(label=trimws(.group), y=emmean+SE), size=9, position = position_dodge2(width = 0.9), vjust=-1)+
+  scale_y_continuous(limits=c(0, 2))+
+  labs(x = "Treatment", y = "P uptake (kg N/ha)") +
+  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
+                              "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
+                              "Fertilizer\nPhosphorus"))+
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+        axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(RowsPupPlot, file="Rows_Puptake.jpg", width = 8, height = 8, dpi = 150)
 
 
 
@@ -360,30 +550,70 @@ ModRPrec1_tidy <- tidy(ModRPrec1)
 ModRPrec1sum_sq_reg <- ModRPrec1_tidy$sumsq[1] 
 ModRPrec1sum_sq_resid <- ModRPrec1_tidy$sumsq[2]
 ModRPrec1sum_sq_reg / (ModRPrec1sum_sq_reg + ModRPrec1sum_sq_resid) #calculate the R squared value: 0.266
+# ModRPrec2 glmm
+ModRPrec2<- glmmTMB(Precovery~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRPrec2)
+performance::r2(ModRPrec2) # 0.267
+shapiro.test(resid(ModRPrec2)) # p=0.5276
+plot(fitted(ModRPrec2),resid(ModRPrec2),pch=16) # normal
+qqnorm(resid(ModRPrec2)) # slight tails
+qqline(resid(ModRPrec2))
+#ModRPrec3 lmer
+ModRPrec3 <- lmer(Precovery~Treatment+(1|Block), data=Rows, na.action=na.exclude) 
+anova(ModRPrec3) 
+summary(ModRPrec3)
+shapiro.test(resid(ModRPrec3)) # p=0.5304
+plot(fitted(ModRPrec3),resid(ModRPrec3),pch=16) # normal
+qqnorm(resid(ModRPrec3)) # slight tails
+qqline(resid(ModRPrec3))
+rsq(ModRPrec3)  # 0.214
+# ModRPrec4 lme model
+ModRPrec4 <- lme(Precovery ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
+summary(ModRPrec4)
+anova(ModRPrec4)
+shapiro.test(resid(ModRPrec4)) # p= 0.5304
+plot(fitted(ModRPrec4),resid(ModRPrec4),pch=16) # normal
+qqnorm(resid(ModRPrec4)) # slight tails
+qqline(resid(ModRPrec4))
+rsq(ModRPrec4)  ## issues with function
 
-#emmeans on aov model
-ModRemPrec <- emmeans(ModRPrec1,~Treatment, type="response")
-ModRemPrec_cld <- cld(ModRemPrec, Letters = letters) 
+#AIC and BIC values
+RowsPrec_modlist <- list(ModRPrec2, ModRPrec3, ModRPrec4)
+AIC_values <- sapply(RowsPrec_modlist, AIC)
+BIC_values <- sapply(RowsPrec_modlist, BIC)
+PrecRowsPrec <- data.frame(Model=c("ModRPrec2", "ModRPrec3", "ModRPrec4"),AIC_values, BIC_values)
+print(PrecRowsPrec)
+#Model AIC_values BIC_values
+#1 ModRPrec2   96.21132  105.29527
+#2 ModRPrec3   88.46554   97.54950
+#3 ModRPrec4   88.46554   95.13125
+
+#emmeans on glmm model - df looks fine, highest rsq
+ModRemPrec <- emmeans(ModRPrec3,~Treatment, type="response")
+ModRemPrec_cld <- cld(ModRemPrec, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemPrec_cld)
 write.csv(ModRemPrec_cld, file="Rows_Precovery.csv")
 
 # Plotting the summary data
-par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
-ggplot(ModRemPrec_cld, aes(x=Treatment, y=emmean)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+(RowsPrecPlot <- ggplot(ModRemPrec_cld, aes(x=Treatment, y=emmean)) +
+    geom_bar_pattern(stat = "identity", width=0.5, position = position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=9, vjust=-1)+
-  labs(x = "Treatment", y = "% Phosphorus recovery") +
-  scale_x_discrete(labels = c("Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
-                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Rows_Precovery.jpg", width = 12, height = 12, dpi = 600)
+    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
+    geom_text(aes(label=trimws(.group), y=emmean+SE+0.3), size=9,)+
+    scale_y_continuous(limits=c(-2,3))+
+    labs(x = "Treatment", y = "% Phosphorus recovery") +
+    scale_x_discrete(labels = c("Canola\nMeal", "Manure", "Willow", "Meat and Bone\nMeal - Coarse",
+                                "Meat and Bone\nMeal - Fine", "Fertilizer\nPhosphorus"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(RowsPrecPlot, file="Rows_Precovery.jpg", width = 8, height = 8, dpi = 150)
 
 
 
@@ -410,9 +640,18 @@ ModRNO31_tidy <- tidy(ModRNO31)
 ModRNO31sum_sq_reg <- ModRNO31_tidy$sumsq[1] 
 ModRNO31sum_sq_resid <- ModRNO31_tidy$sumsq[2]
 ModRNO31sum_sq_reg / (ModRNO31sum_sq_reg + ModRNO31sum_sq_resid) #0.76
+# ModRNO3 glmm
+ModRNO32<- glmmTMB(NO3~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRNO32)
+performance::r2(ModRNO32) # 0.625
+shapiro.test(resid(ModRNO32)) # p=0.6206
+plot(fitted(ModRNO32),resid(ModRNO32),pch=16) # normal
+qqnorm(resid(ModRNO32)) # almost no tails
+qqline(resid(ModRNO32))
+
 #emmeans on aov model
-ModRemNO3 <- emmeans(ModRNO31,~Treatment, type="response")
-ModRemNO3_cld <- cld(ModRemNO3, Letters = letters) 
+ModRemNO3 <- emmeans(ModRNO32,~Treatment, type="response")
+ModRemNO3_cld <- cld(ModRemNO3, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemNO3_cld)
 write.csv(ModRemNO3_cld, file="Rows_NO3.csv")
 
@@ -441,9 +680,18 @@ ModRPO41_tidy <- tidy(ModRPO41)
 ModRPO41sum_sq_reg <- ModRPO41_tidy$sumsq[1] 
 ModRPO41sum_sq_resid <- ModRPO41_tidy$sumsq[2]
 ModRPO41sum_sq_reg / (ModRPO41sum_sq_reg + ModRPO41sum_sq_resid) #0.5651
-#emmeans on aov model
-ModRemPO4 <- emmeans(ModRPO41,~Treatment, type="response")
-ModRemPO4_cld <- cld(ModRemPO4, Letters = letters) 
+# ModRPO42 glmm - possible singularity issue related to random effect
+ModRPO42<- glmmTMB(PO4~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRPO42)
+performance::r2(ModRPO42) # 0.625
+shapiro.test(resid(ModRPO42)) # p=0.2893
+plot(fitted(ModRPO42),resid(ModRPO42),pch=16) # slightly below the center line
+qqnorm(resid(ModRPO42)) # moderate-heavy right tail
+qqline(resid(ModRPO42))
+
+#emmeans on glmm model
+ModRemPO4 <- emmeans(ModRPO42,~Treatment, type="response")
+ModRemPO4_cld <- cld(ModRemPO4, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemPO4_cld)
 write.csv(ModRemPO4_cld, file="Rows_PO4.csv")
 
@@ -474,9 +722,18 @@ ModResP1_tidy <- tidy(ModResP1)
 ModResP1sum_sq_reg <- ModResP1_tidy$sumsq[1] 
 ModResP1sum_sq_resid <- ModResP1_tidy$sumsq[2]
 ModResP1sum_sq_reg / (ModResP1sum_sq_reg + ModResP1sum_sq_resid) #0.539
+# ModResP2 glmm 
+ModResP2<- glmmTMB(ResinP~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModResP2)
+performance::r2(ModResP2) # 0.245
+shapiro.test(resid(ModResP2)) # p=0.261
+plot(fitted(ModResP2),resid(ModResP2),pch=16) # slightly below the center line
+qqnorm(resid(ModResP2)) # moderate-heavy right tail, small left tail
+qqline(resid(ModResP2))
+
 #emmeans on aov model
-ModREMResP1 <- emmeans(ModResP1,~Treatment, type="response")
-ModREMResP1_cld <- cld(ModRemNup, Letters = letters) 
+ModREMResP1 <- emmeans(ModResP2,~Treatment, type="response")
+ModREMResP1_cld <- cld(ModRemNup, Letters=trimws(letters), reversed = TRUE) 
 View(ModREMResP1_cld)
 write.csv(ModREMResP1_cld, file="Rows_resinP.csv")
 
@@ -506,9 +763,18 @@ ModRWSP1_tidy <- tidy(ModRWSP1)
 ModRWSP1sum_sq_reg <- ModRWSP1_tidy$sumsq[1] 
 ModRWSP1sum_sq_resid <- ModRWSP1_tidy$sumsq[2]
 ModRWSP1sum_sq_reg / (ModRWSP1sum_sq_reg + ModRWSP1sum_sq_resid) #0.756
+# ModRWSP2 glmm - possible singularity issue
+ModRWSP2<- glmmTMB(WatSolP~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRWSP2)
+performance::r2(ModRWSP2) # NA
+shapiro.test(resid(ModRWSP2)) # p=0.167
+plot(fitted(ModRWSP2),resid(ModRWSP2),pch=16) # slightly above the center line
+qqnorm(resid(ModRWSP2)) # heavy tails
+qqline(resid(ModRWSP2))
+
 #emmeans on aov model
-ModRemWSP <- emmeans(ModRWSP1,~Treatment, type="response")
-ModRemWSP_cld <- cld(ModRemWSP, Letters = letters) 
+ModRemWSP <- emmeans(ModRWSP2,~Treatment, type="response")
+ModRemWSP_cld <- cld(ModRemWSP, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemWSP_cld)
 write.csv(ModRemWSP_cld, file="Rows_WatSolP.csv")
 
@@ -538,12 +804,20 @@ ModRpH1_tidy <- tidy(ModRpH1)
 ModRpH1sum_sq_reg <- ModRpH1_tidy$sumsq[1] 
 ModRpH1sum_sq_resid <- ModRpH1_tidy$sumsq[2]
 ModRpH1sum_sq_reg / (ModRpH1sum_sq_reg + ModRpH1sum_sq_resid) #0.1980843
+# ModRpH2 glmm
+ModRpH2<- glmmTMB(pH~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModRpH2)
+performance::r2(ModRpH2) # 0.589
+shapiro.test(resid(ModRpH2)) # p=0.789
+plot(fitted(ModRpH2),resid(ModRpH2),pch=16) # normal
+qqnorm(resid(ModRpH2)) # slight tails
+qqline(resid(ModRpH2))
+
 #emmeans on aov model
-ModRempH1 <- emmeans(ModRpH1,~Treatment, type="response")
-ModRempH1_cld <- cld(ModRempH1, Letters = letters) 
+ModRempH1 <- emmeans(ModRpH2,~Treatment, type="response")
+ModRempH1_cld <- cld(ModRempH1, Letters=trimws(letters), reversed = TRUE) 
 View(ModRempH1_cld)
 write.csv(ModRempH1_cld, file="Rows_pH.csv")
-
 
 
 
@@ -578,9 +852,18 @@ ModREC1_tidy <- tidy(ModREC1)
 ModREC1sum_sq_reg <- ModREC1_tidy$sumsq[1] 
 ModREC1sum_sq_resid <- ModREC1_tidy$sumsq[2]
 ModREC1sum_sq_reg / (ModREC1sum_sq_reg + ModREC1sum_sq_resid) #0.808
+# ModREC2 glmm
+ModREC2<- glmmTMB(EC~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModREC2)
+performance::r2(ModREC2) # 0.496
+shapiro.test(resid(ModREC2)) # p=0.5597
+plot(fitted(ModREC2),resid(ModREC2),pch=16) # normal
+qqnorm(resid(ModREC2)) # moderate-heavy tails
+qqline(resid(ModREC2))
+
 #emmeans on aov model
-ModRemEC1 <- emmeans(ModREC1,~Treatment)
-ModRemEC1_cld <- cld(ModRemEC1, Letters = letters, type="response") 
+ModRemEC1 <- emmeans(ModREC2,~Treatment, type="response")
+ModRemEC1_cld <- cld(ModRemEC1, Letters=trimws(letters), reversed = TRUE) 
 View(ModRemEC1_cld)
 write.csv(ModRemEC1_cld, file="Rows_EC.csv")
 
@@ -635,9 +918,47 @@ ModROC2_tidy <- tidy(ModROC2)
 ModROC2sum_sq_reg <- ModROC2_tidy$sumsq[1] 
 ModROC2sum_sq_resid <- ModROC2_tidy$sumsq[2]
 ModROC2sum_sq_reg / (ModROC2sum_sq_reg + ModROC2sum_sq_resid) #0.6617664
-#emmeans on aov model
-ModRemOC1 <- emmeans(ModROC2,~Treatment)
-ModRemOC1_cld <- cld(ModRemOC1, Letters = letters, type="response")
+# ModROC3 glmm - possible singulary issues
+ModROC3<- glmmTMB(OC~Treatment+(1|Block), data=Rows, family=gaussian(), na.action=na.exclude)
+summary(ModROC3)
+performance::r2(ModROC3) # NA
+shapiro.test(resid(ModROC3)) # p=0.654
+plot(fitted(ModROC3),resid(ModROC3),pch=16) # normal, slight upper left shift
+qqnorm(resid(ModROC3)) # slight-moderate tails
+qqline(resid(ModROC3))
+#ModROC4 lmer - singularuty
+ModROC4 <- lmer(OC~Treatment+(1|Block), data=Rows, na.action=na.exclude) 
+anova(ModROC4) 
+summary(ModROC4)
+shapiro.test(resid(ModROC4)) # p=0.6541
+plot(fitted(ModROC4),resid(ModROC4),pch=16) # normal, slight upper left shift
+qqnorm(resid(ModROC4)) # slight tails
+qqline(resid(ModROC4))
+rsq(ModROC4)  # 0.331
+# ModROC5 lme model
+ModROC5 <- lme(OC ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
+summary(ModROC5)
+anova(ModROC5)
+shapiro.test(resid(ModROC5)) # p= 0.654
+plot(fitted(ModROC5),resid(ModROC5),pch=16) # normal, slight upper left shift
+qqnorm(resid(ModROC5)) # slight-moderate tails
+qqline(resid(ModROC5))
+rsq(ModROC5)  ## 0.331
+
+#AIC and BIC values
+RowsOC_modlist <- list(ModROC3, ModROC4, ModROC5)
+AIC_values <- sapply(RowsOC_modlist, AIC)
+BIC_values <- sapply(RowsOC_modlist, BIC)
+PrecRowsOC <- data.frame(Model=c("ModROC3", "ModROC4", "ModROC5"),AIC_values, BIC_values)
+print(PrecRowsOC)
+#Model  AIC_values BIC_values
+#1 ModROC3 -31.2802314  -16.62287
+#2 ModROC4  -0.4654489   14.19191
+#3 ModROC5  -0.4654489   11.31509
+
+#emmeans on lme  model - no singularity issues
+ModRemOC1 <- emmeans(ModROC5,~Treatment, type="response")
+ModRemOC1_cld <- cld(ModRemOC1, Letters=trimws(letters), reversed = TRUE)
 View(ModRemOC1_cld)
 write.csv(ModRemOC1_cld, file="Rows_OC.csv")
 

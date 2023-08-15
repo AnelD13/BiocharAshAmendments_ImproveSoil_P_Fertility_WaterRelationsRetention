@@ -30,6 +30,7 @@ library(e1071)
 library(rsq)
 library(pgirmess)
 library(dunn.test)
+library(directlabels)
 
 ##### Combining 0-30cm values   ####
 # Calculate mean of soil data from incremental depths to combined depth (0-30cm)
@@ -330,7 +331,7 @@ ggplot(ModFStrawem_cld, aes(x = Treatment, y = response)) +
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = response - SE, ymax = response + SE), 
                 width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=response+SE), size=4, vjust=-1) +
+  geom_text(aes(label=trimws(.group), y=response+SE), size=4, vjust=-1) +
   labs(x = "Treatments", y = "Canola straw yield (kg/ha)") +
   scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kg P/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                               "Fertilizer\nPhosphorus"))+
@@ -437,7 +438,7 @@ ggplot(ModFGrainem_cld, aes(x = Treatment, y = response, fill=Treatment)) +
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = response - SE, ymax = response + SE), 
                 width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=response+SE), size=4, vjust=-1) +
+  geom_text(aes(label=trimws(.group), y=response+SE), size=4, vjust=-1) +
   labs(x = "Treatments", y = "Canola grain yield (g)") +
   scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                               "Fertilizer\nPhosphorus"))+
@@ -464,7 +465,7 @@ ggplot(BiomassFieldEm, aes(x=Treatment, y=emmean, pattern=origin)) +
   geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=6, vjust=-1, position = position_dodge(width = 0.9))+
+  geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1, position = position_dodge(width = 0.9))+
   labs(x = "Treatment", y = "Canola grain and straw yield (kg/ha)", pattern="") +
   scale_pattern_manual(values = c("FGrain" = "stripe", "FStraw" = "crosshatch"), 
                        labels = c("Grain", "Straw"))+
@@ -533,7 +534,7 @@ ggplot(ModFieldNupem_cld, aes(x = Treatment, y = response, fill=Treatment)) +
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = response - SE, ymax = response + SE), 
                 width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=response+SE), size=8, vjust=-1) +
+  geom_text(aes(label=trimws(.group), y=response+SE), size=8, vjust=-1) +
   labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
   scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                               "Fertilizer\nPhosphorus"))+
@@ -605,7 +606,7 @@ ggplot(ModFieldNrecem_cld, aes(x = Treatment, y = emmean, fill=Treatment)) +
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
                 width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=4, vjust=-1) +
+  geom_text(aes(label=trimws(.group), y=emmean+SE), size=4, vjust=-1) +
   labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
   scale_x_discrete(labels = c("Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                               "Fertilizer\nPhosphorus"))+
@@ -665,7 +666,7 @@ ggplot(ModFieldPupem_cld, aes(x = Treatment, y = emmean, fill=Treatment)) +
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
                 width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=4, vjust=-1) +
+  geom_text(aes(label=trimws(.group), y=emmean+SE), size=4, vjust=-1) +
   labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
   scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                               "Fertilizer\nPhosphorus"))+
@@ -725,7 +726,7 @@ ggplot(ModFieldPrecem_cld, aes(x = Treatment, y = emmean, fill=Treatment)) +
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
                 width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean-SE), size=4, vjust=1) +
+  geom_text(aes(label=trimws(.group), y=emmean-SE), size=4, vjust=1) +
   labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
   scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                               "Fertilizer\nPhosphorus"))+
@@ -786,7 +787,7 @@ ggplot(ModFieldemPup_cld, aes(x=Treatment, y=emmean)) +
   geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE), size=4, vjust=-1)+
+  geom_text(aes(label=trimws(.group), y=emmean+SE), size=4, vjust=-1)+
   labs(x = "Treatment", y = "Wheat P uptake (ug)") +
   scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
                               "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
@@ -1170,6 +1171,10 @@ ModFieldLNO3c_tidy <- tidy(ModFieldLNO3c)
 ModFieldLNO3csum_sq_reg <- ModFieldLNO3c_tidy$sumsq[1] 
 ModFieldLNO3csum_sq_resid <- ModFieldLNO3c_tidy$sumsq[2]
 ModFieldLNO3csum_sq_reg / (ModFieldLNO3csum_sq_reg + ModFieldLNO3csum_sq_resid) #0.0.899
+# glmm model
+Mod3i <- glmmTMB(Nuptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod3i)
+performance::r2(Mod3i) # 0.752
 #emmeans 
 ModFieldemLNO3 <- emmeans(ModFieldLNO3c,~Treatment) 
 ModFieldemLNO3_cld <- cld(ModFieldemLNO3, Letters = letters, type="response") 
@@ -1514,16 +1519,16 @@ YieldCovField_dfAll$variable <- factor(YieldCovField_dfAll$variable, levels=Fiel
                                        labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
                                                 "WatSolP"="Water Soluble P", "ResinP"="Resin P", "pH"="pH", 
                                                 "EC"="EC", "OC"="% SOC"))
-YieldCovField_dfAll$treatment <- factor(YieldCovField_dfAll$treatment, 
-                                       levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
-                                                "Biochar10thaTSP", "Phosphorus"),
-                                       labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", "Biochar 10t/ha",
-                                                "Biochar 10t/ha & TSP", "Phosphorus Fertilizer"))
+YieldCovField_dfAll$treatment <- factor(YieldCovField_dfAll$treatment,
+                                        levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
+                                                 "Biochar10thaTSP", "Phosphorus"),
+                                        labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
+                                                 "Biochar 10t/ha", "Biochar 10t/ha & TSP", "Phosphorus Fertilizer"))
 write.csv(YieldCovField_dfAll, file="Field_YieldCov.csv")
 # ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
 (YieldCovFieldHeat <- ggplot(YieldCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
-    scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.4, 3.3), breaks=seq(-2.4, 3.3, by=1)) +
     facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=round(Covariance, 3)))+
     theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
@@ -1571,22 +1576,24 @@ UptakeCovField_df <- lapply(seq_along(UptakeCov_Field), function(i) {
 })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 UptakeCovField_dfAll <- do.call(rbind, UptakeCovField_df)
-UptakeCovField_dfAll$Var1 <- factor(UptakeCovField_dfAll$Var1, levels=UptakeCovVar, labels=c("Biomass"="Yield", 
-                                                                                           "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
-                                                                                           "OC"="% SOC"))
-UptakeCovField_dfAll$variable <- factor(UptakeCovField_dfAll$variable, levels=UptakeCovVar, labels= c("Biomass"="Yield", 
-                                                                                                    "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
-                                                                                                    "OC"="% SOC"))
-UptakeCovField_dfAll$treatment <- factor(UptakeCovField_dfAll$treatment, 
-                                        levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
-                                        labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
-                                                 "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+UptakeCovField_dfAll$Var1 <- factor(UptakeCovField_dfAll$Var1, levels=UptakeCovVar, 
+                                   labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P",
+                                            "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+UptakeCovField_dfAll$variable <- factor(UptakeCovField_dfAll$variable, levels=UptakeCovVar, 
+                                       labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
+                                                "WatSolP"="Water Soluble P", "ResinP"="Resin P", "pH"="pH", 
+                                                "EC"="EC", "OC"="% SOC"))
+UptakeCovField_dfAll$treatment <- factor(UptakeCovField_dfAll$treatment,
+                                        levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
+                                                 "Biochar10thaTSP", "Phosphorus"),
+                                        labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
+                                                 "Biochar 10t/ha", "Biochar 10t/ha & TSP", "Phosphorus Fertilizer"))
 write.csv(UptakeCovField_dfAll, file="Field_UptakeCov.csv")
 # Generate the heatmap for each treatment and facet wrap them
 (UptakeCovFieldHeat <- ggplot(UptakeCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
-    scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
-    facet_wrap(~ treatment, nrow=3, ncol=3, scales="fixed") +
+    scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.6, 3.3), breaks=seq(-1.6, 3.3, by=1)) +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=round(Covariance, 3)))+
     theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
@@ -1633,22 +1640,25 @@ RecoveryCovField_df <- lapply(seq_along(RecoveryCov_Field), function(i) {
 })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 RecoveryCovField_dfAll <- do.call(rbind, RecoveryCovField_df)
-RecoveryCovField_dfAll$Var1 <- factor(RecoveryCovField_dfAll$Var1, levels=RecoveryCovVar, labels= c("Biomass"="Yield", 
-                                                                                                  "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
-                                                                                                  "OC"="% SOC"))
-RecoveryCovField_dfAll$variable <- factor(RecoveryCovField_dfAll$variable, levels=RecoveryCovVar, labels=c("Biomass"="Yield", 
-                                                                                                         "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P", "ResinP"="Resin P",
-                                                                                                         "pH"="pH", "EC"="EC", "OC"="% SOC"))
-RecoveryCovField_dfAll$treatment <- factor(RecoveryCovField_dfAll$treatment, 
-                                          levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
-                                          labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
-                                                   "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+RecoveryCovField_dfAll$Var1 <- factor(RecoveryCovField_dfAll$Var1, levels=RecoveryCovVar, 
+                                      labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P",
+                                               "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovField_dfAll$variable <- factor(RecoveryCovField_dfAll$variable, levels=RecoveryCovVar, 
+                                          labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", 
+                                                   "WatSolP"="Water Soluble P",
+                                                   "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovField_dfAll$treatment <- factor(RecoveryCovField_dfAll$treatment,
+                                           levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
+                                                    "Biochar10thaTSP", "Phosphorus"),
+                                           labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
+                                                    "Biochar 10t/ha", "Biochar 10t/ha & TSP", 
+                                                    "Phosphorus Fertilizer"))
 write.csv(RecoveryCovField_dfAll, file="Field_RecoveryCov.csv")
 # Generate the heatmap for each treatment and facet wrap them
 (RecoveryCovFieldHeat <- ggplot(RecoveryCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
-    scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
-    facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
+    scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.6, 3.3), breaks=seq(-1.6, 3.3, by=1)) +
+    facet_wrap(~ treatment, nrow=2, scales="fixed") +
     geom_text(aes(label=round(Covariance, 3)))+
     theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
@@ -1667,21 +1677,23 @@ ggsave(RecoveryCovFieldHeat, file="Field_RecoveryCovHeat.jpg", width=20, height=
 
 ####   Yield to N & P Recovery  ####
 Field$Treatment <- as.factor(Field$Treatment)
-Field$Biomass <- as.numeric(Field$Biomass)
+Field$Yield <- as.numeric(Field$Yield)
 Field$Nrecovery <- as.numeric(Field$Nrecovery)
 Field$Precovery <- as.numeric(Field$Precovery)
-FieldContourSub <- subset(Field, Treatment != "Control1" & Treatment != "Control2", select = c(Block, Treatment, 
-                                                                                             Biomass, Nrecovery, Precovery))
+FieldContourSub <- subset(Field, Treatment != "Control1" & Treatment != "Control2", 
+                          select = c(Block, Treatment, Yield, Nrecovery, Precovery))
 View(FieldContourSub)
-FieldContourSub$Treatment <- factor(FieldContourSub$Treatment, levels=c("CanolaMeal", "Manure", "Willow", 
-                                                                      "MBMACoarse", "MBMAFine", "Phosphorus"),
-                                   labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", 
-                                            "Phosphorus Fertilizer"))
+FieldContourSub$Treatment <- factor(FieldContourSub$Treatment,
+                                    levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
+                                             "Biochar10thaTSP", "Phosphorus"),
+                                    labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
+                                             "Biochar 10t/ha", "Biochar 10t/ha & TSP", 
+                                             "Phosphorus Fertilizer"))
 View(FieldContourSub)
 FieldContourExcl <- na.exclude(FieldContourSub)
 View(FieldContourExcl)
 
-FieldContourMod <- glmmTMB(Biomass ~ Nrecovery + Precovery + Treatment + (1|Block), data = FieldContourExcl, 
+FieldContourMod <- glmmTMB(Yield ~ Nrecovery + Precovery + Treatment + (1|Block), data = FieldContourExcl, 
                           na.action=na.exclude)
 summary(FieldContourMod)
 Anova(FieldContourMod)
@@ -1699,8 +1711,8 @@ View(FieldContour_grid)
 # develop contour plot
 (FieldContours <- ggplot(FieldContour_grid, aes(x = Nrecovery, y = Precovery, z = Yield)) +
     geom_raster(aes(fill=Yield)) + #use rastar to get smooth lines
-    geom_contour(aes(z=Yield), color='gray30', binwidth = 20) + #contour line, adjust binwidth depending on yield
-    facet_wrap(~Treatment, nrow = 5) +
+    geom_contour(aes(z=Yield), color='gray30', binwidth = 100) + #contour line, adjust binwidth depending on yield
+    facet_wrap(~Treatment, nrow = 2) +
     scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
     labs(x = "% N Recovery", y = "% P Recovery", fill = "Yield\n(kg/ha)") +
     theme(legend.title = element_text(size = 25, face = "bold"),

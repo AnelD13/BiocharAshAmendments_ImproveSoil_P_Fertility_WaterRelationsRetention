@@ -1,7 +1,7 @@
 #### Loading data in to R ####
 Pots1<-read.csv("Pots1.csv", fileEncoding="UTF-8-BOM")
 View(Pots1)
-plot(Pots1$Drywt)
+plot(Pots1$Yield)
 PotsRaw<-read.csv("Pots1raw.csv", fileEncoding="UTF-8-BOM")
 
 #Loading libraries
@@ -14,11 +14,13 @@ library(doBy)
 library(ggplot2)
 library(ggpattern)
 library(ggforce)
+library(ggrepel)
 library(plotrix)
 library(car)
 library(afex)
 library(onewaytests)
 library(multcomp)
+library(plyr)
 library(dplyr)
 library(tidyr)
 library(magrittr)
@@ -38,12 +40,16 @@ library(ggcorrplot)
 library(pheatmap)
 library(MASS)
 library(RColorBrewer)
-library(tidyHeatmap)
 library(reshape2)
 library(metaSEM)
 library(ggh4x)
 library(gridExtra)
-library(directlabels)
+library(sjstats)
+library(corrr)
+library(FactoMineR)
+library(factoextra)
+library(reshape2)
+
 
 #### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -53,32 +59,30 @@ print(missing)
 #Change columns in a dataframe to factors/categorical values, useful for treatments and soils, str displays 
 #the structure of R objects or the contents of a list
 #treatment order specifies the order in which treatments will appear 
-Trt_order <- c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha",
-               "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha",
-               "CanolaMeal10thaTSP", "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", 
-               "TripleSuperPhosphate")
-Soil_order <- c("Haverhill", "Oxbow")
-Pots1$Treatment <- factor(Pots1$Treatment, levels=Trt_order)
-Pots1$Soil <- factor(Pots1$Soil, levels=Soil_order)
+Pots1$Treatment <- factor(Pots1$Treatment, levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", 
+                          "Manure50kgha", "Willow50kgha", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", 
+                          "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP", "Manure10thaTSP", 
+                          "Willow10thaTSP", "TripleSuperPhosphate"))
+Pots1$Soil <- factor(Pots1$Soil, levels=c("Haverhill", "Oxbow"))
 summary(Pots1)
 str(Pots1) #displays the structure of the object
 View(Pots1) #view the object in a separate window (e.g. as a table)
 
 # Summary data (means, SD, etc.) for each treatment and variable
 Pots1Mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean, na.rm=TRUE)
-Pots1Mean <- rename(Pots1Mean, Drywt=Drywt.mean, Nuptake=Nuptake.mean, Nrecovery=Nrecovery.mean, Puptake=Puptake.mean, 
+Pots1Mean <- rename(Pots1Mean, Yield=Yield.mean, Nuptake=Nuptake.mean, Nrecovery=Nrecovery.mean, Puptake=Puptake.mean, 
                     Precovery=Precovery.mean, NO3=NO3.mean, NH4=NH4.mean, PO4=PO4.mean, ResinP=ResinP.mean, 
                     WaterSolP=WaterSolP.mean, TotalP2=TotalP2.mean, pH=pH.mean, EC=EC.mean, OC=OC.mean)
 View(Pots1Mean)
 Pots1SD <- summary_by(.~Soil+Treatment, data=Pots1, FUN=sd)
 
 ####   Check for outliers   ####
-##Drywt
-ggplot(PotsRaw, aes(x=Treatment, y=Drywt, fill=Soil)) +
+##Yield
+ggplot(PotsRaw, aes(x=Treatment, y=Yield, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
-  labs(x="Treatment", y="Drywt")
-ggsave("OutliersDrywt.jpg", width=30, height=30, dpi=150)
+  labs(x="Treatment", y="Yield")
+ggsave("OutliersYield.jpg", width=30, height=30, dpi=150)
 ##Total N
 ggplot(PotsRaw, aes(x=Treatment, y=TotalN, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
@@ -175,130 +179,160 @@ ggsave("OutliersOC.jpg", width=30, height=30, dpi=150)
 
 
 #Modelling data using simple linear model for CRD, no random intercept possible for my project & mixed model thus not possible
-#look at glmr - equivalent of GLMMIX
+#look at glmr and glmm - equivalent of GLMMIX
 #ANOVA model - this describes the response variable is influenced by the explanatory variables
 ####P-VALUE INTERPRETATION: p >0.05, no significant difference, fail to reject null hypothesis
 #p-value for intercept <0.05
 #Plots to check residuals to be equally centered around 0, vertical lines are ok if centered around 0
 
 
-#### Dry Weight ####
-#Running models
-Mod1<-lm(Drywt~Treatment*Soil,data=Pots1) #using a linear model as the best fit
+#### Yield ####
+Pots1Yield_Mean <- summary_by(Yield~Treatment*Soil, data=Pots1, FUN=mean)
+Pots1Yield_Mean <- as.numeric(Pots1Yield_Mean$Yield)
+Pots1Yield_skew <- skewness(Pots1Yield_Mean,na.rm=TRUE)
+Pots1Yield_kur <- kurtosis(Pots1Yield_Mean,na.rm=TRUE)
+cat("Skewness:", Pots1Yield_skew, "\n") # -0.458 
+cat("Kurtosis:", Pots1Yield_kur, "\n") # -0.655 
+shapiro.test(Pots1$Yield) # p=0.001166
+hist(Pots1$Yield) #  slight right skew
+leveneTest(Yield~Treatment*Soil, data=Pots1)  # #check for equality of variance; p=0.01407, var is equal
+ggplot(Pots1, aes(x = Treatment, y = Yield)) + #checking treatments in boxplots to see if variances = across trt
+  geom_boxplot() + facet_wrap(~Soil) + labs(x = "Treatment", y = "Yield") + theme_bw()
+# Transform data
+shapiro.test(log(Pots1$Yield)) # p=4.984e-10
+shapiro.test(log10(Pots1$Yield)) # p=4.984e-10
+shapiro.test(sqrt(Pots1$Yield)) # p=1.949e-06
+leveneTest(log(Yield) ~ Treatment*Soil, data=Pots1)  # much improved variance: 0.002803
+leveneTest(log10(Yield) ~ Treatment*Soil, data=Pots1)  #  much improved variance: 0.002803
+leveneTest(sqrt(Yield) ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 0.03423
+hist((log(Pots1$Yield))) # severe right skew
+hist((log10(Pots1$Yield))) # severe right skew
+hist((sqrt(Pots1$Yield)))# severe right skew
+#Running models - tried lm & aov but these do not allow for random effects which must be included
+Mod1<-lm(Yield~Treatment*Soil,data=Pots1) #using a linear model as the best fit
 anova(Mod1) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod1)
-shapiro.test(resid(Mod1)) ##S-W p value=0.4382; Data is considered normal
-leveneTest(Drywt~Treatment, data=Pots1) #check for sig dif between variance, Varian is equal P=0.04259
+shapiro.test(resid(Mod1)) ##S-W p value=0.1965; Data is considered normal
 #the residuals plot, qqnorm and shapiro.test all checks normality
 plot(fitted(Mod1),resid(Mod1),pch=16, abline(h=0, lty=2)) #plots the residuals vs the fitted values 
 #from a linear regression model, abline shows the linear horizontal line at 0
 plot(Mod1, which=1) #plots the residuals vs the actual values, the line is the regression line
 plot(Mod1, which=2) # different way to do the below qqnorm & qqline
-qqnorm(resid(Mod1))
+qqnorm(resid(Mod1)) # tails at either end not too hectic
 qqline(resid(Mod1))
-#Mod1a
-Mod1a <- aov(Drywt~Treatment*Soil, data=Pots1) #Two-way anova for Dry weight - another way to do the same
+rsq(Mod1) #r=0.8945
+#Mod1a #The two-way anova appears to be a better fit for the dry weight data
+Mod1a <- aov(Yield~Treatment*Soil, data=Pots1) #Two-way anova for Dry weight - another way to do the same
 anova(Mod1a)
 summary(Mod1a)
-leveneTest(Drywt ~ Treatment, data=Pots1)
-shapiro.test(resid(Mod1a))
-#The two-way anova appears to be a better fit for the dry weight data
+shapiro.test(resid(Mod1a)) #0.01965
+Mod1a_tidy <- tidy(Mod1a)
+Mod1a_tidy$sumsq[1] / (Mod1a_tidy$sumsq[1] + Mod1a_tidy$sumsq[2]) # 0.99
+# Mod1b glmm
+Mod1b <- glmmTMB(Yield~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod1b)
+performance::r2(Mod1b) # 0.895
+# Mod1c Lmer
+Mod1c<-lmer(Yield~Treatment*Soil+(1|Soil),data=Pots1) #model failed to converge
+anova(Mod1c)
+summary(Mod1c)
+rsq(Mod1c) # adjusted R squared: 0.894
+#Mod1d - lme
+Mod1d<-lme(Yield~Treatment*Soil,random=~1|Soil, data=Pots1, na.action = na.exclude)
+anova(Mod1d)
+summary(Mod1d)
+rsq(Mod1d) # issue with low degrees of freedom for random effect
+#Mod1e - glmer
+Mod1e <- glmer(Yield~Treatment*Soil+(1|Soil),data=Pots1,family=gaussian(link="log"))
+anova(Mod1e)
+summary(Mod1e)
+shapiro.test(resid(Mod1e))  # p=6.486e-09
+plot(fitted(Mod1e),resid(Mod1e),pch=16) # severe right cluster
+qqnorm(resid(Mod1e)) # heavy tails
+qqline(resid(Mod1e))
+rsq(Mod1e)
 
-#Compare models
-anova(Mod1, Mod1a)
+#Compare models - doesn't work for certain types of models
+anova(Mod1, Mod1a, Mod1b, Mod1c)
 
 #extract the anova results in a tidy format
-Mod1_tidy <- tidy(Mod1a)
-View(Mod1_tidy)
+View(Mod1_tidy <- tidy(Mod1))
+View(Mod1_tidy <- tidy(Mod1a))
+View(Mod1_tidy <- tidy(Mod1b))  #No tidy method for objects of class glmmTMB
+View(Mod1_tidy <- tidy(Mod1c))  # same for class lmerModLmerTest
+View(Mod1_tidy <- tidy(Mod1d))  # same for class lme
 
 #Run emmeans (the new lsmeans) - it creates a Tukey HSD pairwise comparison
-Mod1em <- emmeans(Mod1a,~Soil+Treatment) #a combined table by soil, but comparing all treatments per soil in one
-Mod1cld <- cld(Mod1em, Letters=letters) #use Compact Letter Display (CLD) with a means test to show sig dif as letters
-View(Mod1cld)
+#Mod1em <- emmeans(Mod1a,~Soil+Treatment) #a combined table by soil, but comparing all treatments per soil in one
+#View(Mod1cld <- cld(Mod1em, Letters=trimws(letters))) #use Compact Letter Display (CLD) with a means test to show sig dif as letters
+
 #emmeans for each soil separately - # cld use directly in ggplot - make sure labels are correct in ggplot
-Mod1em_split <- emmeans(Mod1a,~Treatment|Soil, subset=(Pots1$Drywt))
-Mod1cld_split <- cld(Mod1em_split, Letters=letters, reversed=TRUE, by="Soil") #reversed sorts letters in correct order
+Mod1em_split <- emmeans(Mod1b,~Treatment|Soil, subset=(Pots1$Yield))
+#MUST use trimws to trim the white spaces around the cld letters to ensure proper alignment
+Mod1cld_split <- cld(Mod1em_split, Letters=trimws(letters), reversed=TRUE, by="Soil") #reversed = letters in correct order
 View(Mod1cld_split)
 
-
 ##Developing visualizations
-#set up data frame with the means and SE of Dry weight !!!!   Does NOT include letters - do not use !!!!!
-#Drywt_df <- Pots1 %>%
-#  select(Soil, Treatment, Drywt) %>% # select only relevant columns
-#  group_by(Soil, Treatment) %>% # group by soil and treatment
-#  summarise(Mean=mean(Drywt, na.rm=TRUE), # calculate the mean dry weight for each group
-#            SE=sd(Drywt, na.rm=TRUE)/sqrt(length(Drywt)), # calculate the standard error for each group
-#            .groups='drop')
-#View(Drywt_df)
-#write.csv(Drywt_df,"Drywt.csv")
-
-# Plot means with error bars and CLD
-# par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
-#plot all dry weights onto one graph
-#ggplot(Mod1cld_split, aes(x=Treatment, y=emmean, fill=Soil)) +
-#  geom_bar(stat="identity", position=position_dodge2(padding=0.2)) +
-#  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-#                width=.2, position=position_dodge(width=0.9)) +
-#  geom_text(aes(label=.group), nudge_y=1.5, nudge_x=0.1, vjust=-0.5, size=2) + 
-#  labs(title="Dry Weight by Treatment and Soil", x="Treatment", y="Dry Weight (ug/g)") +
-#  theme_bw() +
-#  theme(plot.title=element_text(size=12))+
-#  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=8)) +
-#  scale_fill_manual(values=c("blue", "red"), breaks=c("Haverhill","Oxbow"), labels=c("Haverhill","Oxbow"))
 ##select specific treatments and use those in the graph - repeat for all subsets
 #Plotting dry weight using constant P and variable biochar rates
-Drywt_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha",
+Yield_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha",
                   "TripleSuperPhosphate")
-Drywt_subVar <- Mod1cld_split %>%
-  filter(Treatment %in% Drywt_trtVar)
-(Drywt50kg <- ggplot(Drywt_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
+Yield_subVar <- Mod1cld_split %>%
+  filter(Treatment %in% Yield_trtVar)
+(Yield50kg <- ggplot(Yield_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position=position_dodge2(width=0.9), vjust=-0.5) + 
+  #geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+           # size=6, position=position_dodge2(width=0.9), vjust=-0.5) + # change Oxbow to italics.
+    #trim white spaces in Geom_text to align properly
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), 
+                y = emmean + SE + 0.5), size = 6, position = position_dodge(width = 0.9))+
   labs(y="Biomass yield (g) for chars at 50kg P/ha")+
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-        legend.text=element_text(size=12))+
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+                            "Phosphorus\nFertilizer"))+
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"), #hjust right aligns text
+        axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-  ggsave(Drywt50kg, file="Pots1_Biomass_50kgPha.jpg", width=12, height=8, dpi=150)
+ggsave(Yield50kg, file="Pots1_Yield_50kgPha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
-Drywt_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
+Yield_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                    "Willow10tha", "Willow10thaTSP")
-Drywt_subCon <- Mod1cld_split %>%
-  filter(Treatment %in% Drywt_charCon)
-(Drywt10tha <- ggplot(Drywt_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+Yield_subCon <- Mod1cld_split %>%
+  filter(Treatment %in% Yield_charCon)
+(Yield10tha <- ggplot(Yield_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position=position_dodge2(width=0.9), vjust=-0.5) + 
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y = emmean + SE + 0.5),
+              size = 6, position = position_dodge(width = 0.9))+
   labs(x="Treatments", y="Biomass yield (g) for chars at 10t/ha") +
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-        legend.text=element_text(size=12))+
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+                            "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", 
+                            "Phosphorus\nFertilizer"))+
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+        axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-  ggsave(Drywt10tha, file="Pots1_Biomass_10tha.jpg", width=12, height=8, dpi=150)
+ggsave(Yield10tha, file="Pots1_Yield_10tha.jpg", width=12, height=8, dpi=150)
 
 
 
@@ -311,8 +345,8 @@ Nup_Mean <- summary_by(Nuptake~Soil+Treatment, data=Pots1, FUN=mean) # calculate
 Nup_Mean <- as.numeric(Nup_Mean$Nuptake)
 Nup_skew <- skewness(Nup_Mean,na.rm=TRUE)
 Nup_kur <- kurtosis(Nup_Mean,na.rm=TRUE)
-cat("Skewness:", Nup_skew, "\n") ## data is moderately skewed @ -1.446
-cat("Kurtosis:", Nup_kur, "\n") ## data has very high kurtosis @ 2.310
+cat("Skewness:", Nup_skew, "\n") ## data is moderately skewed @ -1.31057
+cat("Kurtosis:", Nup_kur, "\n") ## data has very high kurtosis @ 3.36125
 #check distribution normality
 shapiro.test(Pots1$Nuptake) #  p=3.599e-07
 hist(Pots1$Nuptake) # slight right  skew
@@ -365,7 +399,7 @@ Mod3b<-lmer(log(Nuptake)~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclu
 rsq(Mod3b) # 0.842
 anova(Mod3b)
 shapiro.test(resid(Mod3b)) # p=2.081e-08
-plot(fitted(Mod3b),resid(Mod3b),pch=16) #more clustered at the right end
+plot(fitted(Mod3b),resid(Mod3b),pch=16) # clustered at the right end
 qqnorm(resid(Mod3b)) # heavy tails
 qqline(resid(Mod3b))
 # Sqrt transformation
@@ -391,7 +425,7 @@ qqnorm(resid(Mod3d))  #medium-heavy tails
 qqline(resid(Mod3d))
 #using "gamma" distribution in glmer test
 Mod3e <- glmer(Nuptake~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log"))
-#rsq.glmm(Mod3e)
+#rsq(Mod3e)
 anova(Mod3e)
 summary(Mod3e)
 shapiro.test(resid(Mod3e))  # p=6.486e-09
@@ -408,7 +442,7 @@ anova(Mod3g)
 summary(Mod3g)
 leveneTest(Nuptake_YJ~Treatment*Soil, data=Pots1)  # 3.842e-09
 shapiro.test(resid(Mod3g)) # p=4.088e-05
-plot(fitted(Mod3g),resid(Mod3g),pch=16) # heavy right cluster
+plot(fitted(Mod3g),resid(Mod3g),pch=16) # heavy mdeium-loose right cluster
 qqnorm(resid(Mod3g)) # medium-heavy tails
 qqline(resid(Mod3g))
 # weighted lm model
@@ -418,40 +452,46 @@ weightsP1Nuptake_full <- rep(weightsP1Nuptake, each=length(Pots1$Nuptake) / leng
 Mod3h <- lm(Nuptake ~ Treatment*Soil, data=Pots1, weights=weightsP1Nuptake_full) 
 anova(Mod3h)
 summary(Mod3h)
-hist(resid(Mod3h)) # flattened
+hist(resid(Mod3h)) # flattened on edges
 shapiro.test(resid(Mod3h))  # 0.0008813
 plot(fitted(Mod3h),resid(Mod3h),pch=16)   # clusters forming
-qqnorm(resid(Mod3h)) # slight-medium tails
+qqnorm(resid(Mod3h)) # moderate tails
 qqline(resid(Mod3h))
-rsq(Mod3h) # 0.672
+rsq(Mod3h) # 0.643
+# glmm model
+Mod3i <- glmmTMB(Nuptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod3i)
+performance::r2(Mod3i) # 0.752
+shapiro.test(resid(Mod3i)) # p=0.0008813
+plot(fitted(Mod3i),resid(Mod3i),pch=16) # loose cluster at the right end
+qqnorm(resid(Mod3i)) # moderate tails
+qqline(resid(Mod3i))
 
 #Comparing models using various options:
 ## AIC & BIC indicate that Mod3b is the best fit.
 # Create a list of the models
-N_modlist <- list(Mod3, Mod3a1, Mod3a, Mod3b, Mod3c, Mod3d, Mod3e, Mod3g, Mod3h)
+N_modlist <- list(Mod3a, Mod3b, Mod3c, Mod3e, Mod3g, Mod3h, Mod3i)
 AIC_values <- sapply(N_modlist, AIC)
 BIC_values <- sapply(N_modlist, BIC)
-N_AB <- data.frame(Model=c("Mod3", "Mod3a1", "Mod3a", "Mod3b", "Mod3c", "Mod3d", "Mod3e", "Mod3g", "MOd3h"),
+N_AB <- data.frame(Model=c("Mod3a", "Mod3b", "Mod3c", "Mod3e", "Mod3g", "Mod3h", "Mod3i"),
                    AIC_values, BIC_values)
-print(N_AB)
-  #   Model AIC_values BIC_values
-  #1   Mod3   912.0315   997.3928
-  #2 Mod3a1   912.0315   997.3928
-  #3  Mod3a   760.3687   848.4836
-  #4  Mod3b   119.6651   207.7800
-  #5  Mod3c   307.3099   395.4247
-  #6  Mod3d   912.0315   997.3928
-  #7  Mod3e   971.5901  1059.7050
-  #8  Mod3g   768.5644   856.6793
-  #9  MOd3h   964.1322  1049.4935
-# R squared values for Mod3 (aov)=0.866; Mod3a1 (lm)=0.750; Mod3a (lmer) =0.762; Mod3b (lmerlog)=0.841
-# Mod3c (lmersqrt)=0.8086; Mod3d (glm)=0.750;Mod3g (glmr)=0.807, MOd3h (weightedlm)=0.672
+print(N_AB) # Other mods not appropriate for the data
+#1 Mod3a   760.3687   848.4836
+#2 Mod3b   119.6651   207.7800
+#3 Mod3c   307.3099   395.4247
+#4 Mod3e   971.5901  1059.7050
+#5 Mod3g   768.5644   856.6793
+#6 Mod3h   968.3044  1053.6657
+#7 Mod3i   914.0315  1002.1463
+
+# R squared values for Mod3a (lmer) =0.762; Mod3b (lmerlog)=0.841, Mod3c (lmersqrt)=0.8086; 
+# Mod3g (glmr)=0.807, Mod3h (weightedlm)=0.672, Mod3i (glmm)=0.752
 
 #Mod3b chosen as best fit
 #emmeans 
-Mod3em <- emmeans(Mod3e,~Treatment|Soil, data=Pots1)
-Mod3cld <- cld(Mod3em, Letters=letters, reversed = TRUE, by="Soil", type="response") 
-Mod3cld <- Mod3cld %>% rename(emmean="response")
+Mod3em <- emmeans(Mod3i,~Treatment|Soil, data=Pots1)
+Mod3cld <- cld(Mod3em, Letters=trimws(letters), reversed = TRUE, by="Soil", type="response") 
+#Mod3cld <- Mod3cld %>% rename(emmean="response")
 View(Mod3cld)
 
 ## Visualizations
@@ -466,18 +506,21 @@ Nuptake_subVar <- Mod3cld %>%
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position=position_dodge2(width=0.9), vjust=-1) + 
-  labs(x="Treatments", y="N uptake (ug) for chars at 50kg p/ha")+
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2),
+              size = 6, position = position_dodge(width = 0.9))+
+  labs(x="Treatments", y="N uptake (ug/kg soil) for chars at 50kg p/ha")+
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title=element_text(size=20))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=20, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(Nup50kg, file="Pots1_Nuptake_50kgPha.jpg", width=18, height=18, dpi=500)
+                              "Phosphorus\nFertilizer"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Nup50kg, file="Pots1_Nuptake_50kgPha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
 Nuptake_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
@@ -491,21 +534,22 @@ Nuptake_subCon <- Mod3cld %>%
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position=position_dodge2(width=0.9), vjust=-1) + 
-  labs(x="Treatments", y="N uptake (ug) for chars at 10t/ha") +
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2),
+              size = 6, position = position_dodge(width = 0.9))+
+  labs(x="Treatments", y="N uptake (ug/kg soil) for chars at 10t/ha") +
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=20, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(Nup10tha, file="Pots1_Nuptake_10tha.jpg", width=21, height=21, dpi=500)
-
-
-
+                            "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP",
+                            "Phosphorus\nFertilizer"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Nup10tha, file="Pots1_Nuptake_10tha.jpg", width=12, height=8, dpi=150)
 
 
 
@@ -553,7 +597,8 @@ plot(fitted(Mod4a),resid(Mod4a),pch=16) #looks relatively normal
 qqnorm(resid(Mod4a)) #long tails
 qqline(resid(Mod4a))
 # lmer model - did not work  ##S-W p value <0.005; Data is considered non-normal and needs to be transformed
-Mod4b<-lmer(Nrecovery~Treatment*Soil+(1|Soil),data=Pots1)
+Mod4b<-lmer(Nrecovery~Treatment*Soil+(1|Soil),data=Pots1) #model fitting process didn't reach stable solution
+# estimated parameter values may not be reliable
 anova(Mod4b)
 summary(Mod4b)
 shapiro.test(resid(Mod4b))  # p=2.046e-06
@@ -561,75 +606,86 @@ plot(fitted(Mod4b),resid(Mod4b),pch=16) #looks relatively normal
 qqnorm(resid(Mod4b)) #long tails
 qqline(resid(Mod4b))
 #Mod4c - log and base log 10 transform data for N recovery
-Mod4c<-lmer(log(Nrecovery)~Treatment*Soil+(1|Soil),data=Pots1)
-rsq(Mod4c) # adjusted R squared: 0.6234
+Mod4c<-lmer(log(Nrecovery)~Treatment*Soil+(1|Soil),data=Pots1) # model didn't converge properly
 anova(Mod4c)
 summary(Mod4c)
 shapiro.test(resid(Mod4c))  # p=1.297e-14
-plot(fitted(Mod4c),resid(Mod4c),pch=16)  # data clustering
+plot(fitted(Mod4c),resid(Mod4c),pch=16)  # pretty normal slight upward shift
 qqnorm(resid(Mod4c)) #most data fit better but tails are exaggerated
 qqline(resid(Mod4c))
+rsq(Mod4c) # adjusted R squared: 0.631
 #Mod4d 
 Mod4d<-lmer(log10(Nrecovery)~Treatment*Soil+(1|Soil),data=Pots1)
-ref.grid(Mod4d)
-Mod4doptim <- lmerControl(optimizer="Nelder_Mead", optCtrl=list(maxfun=1e9))
-Mod4dOp <- update(Mod4d, control=Mod4doptim)
-rsq(Mod4d) #0.62
 anova(Mod4d)
 summary(Mod4d)
 shapiro.test(resid(Mod4d)) # p= 1.297e-14
+plot(fitted(Mod4d),resid(Mod4d),pch=16)  # pretty normal but shifted up
+qqnorm(resid(Mod4d)) #heavy tails & shifted up
+qqline(resid(Mod4d))
+ref.grid(Mod4d)
+Mod4doptim <- lmerControl(optimizer="Nelder_Mead", optCtrl=list(maxfun=1e9))
+Mod4dOp <- update(Mod4d, control=Mod4doptim)
+rsq(Mod4d) #0.59
 #Mod4e - sqrt transformation - did not work, data non-normally distributed and has unequal variances
-Mod4e <- lmer(sqrt(Nrecovery)~Treatment*Soil+(1|Soil),data=Pots1)
+Mod4e <- lmer(sqrt(Nrecovery)~Treatment*Soil+(1|Soil),data=Pots1) # model didn't converge properly
 anova(Mod4e)
 summary(Mod4e)
 shapiro.test(resid(Mod4e)) #=8.829e-09
+plot(fitted(Mod4e),resid(Mod4e),pch=16)  # pretty normal
+qqnorm(resid(Mod4e)) #heavy tails
+qqline(resid(Mod4e))
+rsq(Mod4e)  # r=0.73
 #Mod4f using "gamma" distribution in glmer test - did not work, data less normally distributed with unequal variance
 Mod4f <- glmer(Nrecovery~Treatment*Soil+(1|Soil),data=Nrec_out,family=Gamma(link="log"))
 anova(Mod4f)
 summary(Mod4f)
 shapiro.test(resid(Mod4f)) # p=2.471e-13
 bf.test(Nrecovery~Treatment, data=Pots1) # variances are significantly different 
-plot(fitted(Mod4f),resid(Mod4f),pch=16)  # data clustering at the top of the plot
-qqnorm(resid(Mod4f)) #data clustering at the top of the plot
+plot(fitted(Mod4f),resid(Mod4f),pch=16)  # data clustering at the top and slightly to left of the plot
+qqnorm(resid(Mod4f)) #data clustering at the top of the plot, moderate tails
 qqline(resid(Mod4f))
-
+# Mod 4g glmm
+Mod4g <- glmmTMB(Nrecovery~Treatment*Soil+(1|Soil), data=Nrec_out, family=gaussian(), na.action=na.exclude)
+summary(Mod4g)
+performance::r2(Mod4g) # 0.764
+shapiro.test(resid(Mod4g)) # p=2.046e-06
+plot(fitted(Mod4g),resid(Mod4g),pch=16) # slight cluster to left
+qqnorm(resid(Mod4g)) # moderate tails
+qqline(resid(Mod4g))
 
 ##since the S-W values for all models show non-normally distributed data, look at other options:
 #Shapiro-Wilk values for the various models showed Mod4 to have the most normal data
 #Levene test showed Mod4c&d to have the most equal variances of all the models, but still unequal p=1.507e-06
 #AIC and BIC values - this indicated that Mod4d (lmer with log10 transform) was the best fit
 # Create a list of the models
-Nrec_modlist <- list(Mod4, Mod4_aovlog, Mod4a, Mod4b, Mod4c, Mod4d, Mod4e, Mod4f)
+Nrec_modlist <- list(Mod4c, Mod4d, Mod4e, Mod4f, Mod4g)
 AIC_Nrec <- sapply(Nrec_modlist, AIC)
 BIC_Nrec <- sapply(Nrec_modlist, BIC)
-NrecAB <- data.frame(Model=c("Mod4", "Mod4_aovlog", "Mod4a", "Mod4b", "Mod4c", "Mod4d", "Mod4e", "Mod4f"),AIC_Nrec, BIC_Nrec)
+NrecAB <- data.frame(Model=c("Mod4c", "Mod4d", "Mod4e", "Mod4f", "Mod4g"),
+                     AIC_Nrec, BIC_Nrec)
 print(NrecAB)
-#Model   AIC_Nrec BIC_Nrec
-#1        Mod4 656.4140 734.1958
-#2 Mod4_aovlog 132.5385 210.3203
-#3       Mod4a 656.4140 734.1958
-#4       Mod4b 564.9435 645.4075
-#5       Mod4c 176.8876 257.3515
-#6       Mod4d  43.4424 123.9063
-#7       Mod4e 239.5915 320.0554
-#8       Mod4f 701.5753 782.0392
+# Model AIC_Nrec BIC_Nrec
+#1 Mod4c 176.8876 257.3515
+#2 Mod4d  43.4424 123.9063
+#3 Mod4e 239.5915 320.0554
+#4 Mod4f 701.5753 782.0392
+#5 Mod4g 658.4141 738.8780
 
 
-# R squared values - these were check for Mod4 (0.753), Mod4a (0.682), Mod4c (0.6234) & Mod4d (0.62) which showed
-# Mod 4 to be best)
-# considering that none of the models fit very well, Mod4c was chosen as it had good AIC, decent R squared and 
-# the transformation in the model improved the unequal variances significantly. Also no problem fitting it to emmeans
+# R squared values - these were check for Mod4c=0.63, Mod4d=0.59, Mod4e=0.73, Mod4f=, Mod4g=0.76
+# considering that none of the models fit very well, Mod4g was chosen as it had decent AIC, high rsq and 
+# the residuals were the least abnormal
 
 #run emmeans on Mod4 - showed significant differences
-Mod4em <- emmeans(Mod4c,~Treatment|Soil, subset=(Nrec$Nrecovery))
-Mod4em_cld <- cld(Mod4em, Letters=letters, reversed = TRUE, by="Soil")
+Mod4em <- emmeans(Mod4g,~Treatment|Soil, subset=(Nrec_out$Nrecovery))
+Mod4em_cld <- cld(Mod4em, Letters=trimws(letters), reversed = TRUE, by="Soil")
 View(Mod4em_cld)
 
 ## Visualizations
-par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
 ##select specific treatments and use those in the graph - repeat for all subsets
 #Plotting dry weight using constant P and variable biochar rates
-Nrec_trtVar <- c("Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
+Nrec_trtVar <- c("Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", 
+                 "TripleSuperPhosphate")
 Nrec_subVar <- Mod4em_cld %>%
   filter(Treatment %in% Nrec_trtVar)
 (Nrec50kg <- ggplot(Nrec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
@@ -639,17 +695,21 @@ Nrec_subVar <- Mod4em_cld %>%
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position=position_dodge2(width=0.9), vjust=-7) +
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2),
+            size = 6, position = position_dodge(width = 0.9))+
   labs(x="Treatments", y="Nitrogen Recovery (%)") +
-  scale_x_discrete(labels=c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-  ggsave(Nrec50kg, file="Pots1_Nrec_50kg_ha.jpg", width=20, height=20, dpi=100)
+  scale_x_discrete(labels=c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", 
+                            "Phosphorus\nFertilizer"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Nrec50kg, file="Pots1_Nrec_50kg_ha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
 Nrec_charCon <- c("Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
@@ -662,19 +722,23 @@ Nrec_subCon <- Mod4em_cld %>%
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-                width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position=position_dodge2(width=0.9), vjust=-7) +
+                  width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2),
+              size = 6, position = position_dodge(width = 0.9))+
   labs(x="Treatments", y="Nitrogen Recovery (%)") +
   scale_x_discrete(labels=c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title=element_text(size=16))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(Nrec10tha, file="Pots1_Nrec_10t_ha.jpg", width=20, height=20, dpi=100)
+                            "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP",
+                            "Phosphorus\nFertilizer"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Nrec10tha, file="Pots1_Nrec_10t_ha.jpg", width=12, height=8, dpi=150)
 
 
 
@@ -698,13 +762,13 @@ hist(Pots1$Puptake) # left skewed
 leveneTest(Puptake ~ Treatment*Soil, data=Pots1) # variances are equal; p=0.1601
 #Mod5 - P uptake
 Mod5 <- lm(Puptake~Soil*Treatment,data=Pots1) 
-rsq(Mod5) # 0.9428224
 anova(Mod5)
 summary(Mod5)
 shapiro.test(resid(Mod5))  ##S-W p value=0.1046; Data is considered normal
 plot(fitted(Mod4),resid(Mod4),pch=16) # slightly clustered to the left
 qqnorm(resid(Mod4)) #long tails
 qqline(resid(Mod4))
+rsq(Mod5) # 0.9428224
 ## Run aov to compare
 Mod5a <- aov(Puptake~Treatment*Soil, data=Pots1)
 anova(Mod5a)
@@ -719,69 +783,89 @@ Mod5asum_sq_resid <- Mod5a_tidy$sumsq[2]
 Mod5asum_sq_reg / (Mod5asum_sq_reg + Mod5asum_sq_resid) # 0.9950879
 # robust anova
 Mod5b <- lmrob(Puptake ~ Treatment * Soil, data=Pots1, method="MM")
+Mod5b_N <- length(residuals(Mod5b))
+Mod5b_P <- length(coefficients(Mod5b)) - 1  # Exclude the intercept
+(adj_rsq <- 1 - (1 - summary(Mod5b)$r.squared) * ((Mod5b_N - 1) / (Mod5b_N - Mod5b_P - 1))) # r=0.929
+# Mod5c glmm
+Mod5c <- glmmTMB(Puptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod5c)
+performance::r2(Mod5c) # 0.938
+shapiro.test(resid(Mod5c)) # p=0.6237
+plot(fitted(Mod5c),resid(Mod5c),pch=16) # normal
+qqnorm(resid(Mod5c)) # almost no tails
+qqline(resid(Mod5c))
 
 #AIC and BIC values - the models were equal
-Pup_modlist <- list(Mod5, Mod5a, Mod5b)
+Pup_modlist <- list(Mod5c)
 AIC_values <- sapply(Pup_modlist, AIC)
 BIC_values <- sapply(Pup_modlist, BIC)
-PupAB <- data.frame(Model=c("Mod5", "Mod5a", "Mod5b"), AIC_values, BIC_values)
+PupAB <- data.frame(Model=c("Mod5c"), AIC_values, BIC_values)
 print(PupAB)
 #Model AIC_values BIC_values
-#1  Mod5   2130.762   2216.389
-#2 Mod5a   2130.762   2216.389
+#1  Mod5   527.3229   613.2141
+#2  Mod5a   527.3229   613.2141
+#3  Mod5c   529.3229   617.9848
+## rsq values: Mod5=0.94 , Mod5a= 0.99, Mod5b = 0.93, Mod5c= .094
 
-#Mod5a chosen as rsq is higher (0.99)
-Mod5em <- emmeans(Mod5a,~Treatment|Soil)
-Mod5em_cld <- cld(Mod5em, Letters=letters, reversed = TRUE, by="Soil", type="response")
+#Mod5c chosen as it is a mixed model with high rsq
+Mod5em <- emmeans(Mod5c,~Treatment|Soil)
+Mod5em_cld <- cld(Mod5em, Letters=trimws(letters), reversed = TRUE, by="Soil", type="response")
 View(Mod5em_cld)
 
 
 ## Visualizations
-par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
 Pup_trtVar <- c("Control1", "Control2","CanolaMeal50kgha","CanolaHull50kgha","Manure50kgha","Willow50kgha",
                 "TripleSuperPhosphate")
 Pup_subVar <- Mod5em_cld %>% filter(Treatment %in% Pup_trtVar)
-ggplot(Pup_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Pup50kgha <- ggplot(Pup_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position=position_dodge2(width=0.9), vjust=-1) +
-  labs(x="Treatments", y="Phosphorus uptake (mg) for 50kg P/ha treatments") +
-  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x=element_text(size=20, face="bold"), axis.title.y=element_text(size=20, face="bold")) +
-  theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Puptake_50kg_ha.jpg", width=14, height=12, dpi=150)
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+0.8),
+            size = 6, position = position_dodge(width = 0.9))+
+  labs(x="Treatments", y="P uptake (ug/kg soil) for 50kg P/ha treatments") +
+  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", 
+                            "Phosphorus\nFertilizer"))+
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+        axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Pup50kgha, file="Pots1_Puptake_50kg_ha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
 Pup_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                   "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                   "Willow10tha", "Willow10thaTSP")
 Pup_subCon <- Mod5em_cld %>% filter(Treatment %in% Pup_charCon)
-ggplot(Pup_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Pup10tha <- ggplot(Pup_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position=position_dodge2(width=0.9), vjust=-1) +
-  labs(x="Treatments", y="Phosphorus uptake (mg) for 10t/ha treatments") +
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+1),
+            size = 6, position = position_dodge(width = 0.9))+
+  labs(x="Treatments", y="P uptake (ug/kg soil) for 10t/ha treatments") +
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x=element_text(size=20, face="bold"), axis.title.y=element_text(size=20, face="bold")) +
-  theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Puptake_10t_ha.jpg", width=14, height=12, dpi=150)
+                              "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP",
+                            "Phosphorus\nFertilizer"))+
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+        axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Pup10tha, file="Pots1_Puptake_10t_ha.jpg", width=12, height=8, dpi=150)
 
 
 
@@ -815,7 +899,7 @@ qqnorm(resid(Mod6)) # tails severely off the line
 qqline(resid(Mod6))
 # Mod6a simple linear model
 Mod6a <- lm(Precovery~Soil*Treatment,data=Prec)
-summary(Mod6a)$adj.r.squared # check adjusted R squared value: 0.66
+summary(Mod6a)$adj.r.squared # check adjusted R squared value: 0.829
 anova(Mod6a)
 summary(Mod6a)
 shapiro.test(resid(Mod6a)) #data is not normally distributed: 3.472e-08
@@ -824,8 +908,8 @@ qqnorm(resid(Mod6a)) # heavy tails
 qqline(resid(Mod6a))
 #Mod6b - applying Yeo-Johnson transformation
 Prec_YJ <- yjPower(Pots1$Precovery, 0.5,jacobian.adjusted=TRUE)
-Mod6b <- lmer(Prec_YJ ~ Treatment*Soil + (1|Soil), data=Pots1)
-rsq(Mod6b) # adjusted R squared: 0.83
+Mod6b <- lmer(Prec_YJ ~ Treatment*Soil + (1|Soil), data=Pots1) # model failed to converge
+rsq(Mod6b) # adjusted R squared: 0.8369
 anova(Mod6b)
 summary(Mod6b)
 leveneTest(Prec_YJ~Treatment*Soil, data=Pots1)  #data has slightly less unequal variances 2.875e-08
@@ -834,41 +918,47 @@ plot(fitted(Mod6b),resid(Mod6b),pch=16) # moderately clustered in the middel fo 
 qqnorm(resid(Mod6b)) # heavy tails
 qqline(resid(Mod6b))
 # Mod 6c lmer model
-Mod6c <- lme(Precovery ~ Treatment*Soil, random=~1|Soil, data=Pots1, na.action=na.omit)
+Mod6c <- lme(Precovery ~ Treatment*Soil, random=~1|Soil, data=Prec)
 summary(Mod6c)
 anova(Mod6c)
-rsq(Mod6c) # 0.86
+shapiro.test(resid(Mod6c)) # p= 3.472e-08
+plot(fitted(Mod6c),resid(Mod6c),pch=16) # clustered to left, equal around 0
+qqnorm(resid(Mod6c)) # heavy  tails
+qqline(resid(Mod6c))
+rsq(Mod6c) # 0.88
 plot(ranef(Mod6c))
+# Mod6d glmm
+Mod6d <- glmmTMB(Precovery~Treatment*Soil+(1|Soil), data=Prec, family=gaussian(), na.action=na.exclude)
+summary(Mod6d)
+performance::r2(Mod6d) # 0.874
+shapiro.test(resid(Mod6d)) # p= 3.472e-08
+plot(fitted(Mod6d),resid(Mod6d),pch=16) # clustered to left, equal around 0
+qqnorm(resid(Mod6d)) # heavy  tails
+qqline(resid(Mod6d))
 
-#AIC and BIC values - this indicated that Mod6b was marginally the best fit with Mod6 coming in a close second on AIC
-# Create a list of the models
-Prec_modlist <- list(Mod6, Mod6a, Mod6b, Mod6c)
-# Obtain the AIC and BIC values
+#AIC and BIC values
+Prec_modlist <- list(Mod6b, Mod6c, Mod6d)
 AIC_values <- sapply(Prec_modlist, AIC)
 BIC_values <- sapply(Prec_modlist, BIC)
-# Print the AIC and BIC values
-PrecAB <- data.frame(Model=c("Mod6", "Mod6a", "Mod6b","Mod6c"), AIC_values, BIC_values)
+PrecAB <- data.frame(Model=c("Mod6b","Mod6c", "Mod6d"), AIC_values, BIC_values)
 print(PrecAB)
 #Model AIC_values BIC_values
-#1  Mod6   748.9711   819.3107
-#2 Mod6a   748.9711   819.3107
-#3 Mod6b   628.1842   701.1290
-#4 Mod6c   627.4533   691.9672
+#1 Mod6b   628.1842   701.1290
+#2 Mod6c   627.4533   691.9672
+#3 Mod6d   750.9711   823.9159
 
-#run emmeans on Mod6b - this model chosen as the second lowest AIC/BIC and highest Rsq with improved variances
-Mod6bEm<- emmeans(Mod6b,~Treatment|Soil, subset=(Prec$Precovery), type="response")
-Mod6bEm_cld <- cld(Mod6bEm, Letters=letters, reversed = TRUE, alpha=0.1, by="Soil") 
-View(Mod6bEm_cld)
-# Run emmeans on Mod6 - no significant differences detected between treatments
-#Mod6em <- emmeans(Mod6a,~Treatment*Soil, subset=(Pots1$Precovery))
-#Mod6em_cld <- cld(Mod6em, Letters=letters, by="Soil") 
-#View(Mod6em_cld)
+#rsq values: Mod6b=0.84, Mod6c=0.88, Mod6d=0.87 (Mod6b failed to converge)
+
+#run emmeans on Mod6d - issues with Mods 6b & 6c
+Mod6Em<- emmeans(Mod6d,~Treatment|Soil, subset=(Prec$Precovery), type="response")
+Mod6Em_cld <- cld(Mod6Em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
+#Mod6c resulted in Se values of 0 with df=0 and NaN for the upper and lower CIL
+View(Mod6Em_cld)
+print(Mod6Em_cld)
 
 ##Developing visualizations
-par(mar=c(4,4,4,4)+0.4) #c(bottom, left, top, right) + 0.1 lines
-##select specific treatments and use those in the graph - repeat for all subsets
 Prec_trtVar <- c("CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
-Prec_subVar <- Mod6bEm_cld %>%
+Prec_subVar <- Mod6Em_cld %>%
   filter(Treatment %in% Prec_trtVar)
 (Prec50kg <- ggplot(Prec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -878,24 +968,24 @@ Prec_subVar <- Mod6bEm_cld %>%
   scale_y_continuous(limits=c(-10, 70))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position=position_dodge2(width=0.9), vjust=-1.5) +
-  labs(x="Treatments", y="P Recovery (%) in the 50kg P/ha treatments") +
-  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-        legend.text=element_text(size=12))+
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2.5),
+              size = 6, position = position_dodge(width = 0.9))+
+  labs(x="Treatments", y="P Recovery (%) for 50kg P/ha treatments") +
+  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Phosphorus\nFertilizer"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Prec50kg, file="Pots1_Prec_50kg_ha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
-par(mar=c(5,6,6,2)+0.4) #c(bottom, left, top, right) + 0.1 lines
-Prec_charCon <- c("CanolaMeal10tha", "CanolaHull10tha", "Manure10tha",  "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP",
-                  "Manure10thaTSP", "Willow10thaTSP","TripleSuperPhosphate")
-Prec_subCon <- Mod6bEm_cld %>%
+Prec_charCon <- c("CanolaMeal10tha", "CanolaHull10tha", "Manure10tha",  "Willow10tha", "CanolaMeal10thaTSP", 
+                  "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP","TripleSuperPhosphate")
+Prec_subCon <- Mod6Em_cld %>%
   filter(Treatment %in% Prec_charCon)
 (Prec10tha <- ggplot(Prec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -904,19 +994,20 @@ Prec_subCon <- Mod6bEm_cld %>%
                        labels=c("Haverhill", "Oxbow"))+ 
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position=position_dodge2(width=0.9), vjust=-0.5) +
+  geom_text(aes(label = ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2.5),
+              size = 6, position = position_dodge(width = 0.9))+
   labs(x="Treatments", y="P Recovery (%) in 10t/ha treatments") +
-  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", "Canola Hull\n& TSP",
-                              "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
-  theme_bw() +
-  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-        legend.text=element_text(size=12))+
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", 
+                            "Canola Hull\n& TSP","Manure\n& TSP", "Willow\n& TSP", "Phosphorus\nFertilizer"))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Prec10tha, file="Pots1_Prec_10t_ha.jpg", width=12, height=8, dpi=150)
 
 
@@ -960,20 +1051,29 @@ shapiro.test(resid(Mod7a)) # p=0.04706
 plot(fitted(Mod7a),resid(Mod7a),pch=16) # somewhat clustered to the left
 qqnorm(resid(Mod7a)) # medium tails
 qqline(resid(Mod7a))
+# Mod7b glmm
+Mod7b <- glmmTMB(NO3~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod7b)
+performance::r2(Mod7b) # 0.767
+shapiro.test(resid(Mod7b)) # p= 1.408e-09
+plot(fitted(Mod7b),resid(Mod7b),pch=16) # clustered to left, equal around 0
+qqnorm(resid(Mod7b)) # heavy  tails
+qqline(resid(Mod7b))
 
 #AIC and BIC values - this indicated that Mod7 was the best fit
-NO3_modlist <- list(Mod7, Mod7a)
+NO3_modlist <- list(Mod7, Mod7a, Mod7b)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod7", "Mod7a"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod7", "Mod7a", "Mod7b"), AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod7  -85.68761  -1.972715
-# 2 Mod7a  -85.68761  -1.972715
+#2 Mod7a  -85.68761  -1.972715
+#3 Mod7b  575.15162 661.566995
 
-#run emmeans on Mod7 - highest Rsq 
-Mod7em<- emmeans(Mod7,~Treatment|Soil, subset=(Pots1$NO3), type="response")
-Mod7em_cld <- cld(Mod7em, Letters=letters, reversed = TRUE, by="Soil") 
+#run emmeans on Mod7b - aov and lm doesn't work
+Mod7em<- emmeans(Mod7b,~Treatment|Soil, subset=(Pots1$NO3), type="response")
+Mod7em_cld <- cld(Mod7em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod7em_cld)
 write.csv(Mod7em_cld, file="Pots1_NO3.csv")
 
@@ -1021,20 +1121,29 @@ shapiro.test(resid(Mod8a)) # p=0.002862
 plot(fitted(Mod8a),resid(Mod8a),pch=16) # looks normal, starting to cluster in vertical lines
 qqnorm(resid(Mod8a)) # medium tails
 qqline(resid(Mod8a))
+# Mod8b glmm
+Mod8b <- glmmTMB(NH4~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod8b)
+performance::r2(Mod8b) # 0.864
+shapiro.test(resid(Mod8b)) # p= 1.249e-06
+plot(fitted(Mod8b),resid(Mod8b),pch=16) # clustered to left, equal around 0
+qqnorm(resid(Mod8b)) # moderate-heavy  tails
+qqline(resid(Mod8b))
 
 #AIC and BIC values - this indicated that Mod8 was the best fit
-NO3_modlist <- list(Mod8, Mod8a)
+NO3_modlist <- list(Mod8, Mod8a, Mod8b)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod8", "Mod8a"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod8", "Mod8a", "Mod8b"), AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod8    39.4422   123.1571
 #2  Mod8a   39.4422   123.1571
+#3  Mod8b   473.6601  560.0755
 
-#run emmeans on Mod8 - highest Rsq 
-Mod8em<- emmeans(Mod8,~Treatment|Soil, subset=(Pots1$NH4), type="response")
-Mod8em_cld <- cld(Mod8em, Letters=letters, reversed = TRUE, by="Soil") 
+#run emmeans on Mod8b - aov and lm shouldn't be used
+Mod8em<- emmeans(Mod8b,~Treatment|Soil, subset=(Pots1$NH4), type="response")
+Mod8em_cld <- cld(Mod8em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod8em_cld)
 write.csv(Mod8em_cld, file="Pots1_NH4.csv")
 
@@ -1083,7 +1192,7 @@ Mod9asum_sq_reg <- Mod9a_tidy$sumsq[1]
 Mod9asum_sq_resid <- Mod9a_tidy$sumsq[2]  
 Mod9asum_sq_reg / (Mod9asum_sq_reg + Mod9asum_sq_resid) # 0.3674
 #Mod9b - lmer
-Mod9b<-lmer(PO4~Treatment*Soil+(1|Soil),data=Pots1)
+Mod9b<-lmer(PO4~Treatment*Soil+(1|Soil),data=Pots1) #model convergence issues
 anova(Mod9b)
 summary(Mod9b)
 rsq(Mod9b) # adjusted R squared: 0.91
@@ -1100,7 +1209,7 @@ plot(fitted(Mod9c),resid(Mod9c),pch=16) # data looks more random
 qqnorm(resid(Mod9c)) #tails have improved - almost normal
 qqline(resid(Mod9c))
 #Mod9d - results similar as for natural log
-Mod9d<-lmer(log10(PO4)~Treatment*Soil+(1|Soil),data=Pots1) # same as for natural log
+Mod9d<-lmer(log10(PO4)~Treatment*Soil+(1|Soil),data=Pots1) # model failed to converge
 anova(Mod9d)
 shapiro.test(resid(Mod9d))
 rsq(Mod9d) # adjusted R squared: 0.953674
@@ -1108,7 +1217,7 @@ plot(fitted(Mod9d),resid(Mod9d),pch=16) # data looks more random
 qqnorm(resid(Mod9d)) #tails have improved - almost normal
 qqline(resid(Mod9d))
 #Mod4e - sqrt transformation - did not work, data non-normally distributed and has unequal variances
-Mod9e <- lmer(sqrt(PO4)~Treatment*Soil+(1|Soil),data=Pots1)
+Mod9e <- lmer(sqrt(PO4)~Treatment*Soil+(1|Soil),data=Pots1) # model failed to converge
 anova(Mod9e)
 summary(Mod9e)
 shapiro.test(resid(Mod9e)) # p=5.173e-05
@@ -1117,7 +1226,7 @@ plot(fitted(Mod9e),resid(Mod9e),pch=16) # clusters forming
 qqnorm(resid(Mod9e)) #fatter tails
 qqline(resid(Mod9e))
 #Mod4f using "gamma" distribution in glmer test - did not work, data less normally distributed with unequal variance
-Mod9f <- glmer(PO4~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log"))
+Mod9f <- glmer(PO4~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log")) # singular issues
 anova(Mod9f)
 summary(Mod9f)
 shapiro.test(resid(Mod9f)) # p=0.3705
@@ -1127,20 +1236,28 @@ plot(fitted(Mod9f),resid(Mod9f),pch=16) # clusters forming
 qqnorm(resid(Mod9f)) #fatter tails
 qqline(resid(Mod9f))
 #Mod9g glmer using gamma distribution with log transformation - better than Mod4f, similar to Mod4c
-Mod9g <- glmer(log(PO4)~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log"))
+Mod9g <- glmer(log(PO4)~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log")) # singularity issues
 anova(Mod9g)
 summary(Mod9g)
 shapiro.test(resid(Mod9g)) # p=0.3567
 bf.test(PO4~Treatment, data=Pots1) # 0.0003149367 
 rsq.glmm(Mod9g)
+# Mod9h glmm
+Mod9h <- glmmTMB(log(PO4)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod9h)
+performance::r2(Mod9h) # 0.962
+shapiro.test(resid(Mod9h)) # p= 0.475
+plot(fitted(Mod9h),resid(Mod9h),pch=16) # normal
+qqnorm(resid(Mod9h)) # slight  tails
+qqline(resid(Mod9h))
+
 
 # run AIC/BIC to test for best model fit
-PO4_modlist <- list(Mod9, Mod9a, Mod9b, Mod9c, Mod9d, Mod9e, Mod9f, Mod9g)
-# Obtain the AIC and BIC values
+PO4_modlist <- list(Mod9, Mod9a, Mod9b, Mod9c, Mod9d, Mod9e, Mod9f, Mod9g, Mod9h)
 AIC_values <- sapply(PO4_modlist, AIC)
 BIC_values <- sapply(PO4_modlist, BIC)
-# Print the AIC and BIC values
-PO4AB <- data.frame(Model=c("Mod9","Mod9a","Mod9b","Mod9c","Mod9d","Mod9e","Mod9f","Mod9g"), AIC_values, BIC_values)
+PO4AB <- data.frame(Model=c("Mod9","Mod9a","Mod9b","Mod9c","Mod9d","Mod9e","Mod9f","Mod9g", "Mod9h"),
+                    AIC_values, BIC_values)
 print(PO4AB)
 
 # Model  AIC_values BIC_values
@@ -1152,12 +1269,13 @@ print(PO4AB)
 #6 Mod9e   91.535178  179.37301
 #7 Mod9f  330.642924  418.48075
 #8 Mod9g  -56.48083    31.3570
+#9 Mod9h  -71.18115   16.65668
 
-# Based on the AIC, S-W and Levene test results, Mod9c has the best fit
+# Mod9h only appropriate model with no converge or other issues, very high rsq
 
 #Run emmeans
-Mod9em <- emmeans(Mod9c,~Treatment|Soil, subset=(Pots1$PO4>0), type="response")
-Mod9cld <- cld(Mod9em, Letters=letters, reversed = TRUE, by="Soil")
+Mod9em <- emmeans(Mod9h,~Treatment|Soil, subset=(Pots1$PO4>0), type="response")
+Mod9cld <- cld(Mod9em, Letters=trimws(letters), reversed = TRUE, by="Soil")
 View(Mod9cld)
 write.csv(Mod9cld, file="Pots1_PO4.csv")
 
@@ -1204,19 +1322,30 @@ shapiro.test(resid(Mod10a)) # p=0.01133
 plot(fitted(Mod10a),resid(Mod10a),pch=16) # cluistering to right
 qqnorm(resid(Mod10a)) # small-medium tails
 qqline(resid(Mod10a))
+# Mod10b glmm
+Mod10b <- glmmTMB(log(ResinP)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod10b)
+performance::r2(Mod10b) # 0.812
+shapiro.test(resid(Mod10b)) # p= 0.01133
+plot(fitted(Mod10b),resid(Mod10b),pch=16) # slight cluster to upper right
+qqnorm(resid(Mod10b)) # small  tails
+qqline(resid(Mod10b))
+
+
 #AIC and BIC values - this indicated that Mod10 was the best fit
-NO3_modlist <- list(Mod10, Mod10a)
+NO3_modlist <- list(Mod10, Mod10a, Mod10b)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod10", "Mod10a"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod10", "Mod10a", "Mod10b"), AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod10    -71.30774   14.31965
 #2 Mod10a  -71.30774   14.31965
+#3 Mod10b  125.85585  214.24541
 
-#run emmeans on Mod10 - highest Rsq 
-Mod10em<- emmeans(Mod10,~Treatment|Soil, subset=(Pots1$ResinP), type="response")
-Mod10em_cld <- cld(Mod10em, Letters=letters, reversed = TRUE, by="Soil") 
+#run emmeans on Mod10b - only apprpriate model, high rsq
+Mod10em<- emmeans(Mod10b,~Treatment|Soil, subset=(Pots1$ResinP), type="response")
+Mod10em_cld <- cld(Mod10em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod10em_cld)
 write.csv(Mod10em_cld, file="Pots1_ResinP.csv")
 
@@ -1263,20 +1392,29 @@ shapiro.test(resid(Mod11a)) # p=0.1704
 plot(fitted(Mod11a),resid(Mod11a),pch=16) # clustered to left
 qqnorm(resid(Mod11a)) # small tails
 qqline(resid(Mod11a))
+# Mod11b glmm
+Mod11b <- glmmTMB(log(WaterSolP)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod11b)
+performance::r2(Mod11b) # 0.804
+shapiro.test(resid(Mod11b)) # p= 0.1704
+plot(fitted(Mod11b),resid(Mod11b),pch=16) # slight cluster to upper left
+qqnorm(resid(Mod11b)) # small  tails
+qqline(resid(Mod11b))
 
 #AIC and BIC values - this indicated that Mod11 was the best fit
-NO3_modlist <- list(Mod11, Mod11a)
+NO3_modlist <- list(Mod11, Mod11a, Mod11b)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod11", "Mod11a"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod11", "Mod11a", "Mod11b"), AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod11    -247.85  -161.9588
 #2 Mod11a    -247.85  -161.9588
+#3 Mod11b  -49.01836   39.64354
 
-#run emmeans on Mod11 - highest Rsq 
-Mod11em<- emmeans(Mod11,~Treatment|Soil, subset=(Pots1$WaterSolP), type="response")
-Mod11em_cld <- cld(Mod11em, Letters=letters, reversed = TRUE, by="Soil") 
+#run emmeans on Mod11b 
+Mod11em<- emmeans(Mod11b,~Treatment|Soil, subset=(Pots1$WaterSolP), type="response")
+Mod11em_cld <- cld(Mod11em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod11em_cld)
 write.csv(Mod11em_cld, file="Pots1_WaterSolP.csv")
 
@@ -1314,29 +1452,39 @@ plot(fitted(Mod12a),resid(Mod12a),pch=16) # clustered to left
 qqnorm(resid(Mod12a)) # small-medium tails
 qqline(resid(Mod12a))
 #Mod12b
-Mod12b <- lmer(TotalP2~Treatment*Soil+(1|Soil), data=Pots1, , na.action=na.exclude)
-rsq(Mod12b)  # 0.6789
-anova(Mod12b) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
+Mod12b <- lmer(TotalP2~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude) #didn't converge properly
+rsq(Mod12b)  # 0.6804
+anova(Mod12b) 
 summary(Mod12b)
 shapiro.test(resid(Mod12b)) # p=0.07059
-plot(fitted(Mod12b),resid(Mod12b),pch=16) # clustered to left
+plot(fitted(Mod12b),resid(Mod12b),pch=16) # slightly clustered to left
 qqnorm(resid(Mod12b)) # small-medium tails
 qqline(resid(Mod12b))
+# Mod12c glmm - convergence issues
+Mod12c <- glmmTMB(TotalP2~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude,
+                  control=glmmTMBControl(optimizer=optim, optArgs=list(parallel = TRUE, nthreads = 100)))
+summary(Mod12c)
+performance::r2(Mod12c) # 0.764
+shapiro.test(resid(Mod12c)) # p= 2.019e-05
+plot(fitted(Mod12c),resid(Mod12c),pch=16) # splitinto two vertical lines
+qqnorm(resid(Mod12c)) # heavy right tail
+qqline(resid(Mod12c))
 
 #AIC and BIC values - this indicated that Mod12 was the best fit
-NO3_modlist <- list(Mod12, Mod12a, Mod12b)
+NO3_modlist <- list(Mod12, Mod12a, Mod12b, Mod12c)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod12", "Mod12a", "Mod12b"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod12", "Mod12a", "Mod12b", "Mod12c"), AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod12    1149.313   1234.941
 #2 Mod12a    1149.313   1234.941
 #3 Mod12b    939.016   1027.406
+#4 Mod12c         NA         NA
 
 #run emmeans on Mod12b - highest Rsq & lowest AIC/BIc
 Mod12em<- emmeans(Mod12b,~Treatment|Soil, subset=(Pots1$TotalP2), type="response")
-Mod12em_cld <- cld(Mod12em, Letters=letters, reversed = TRUE, by="Soil") 
+Mod12em_cld <- cld(Mod12em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod12em_cld)
 write.csv(Mod12em_cld, file="Pots1_TotalP2.csv")
 
@@ -1385,7 +1533,8 @@ plot(fitted(Mod13a),resid(Mod13a),pch=16) # clustered to right
 qqnorm(resid(Mod13a)) # medium tails
 qqline(resid(Mod13a))
 #Mod13b
-Mod13b <- lmer(pH~Treatment*Soil+(1|Soil), data=Pots1, , na.action=na.exclude)
+Mod13b <- lmer(pH~Treatment*Soil+(1|Soil), data=Pots1) # convergence issues
+print(vif(Mod13b)) #check collinearity
 rsq(Mod13b)  # 0.9428
 anova(Mod13b) 
 summary(Mod13b)
@@ -1394,7 +1543,8 @@ plot(fitted(Mod13b),resid(Mod13b),pch=16) # clustered to right
 qqnorm(resid(Mod13b)) # medium tails
 qqline(resid(Mod13b))
 #Mod13c
-Mod13c <- glmer(pH~Treatment*Soil+(1|Soil),data=Pots1,family=gaussian(link="log"))
+Mod13c <- glmer(pH~Treatment*Soil+(1|Soil),data=Pots1, family=gaussian(link="log")) #singularity issues
+print(vif(Mod13c)) 
 rsq(Mod13c) # 0.9386
 anova(Mod13c)
 summary(Mod13c)
@@ -1403,23 +1553,34 @@ bf.test(pH~Treatment, data=Pots1)  # variance equal p=0.2407674
 plot(fitted(Mod13c),resid(Mod13c),pch=16) # clustered to right
 qqnorm(resid(Mod13c)) # medium tails
 qqline(resid(Mod13c))
+# Mod13d glmm - convergence issues
+Mod13d <- glmmTMB(pH~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), 
+                  control=glmmTMBControl(optimizer=optim, optArgs=list(parallel = TRUE, nthreads = 4)))
+print(vif(Mod13d))
+summary(Mod13d)
+performance::r2(Mod13d) # 0.939
+shapiro.test(resid(Mod13d)) # p= 8.949e-06
+plot(fitted(Mod13d),resid(Mod13d),pch=16) # normalish
+qqnorm(resid(Mod13d)) # moderate tails
+qqline(resid(Mod13d))
 
 # Rsq summary: Mod13=0.53968; Mod13a=0.9189; Mod13b=0.9428; Mod13c=0.9386
 #AIC and BIC values - this indicated that Mod13 was the best fit
-NO3_modlist <- list(Mod13, Mod13a, Mod13b, Mod13c)
+NO3_modlist <- list(Mod13, Mod13a, Mod13b, Mod13c, Mod13d)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod13", "Mod13a", "Mod13b", "Mod13c"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod13", "Mod13a", "Mod13b", "Mod13c", "Mod13d"), AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod13  -464.4936  -378.0814
 #2 Mod13a  -464.4936  -378.0814
 #3 Mod13b  -263.3900  -174.1903
 #4 Mod13c  -460.4936  -371.2939
+#5 Mod13d         NA         NA
 
-#run emmeans on Mod13a - Models 13b&c have convergence and singularity issues
-Mod13em<- emmeans(Mod13a,~Treatment|Soil, subset=(Pots1$pH), type="response")
-Mod13em_cld <- cld(Mod13em, Letters=letters, reversed = TRUE, by="Soil") 
+#run emmeans on Mod13c - singularity issue but only appropriate one that works
+Mod13em<- emmeans(Mod13c,~Treatment|Soil, subset=(Pots1$pH), type="response")
+Mod13em_cld <- cld(Mod13em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod13em_cld)
 write.csv(Mod13em_cld, file="Pots1_pH.csv")
 
@@ -1469,21 +1630,30 @@ shapiro.test(resid(Mod14a)) # p=0.4634
 plot(fitted(Mod14a),resid(Mod14a),pch=16) # clustered to left
 qqnorm(resid(Mod14a)) # small tails
 qqline(resid(Mod14a))
+# Mod14b glmm - convergence issues
+Mod14b <- glmmTMB(log(EC)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod14b)
+performance::r2(Mod14b) # 0.818
+shapiro.test(resid(Mod14b)) # p= 0.4634
+plot(fitted(Mod14b),resid(Mod14b),pch=16) # normalish
+qqnorm(resid(Mod14b)) # small tails
+qqline(resid(Mod14b))
 
-# Rsq summary: Mod14=0.9513; Mod14a=0.75516
+# Rsq summary: Mod14=0.95; Mod14a=0.76, Mod4b = 0.82
 #AIC and BIC values 
-NO3_modlist <- list(Mod14, Mod14a)
+NO3_modlist <- list(Mod14, Mod14a, Mod14b)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod14", "Mod14a"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod14", "Mod14a", "Mod14b"), AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod14  -228.8464  -143.4851
 #2 Mod14a  -228.8464  -143.4851
+#3 Mod14b  -226.8464  -138.7315
 
-#run emmeans on Mod14 with highest rsq
-Mod14em<- emmeans(Mod14,~Treatment|Soil, subset=(Pots1$EC), type="response")
-Mod14em_cld <- cld(Mod14em, Letters=letters, reversed = TRUE, by="Soil") 
+#run emmeans on Mod14b
+Mod14em<- emmeans(Mod14b,~Treatment|Soil, subset=(Pots1$EC), type="response")
+Mod14em_cld <- cld(Mod14em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod14em_cld)
 write.csv(Mod14em_cld, file="Pots1_EC.csv")
 
@@ -1531,22 +1701,22 @@ plot(fitted(Mod15a),resid(Mod15a),pch=16) # 2 clusters forming
 qqnorm(resid(Mod15a)) # fat tails
 qqline(resid(Mod15a))
 #Mod13b
-Mod15b <- lmer(OC~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude)
+Mod15b <- lmer(OC~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude) # convergence issues
 rsq(Mod15b)  # 0.9366
 anova(Mod15b) 
 summary(Mod15b)
 shapiro.test(resid(Mod15b)) # p=5.413e-09
 plot(fitted(Mod15b),resid(Mod15b),pch=16) # 2 clusters forming
-qqnorm(resid(Mod15b)) # fat tails
+qqnorm(resid(Mod15b)) # heavy tails
 qqline(resid(Mod15b))
 #Mod15c
-Mod15c <- glmer(OC~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log"), na.action=na.exclude)
+Mod15c <- glmer(OC~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log"), na.action=na.exclude) #singularity
 anova(Mod15c)
 summary(Mod15c)
 shapiro.test(resid(Mod15c))  #p=2.297e-07
 bf.test(OC~Treatment, data=Pots1)  # variance equal p=0.2546385 
 plot(fitted(Mod15c),resid(Mod15c),pch=16) # 2 clusters forming
-qqnorm(resid(Mod15c)) # fat tails
+qqnorm(resid(Mod15c)) # heavy tails
 qqline(resid(Mod15c))
 #Mod15d
 Mod15d <- glm(OC ~ Treatment*Soil, family=gaussian, data=Pots1)
@@ -1558,7 +1728,7 @@ plot(fitted(Mod15d),resid(Mod15d),pch=16) # 2 clusters forming
 qqnorm(resid(Mod15d))  # fat tails
 qqline(resid(Mod15d))
 #Mod15e - YJ transformation
-OC_YJ <- yjPower(Pots1$OC, 0.5,jacobian.adjusted=TRUE)
+OC_YJ <- yjPower(Pots1$OC, 0.5,jacobian.adjusted=TRUE) # convergende issues
 Mod15e <- lmer(OC_YJ ~ Treatment*Soil + (1|Soil), data=Pots1, control=lmerControl(optCtrl=list(maxfun=100000)))
 rsq(Mod15e) # adjusted R squared: 0.9223
 anova(Mod15e)
@@ -1568,13 +1738,23 @@ shapiro.test(resid(Mod15e)) #data is not normally distributed: 1.727e-08
 plot(fitted(Mod15e),resid(Mod15e),pch=16) # 2 clusters
 qqnorm(resid(Mod15e)) # fat tails
 qqline(resid(Mod15e))
+# Mod115f glmm - convergence issues
+Mod15f <- glmmTMB(OC~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+summary(Mod15f)
+performance::r2(Mod15f) # 0.934
+shapiro.test(resid(Mod15f)) # p= 5.413e-09
+plot(fitted(Mod15f),resid(Mod15f),pch=16) # normalish
+qqnorm(resid(Mod15f)) # heavy tails
+qqline(resid(Mod15f))
 
-# Rsq summary: Mod15=0.1746; Mod15a=0.9101, Mod15b=0.9366; Mod15c=??; Mod15d=0.9334; Mod15e=0.9223
+
+# Rsq summary: Mod15=0.17; Mod15a=0.91, Mod15b=0.94; Mod15c=??; Mod15d=0.93; Mod15e=0.92; Mod15f=0.93
 #AIC and BIC values 
-NO3_modlist <- list(Mod15, Mod15a, Mod15b, Mod15c, Mod15d, Mod15e)
+NO3_modlist <- list(Mod15, Mod15a, Mod15b, Mod15c, Mod15d, Mod15e, Mod15f)
 AIC_values <- sapply(NO3_modlist, AIC)
 BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod15", "Mod15a", "Mod15b", "Mod15c", "Mod15d", "Mod15e"), AIC_values, BIC_values)
+NO3AB <- data.frame(Model=c("Mod15", "Mod15a", "Mod15b", "Mod15c", "Mod15d", "Mod15e", "Mod15f"),
+                    AIC_values, BIC_values)
 print(NO3AB)
 #  Model AIC_values BIC_values
 #1  Mod15  -59.00536   25.54366
@@ -1583,10 +1763,13 @@ print(NO3AB)
 #4 Mod15c  -62.73739   24.53902
 #5 Mod15d  -59.00536   25.54366
 #6 Mod15e   36.31864  123.59505
+#7 Mod15f -254.09000 -166.81359
 
-#run emmeans on Mod15d high rsq, with lowest combined AIC & BIC
-Mod15em<- emmeans(Mod15d,~Treatment|Soil, subset=(Pots1$OC), type="response")
-Mod15em_cld <- cld(Mod15em, Letters=letters, reversed = TRUE, by="Soil") 
+# Appropriate model options are Mods15 b c e f
+
+#run emmeans on Mod15f - only one that makes sense with emmeans and cld
+Mod15em<- emmeans(Mod15f,~Treatment|Soil, subset=(Pots1$OC), type="response")
+Mod15em_cld <- cld(Mod15em, Letters=trimws(letters), reversed = TRUE, by="Soil") 
 View(Mod15em_cld)
 write.csv(Mod15em_cld, file="Pots1_OC.csv")
 
@@ -1597,17 +1780,34 @@ write.csv(Mod15em_cld, file="Pots1_OC.csv")
 # no reps, couldn't fit to a model
 WHC <- data.frame(
   Soil=as.factor(rep(c("Haverhill", "Oxbow"), each=5)),
-  Treatment=as.factor(c("Control2", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "Control2",
-              "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha")),
+  Treatment=as.factor(c("Control 2", "Canola Meal 10 t/ha", "Canola Hull 10 t/ha", "Manure 10 t/ha",
+                        "Willow 10 t/ha", "Control 2", "Canola Meal 10 t/ha", "Canola Hull 10 t/ha", 
+                        "Manure 10 t/ha", "Willow 10 t/ha")),
   VolWatContent=c(21, 22, 21, 24, 21, 22, 23, 24, 24, 24))
+WHC$Soil <- factor(WHC$Soil, levels = c("Haverhill", "Oxbow"))
 print(WHC)
 # boxplot
-ggplot(WHC, aes(x=Soil, y=VolWatContent)) +
-  geom_boxplot() +
-  geom_jitter(shape=15, color="steelblue", position=position_jitter(0.21)) +
-    labs(x="Treatment", y="Volumetric Water Content %")
+(Pots1WHCbox <- ggplot(WHC, aes(x=Soil, y=VolWatContent))+
+    geom_boxplot(width=0.5, fill="grey89") +
+    geom_point(aes(color = Treatment), position = position_dodge(width = 0.75), size = 3) +
+    geom_label_repel(aes(label = VolWatContent, color = Treatment), fill = "white",
+                     box.padding = 0.5, segment.color = "black", segment.size = 0.5,
+                     size = 6, nudge_x = 0.2, nudge_y = 0) +
+    scale_color_manual(values = c("Control 2" = "red", "Canola Meal 10 t/ha" = "blue",
+                                  "Canola Hull 10 t/ha" = "green4", "Manure 10 t/ha" = "orange3",
+                                  "Willow 10 t/ha" = "purple"),
+                       labels = c("Control 2", "Canola Meal 10 t/ha", "Canola Hull 10 t/ha",
+                                  "Manure 10 t/ha", "Willow 10 t/ha")) +
+    labs(x = "Soil", y = "Volumetric Water Content %") +
+    theme(panel.background = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.text.x = element_text(size = 18, face = "bold"),
+          axis.text.y = element_text(size=18, face = "bold"),
+          axis.title.x = element_text(size = 22, face = "bold"),
+          axis.title.y = element_text(size = 22, face = "bold")))
 #geom_text(aes(label=Treatment), position=position_dodge(width=0.5), vjust=-0.7, color="steelblue", size=3) +
-ggsave("WaterHoldingCapacity_boxplot.jpg", width=8, height=8, dpi=300)
+ggsave(Pots1WHCbox, file="WaterHoldingCapacity_boxplot.jpg", width=8, height=8, dpi=150)
+
 
 #model data
 #ModWHC1 <- lm(VolWatContent~Treatment*Soil, data=WHC)
@@ -1620,7 +1820,8 @@ ggsave("WaterHoldingCapacity_boxplot.jpg", width=8, height=8, dpi=300)
 #pairwise.t.test(WHC$VolWatContent, list(WHC$Treatment, WHC$Soil))
 #WHC %>% group_by(Soil) %>% do(tidy(pairwise.t.test(.$VolWatContent, .$Treatment)))
 
-ggplot(WHC, aes(x=Treatment, y=VolWatContent, pattern=Soil)) +
+#bar graph - not used
+(Pots1WHCbars <- ggplot(WHC, aes(x=Treatment, y=VolWatContent, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -1630,15 +1831,15 @@ ggplot(WHC, aes(x=Treatment, y=VolWatContent, pattern=Soil)) +
   labs(x="Treatments", y="Volumetric Water Content (%)") +
   scale_x_discrete(labels=c("Control 2", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/h"))+
   scale_y_continuous(limits=c(0, 28))+
-  theme_bw() +
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-        legend.text=element_text(size=12))+
-  theme(plot.title=element_text(size=18))+
-  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
-  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_WatHolCapacity.jpg", width=12, height=8, dpi=500)
+        legend.text=element_text(size=14), legend.title = element_text(size = 16),
+        plot.title=element_text(size=18),
+        axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold"),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Pots1WHCbars, file="Pots1_WatHolCapacity.jpg", width=8, height=8, dpi=150)
 
 
 
@@ -1646,7 +1847,7 @@ ggsave("Pots1_WatHolCapacity.jpg", width=12, height=8, dpi=500)
 #####  Haverhill  #####
 ######  Yield ######
 #Split and scale data
-YieldCovVar <- c("Drywt", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+YieldCovVar <- c("Yield", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
 HavCovYield <- subset(Pots1, Soil == "Haverhill", select=c("Treatment", YieldCovVar), # select per soil
                       na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
 HavCovScaleYield <- as.data.frame(scale(HavCovYield[,-1])) # scale & remove treatment name from data frame
@@ -1916,11 +2117,11 @@ YieldCovOx_df <- lapply(seq_along(YieldCov_Ox), function(i) {
 })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovOx_dfAll <- do.call(rbind, YieldCovOx_df)
-YieldCovOx_dfAll$Var1 <- factor(YieldCovOx_dfAll$Var1, levels=YieldCovVar, labels=c("Drywt"="Yield", 
+YieldCovOx_dfAll$Var1 <- factor(YieldCovOx_dfAll$Var1, levels=YieldCovVar, labels=c("Yield"="Yield", 
             "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
             "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovOx_dfAll$variable <- factor(YieldCovOx_dfAll$variable, levels=YieldCovVar, labels=
-            c("Drywt"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
+            c("Yield"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
               "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
 YieldCovOx_dfAll$treatment <- factor(YieldCovOx_dfAll$treatment, 
         levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
@@ -2090,12 +2291,12 @@ ggsave(RecoveryCovOxHeat, file="Pots1_RecoveryCovOxHeat.jpg", width=20, height=2
 # Set factor and numeric variables
 Pots1$Soil <- as.factor(Pots1$Soil)
 Pots1$Treatment <- as.factor(Pots1$Treatment)
-Pots1$Yield <- as.numeric(Pots1$Drywt)
+Pots1$Yield <- as.numeric(Pots1$Yield)
 Pots1$`N Recovery` <- as.numeric(Pots1$Nrecovery) # can change variable name, but as unspecified later it didn't matter
 Pots1$`P Recovery` <- as.numeric(Pots1$Precovery)
 #set up subset minus controls and including only necessary variables - var important for predict later on!
 Pots1ContourSub <- subset(Pots1, Treatment != "Control1" & Treatment != "Control2", select = c(Soil, 
-                         Treatment, Drywt, Nrecovery, Precovery))
+                         Treatment, Yield, Nrecovery, Precovery))
 View(Pots1ContourSub)
 # Set Treatment levels and in order, and relabel
 Pots1ContourSub$Treatment <- factor(Pots1ContourSub$Treatment, levels=c("CanolaMeal50kgha","CanolaHull50kgha", 
@@ -2110,7 +2311,7 @@ View(Pots1ContourSub)
 Pots1ContourExcl <- na.exclude(Pots1ContourSub) # exclude missing values
 View(Pots1ContourExcl)
 # run generalised linear mixed model with soil as fixed and random effect
-Pots1ContourMod <- glmmTMB(Drywt ~ Nrecovery + Precovery + Treatment*Soil + (1|Soil), data = Pots1ContourExcl, 
+Pots1ContourMod <- glmmTMB(Yield ~ Nrecovery + Precovery + Treatment*Soil + (1|Soil), data = Pots1ContourExcl, 
                            na.action=na.exclude)
 summary(Pots1ContourMod)
 Anova(Pots1ContourMod) #Treatments and P recovery, as well as treatment*soil significant
@@ -2189,3 +2390,78 @@ ggsave(HavContours, file="Pots1_YieldContour_Haverhill.jpg", width=20, height=20
           axis.title.y=element_text(size=30, face="bold"),
           panel.spacing = unit(0.5, "cm")))
 ggsave(OxContours, file="Pots1_YieldContour_Oxbow.jpg", width=20, height=20, dpi=150)
+
+
+#### Correlation & eigenvalues  ####
+## for all treatments and both soils
+Pots1EigenMatrix <- Pots1[complete.cases(Pots1), c("Nuptake", "Puptake", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", 
+                                              "pH", "EC", "OC"),]
+Pots1EigenCor <- cor(Pots1EigenMatrix)
+Pots1EigenPCA <- PCA(Pots1EigenMatrix, scale.unit = TRUE, ncp = length(Pots1EigenMatrix)-1)
+Pots1EigenPrin <-princomp(Pots1EigenCor) 
+summary(Pots1EigenPrin)
+Pots1EigenPrin$loadings[, 1:2]
+## Per soil
+#Haverhill
+HavEigenMatrix <- Pots1[complete.cases(Pots1) & Pots1$Soil == "Haverhill", #sets up matrix per soil type
+                        c("Nuptake", "Puptake", "NO3", "NH4", "PO4", "ResinP", #sets relevant variables
+                          "WaterSolP", "TotalP2", "pH", "EC", "OC")] #exlude yield
+HavEigenMatrix <- 
+#have to use above code instead of subset to use complete.cases
+HavEigenCor <- cor(HavEigenMatrix) #sets up correlation matrix
+HavEigenPCA <- PCA(HavEigenMatrix, scale.unit = TRUE, ncp = length(HavEigenMatrix)-1, ) #do PCA with histograme
+HavEigenPrin <-princomp(HavEigenCor) # compute importance of components
+summary(HavEigenPrin)
+HavEigenPrin$loadings[, 1:2] # print loadings linke dto variables
+# model the most important variables
+# variables for Haverhill: Nuptake, NO3, NH4, PO4, ResinP & WaterSolP
+HavSubEig <- Pots1[Pots1$Soil == "Haverhill", c("Yield", "Nuptake", "NO3", "NH4", "PO4", "ResinP", "WaterSolP")] 
+colnames(HavSubEig) <- c("Yield", "N Uptake", "NO3", "NH4", "PO4", "Resin P", "Water Soluble P")
+View(HavSubEig)
+HavModEig <- lm(Yield ~ `N Uptake`+NO3+NH4+PO4+`Resin P`+`Water Soluble P`, data = HavSubEig)
+summary(HavModEig)
+# scatterplot of the most prominant variables against yield
+HavEigScatter <- function(data, model, targetColumn = 'Yield') {
+  formula_vars <- all.vars(model$terms)
+  plot_vars <- intersect(formula_vars, colnames(data))
+  plot_vars <- setdiff(plot_vars, targetColumn)  # Remove targetColumn from plotting variables
+  data_plot <- data[, c(plot_vars, targetColumn)]
+  d <- reshape2::melt(data_plot, id.vars = targetColumn)
+  ggplot(d, aes(value, !!rlang::sym(targetColumn))) + 
+    geom_point() + 
+    facet_wrap(~ variable, scales = 'free') +
+    labs(x = "Variable values", y = "Yield (g) - Haverhill")
+}
+HavEigScatter(HavSubEig, HavModEig)
+ggsave(HavEigScatter(HavSubEig, HavModEig), file="Pots1_EigenScatter_Haverhill.jpg", width=10, height=10, dpi=150)
+
+## Oxbow
+OxEigenMatrix <- Pots1[complete.cases(Pots1) & Pots1$Soil == "Oxbow", 
+                        c("Nuptake", "Puptake", "NO3", "NH4", "PO4", "ResinP", 
+                          "WaterSolP", "TotalP2", "pH", "EC", "OC")] 
+OxEigenCor <- cor(OxEigenMatrix)
+OxEigenPCA <- PCA(OxEigenMatrix, scale.unit = TRUE, ncp = length(OxEigenMatrix)-1, )
+OxEigenPrin <-princomp(OxEigenCor) 
+summary(OxEigenPrin)
+OxEigenPrin$loadings[, 1:2] 
+# model the most important variables
+# variables for Haverhill: Nuptake, Puptake, NO3, NH4, WaterSolP, EC
+OxSubEig <- Pots1[Pots1$Soil == "Oxbow", c("Yield", "Nuptake", "Puptake", "NO3", "NH4", "WaterSolP", "EC")] 
+colnames(OxSubEig) <- c("Yield", "N Uptake", "P Uptake", "NO3", "NH4", "Water Soluble P", "Electrical Conductivity")
+View(OxSubEig)
+OxModEig <- lm(Yield ~ `N Uptake`+`P Uptake`+NO3+NH4+`Water Soluble P`+`Electrical Conductivity`, data = OxSubEig)
+summary(OxModEig)
+# scatterplot of the most prominant variables against yield
+OxEigScatter <- function(data, model, targetColumn = 'Yield') {
+  formula_vars <- all.vars(model$terms)
+  plot_vars <- intersect(formula_vars, colnames(data))
+  plot_vars <- setdiff(plot_vars, targetColumn)  # Remove targetColumn from plotting variables
+  data_plot <- data[, c(plot_vars, targetColumn)]
+  d <- reshape2::melt(data_plot, id.vars = targetColumn)
+  ggplot(d, aes(value, !!rlang::sym(targetColumn))) + 
+    geom_point() + 
+    facet_wrap(~ variable, scales = 'free') +
+    labs(x = "Variable values", y = "Yield (g) - Oxbow")
+}
+OxEigScatter(OxSubEig, OxModEig)
+ggsave(OxEigScatter(OxSubEig, OxModEig), file="Pots1_EigenScatter_Oxbow.jpg", width=10, height=10, dpi=150)
