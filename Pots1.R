@@ -1070,6 +1070,7 @@ PUE_df$Treatment <- factor(PUE_df$Treatment,
                                     "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
                                     "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer"))
 levels(PUE_df$Treatment)
+print(PUE_df)
 PUE_skew <- skewness(PUE_Mean,na.rm=TRUE)
 PUE_kur <- kurtosis(PUE_Mean,na.rm=TRUE)
 cat("Skewness:", PUE_skew, "\n") ## 1.478

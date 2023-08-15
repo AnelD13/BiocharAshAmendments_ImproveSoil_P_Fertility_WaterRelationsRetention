@@ -308,115 +308,149 @@ write.csv(ModP2emS1_cld, file="Pots2_Straw.csv")
 
 
 #####   BIOMASS   #####
-PotBio_Mean <- summary_by(Biomass~Treatment+Block, data=Pots2, FUN=mean)
-PotBio_Mean <- as.numeric(PotBio_Mean$Biomass)
-PotBio_skew <- skewness(PotBio_Mean,na.rm=TRUE)
-PotBio_kur <- kurtosis(PotBio_Mean,na.rm=TRUE)
-cat("Skewness:", PotBio_skew, "\n") # 0.04157241 
-cat("Kurtosis:", PotBio_kur, "\n") # -1.08367 
-shapiro.test(Pots2$Biomass) # p=0.6171
-hist(Pots2$Biomass) #  
-car::leveneTest(Biomass~Treatment, data=Pots2)  # p=0.451
-ggplot(Pots2, aes(x = Block, y = Biomass)) + #checking treatments in boxplots to see if variances are equal across blocks
-  geom_boxplot() +
-  labs(x = "Block", y = "Biomass") +
-  theme_bw()
+  PotBio_Mean <- summary_by(Biomass~Treatment+Block, data=Pots2, FUN=mean)
+  PotBio_Mean <- as.numeric(PotBio_Mean$Biomass)
+  PotBio_skew <- skewness(PotBio_Mean,na.rm=TRUE)
+  PotBio_kur <- kurtosis(PotBio_Mean,na.rm=TRUE)
+  cat("Skewness:", PotBio_skew, "\n") # 0.04157241 
+  cat("Kurtosis:", PotBio_kur, "\n") # -1.08367 
+  shapiro.test(Pots2$Biomass) # p=0.6171
+  hist(Pots2$Biomass) #  
+  car::leveneTest(Biomass~Treatment, data=Pots2)  # p=0.451
+  ggplot(Pots2, aes(x = Block, y = Biomass)) + #checking treatments in boxplots to see if variances are equal across blocks
+    geom_boxplot() + labs(x = "Block", y = "Biomass") + theme_bw()
 #ModP2Bio1
-ModP2Bio1 <- aov(Biomass~Treatment+Block, data=Pots2)
-anova(ModP2Bio1)
-summary(ModP2Bio1)
-hist(resid(ModP2Bio1))
-shapiro.test(resid(ModP2Bio1))  # p=0.1125
-plot(fitted(ModP2Bio1),resid(ModP2Bio1),pch=16)
-qqnorm(resid(ModP2Bio1)) # slight tails
-qqline(resid(ModP2Bio1))
-ModP2Bio1_tidy <- tidy(ModP2Bio1)
-ModP2Bio1sum_sq_reg <- ModP2Bio1_tidy$sumsq[1] 
-ModP2Bio1sum_sq_resid <- ModP2Bio1_tidy$sumsq[2] 
-ModP2Bio1sum_sq_reg / (ModP2Bio1sum_sq_reg + ModP2Bio1sum_sq_resid) # 0.874
+  ModP2Bio1 <- aov(Biomass~Treatment+Block, data=Pots2)
+  anova(ModP2Bio1)
+  summary(ModP2Bio1)
+  hist(resid(ModP2Bio1))
+  shapiro.test(resid(ModP2Bio1))  # p=0.1125
+  plot(fitted(ModP2Bio1),resid(ModP2Bio1),pch=16)
+  qqnorm(resid(ModP2Bio1)) # slight tails
+  qqline(resid(ModP2Bio1))
+  ModP2Bio1_tidy <- tidy(ModP2Bio1)
+  ModP2Bio1sum_sq_reg <- ModP2Bio1_tidy$sumsq[1] 
+  ModP2Bio1sum_sq_resid <- ModP2Bio1_tidy$sumsq[2] 
+  ModP2Bio1sum_sq_reg / (ModP2Bio1sum_sq_reg + ModP2Bio1sum_sq_resid) # 0.874
 # lm model with weighted least squares
-ModP2Biovar <- tapply(Pots2$Biomass, Pots2$Treatment, var) # Calculate the variances for each treatment
-weightsBio <- 1 / ModP2Biovar # Create a vector of weights
-weightsBio_full <- rep(weightsBio, each = length(Pots2$Biomass) / length(weightsBio))
-ModP2Bio2 <- lm(Biomass ~ Treatment + Block, data=Pots2, weights=weightsBio_full) # Fit a WLS model
-hist(resid(ModP2Bio2))  # left skew
-shapiro.test(resid(ModP2Bio2))  # p=0.1394
-plot(fitted(ModP2Bio2),resid(ModP2Bio2),pch=16) 
-qqnorm(resid(ModP2Bio2)) # longer left tail
-qqline(resid(ModP2Bio2))
-rsq(ModP2Bio2)  # 0.7748827
+  ModP2Biovar <- tapply(Pots2$Biomass, Pots2$Treatment, var) # Calculate the variances for each treatment
+  weightsBio <- 1 / ModP2Biovar # Create a vector of weights
+  weightsBio_full <- rep(weightsBio, each = length(Pots2$Biomass) / length(weightsBio))
+  ModP2Bio2 <- lm(Biomass ~ Treatment + Block, data=Pots2, weights=weightsBio_full) # Fit a WLS model
+  hist(resid(ModP2Bio2))  # left skew
+  shapiro.test(resid(ModP2Bio2))  # p=0.1394
+  plot(fitted(ModP2Bio2),resid(ModP2Bio2),pch=16) 
+  qqnorm(resid(ModP2Bio2)) # longer left tail
+  qqline(resid(ModP2Bio2))
+  rsq(ModP2Bio2)  # 0.7748827
 # ModP2Bio3 glmm - convergence issues related to non-positive values
-ModP2Bio3<- glmmTMB(Biomass~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
-glmmTMB:::Anova.glmmTMB(ModP2Bio3, type="III")
-summary(ModP2Bio3)
-shapiro.test(resid(ModP2Bio3)) # p=0.027
-plot(fitted(ModP2Bio3),resid(ModP2Bio3),pch=16) # normal
-qqnorm(resid(ModP2Bio3)) # moderate-heavy tails tail
-qqline(resid(ModP2Bio3))
-performance::r2(ModP2Bio3) # 0.709
+  ModP2Bio3<- glmmTMB(Biomass~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModP2Bio3, type="III")
+  summary(ModP2Bio3)
+  shapiro.test(resid(ModP2Bio3)) # p=0.027
+  plot(fitted(ModP2Bio3),resid(ModP2Bio3),pch=16) # normal
+  qqnorm(resid(ModP2Bio3)) # moderate-heavy tails tail
+  qqline(resid(ModP2Bio3))
+  performance::r2(ModP2Bio3) # 0.709
 #ModP2Bio4
-ModP2Bio4 <- lmer(Biomass~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
-anova(ModP2Bio4) 
-summary(ModP2Bio4)
-shapiro.test(resid(ModP2Bio4)) # p=0.027
-plot(fitted(ModP2Bio4),resid(ModP2Bio4),pch=16) # normal
-qqnorm(resid(ModP2Bio4)) # heavy left & moderate right tail
-qqline(resid(ModP2Bio4))
-rsq(ModP2Bio4)  # 0.688
+  ModP2Bio4 <- lmer(Biomass~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
+  anova(ModP2Bio4) 
+  summary(ModP2Bio4)
+  shapiro.test(resid(ModP2Bio4)) # p=0.027
+  plot(fitted(ModP2Bio4),resid(ModP2Bio4),pch=16) # normal
+  qqnorm(resid(ModP2Bio4)) # heavy left & moderate right tail
+  qqline(resid(ModP2Bio4))
+  rsq(ModP2Bio4)  # 0.688
 # ModP2Bio5 lme model
-ModP2Bio5 <- lme(Biomass ~ Treatment, random=~1|Block, data=Pots2)
-summary(ModP2Bio5)
-anova(ModP2Bio5)
-shapiro.test(resid(ModP2Bio5)) # p= 0.027
-plot(fitted(ModP2Bio5),resid(ModP2Bio5),pch=16) # normal
-qqnorm(resid(ModP2Bio5)) # heavy left & moderate right tail
-qqline(resid(ModP2Bio5))
-rsq(ModP2Bio5) # 0.688
+  ModP2Bio5 <- lme(Biomass ~ Treatment, random=~1|Block, data=Pots2)
+  summary(ModP2Bio5)
+  anova(ModP2Bio5)
+  shapiro.test(resid(ModP2Bio5)) # p= 0.027
+  plot(fitted(ModP2Bio5),resid(ModP2Bio5),pch=16) # normal
+  qqnorm(resid(ModP2Bio5)) # heavy left & moderate right tail
+  qqline(resid(ModP2Bio5))
+  rsq(ModP2Bio5) # 0.688
 #ModP2Bio6 glmer
-ModP2Bio6 <- glmer(Biomass~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"))
-anova(ModP2Bio6)
-summary(ModP2Bio6)
-shapiro.test(resid(ModP2Bio6)) # p=0.046
-bf.test(Biomass~Treatment, data=Pots2) # p=0.00069, variances unequal
-plot(fitted(ModP2Bio6),resid(ModP2Bio6),pch=16) # normal
-qqnorm(resid(ModP2Bio6)) # heavy left & moderate right tail
-qqline(resid(ModP2Bio6))
-rsq(ModP2Bio6) # r=0.725
+  ModP2Bio6 <- glmer(Biomass~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"))
+  anova(ModP2Bio6)
+  summary(ModP2Bio6)
+  shapiro.test(resid(ModP2Bio6)) # p=0.046
+  bf.test(Biomass~Treatment, data=Pots2) # p=0.00069, variances unequal
+  plot(fitted(ModP2Bio6),resid(ModP2Bio6),pch=16) # normal
+  qqnorm(resid(ModP2Bio6)) # heavy left & moderate right tail
+  qqline(resid(ModP2Bio6))
+  rsq(ModP2Bio6) # r=0.725
 
 #AIC and BIC values
-Pots2Bio_modlist <- list(ModP2Bio3, ModP2Bio4, ModP2Bio5, ModP2Bio6)
-AIC_values <- sapply(Pots2Bio_modlist, AIC)
-BIC_values <- sapply(Pots2Bio_modlist, BIC)
-Pots2AICBio <- data.frame(Model=c("ModP2Bio3", "ModP2Bio4", "ModP2Bio5", "ModP2Bio6"), AIC_values, BIC_values)
-print(Pots2AICBio)
-#Model AIC_values BIC_values
-#1 ModP2Bio3   115.7187   130.3760
-#2 ModP2Bio4   109.7837   124.4411
-#3 ModP2Bio5   109.7837   121.5643
-#4 ModP2Bio6   116.6323   131.2896
+  Pots2Bio_modlist <- list(ModP2Bio3, ModP2Bio4, ModP2Bio5, ModP2Bio6)
+  AIC_values <- sapply(Pots2Bio_modlist, AIC)
+  BIC_values <- sapply(Pots2Bio_modlist, BIC)
+  Pots2AICBio <- data.frame(Model=c("ModP2Bio3", "ModP2Bio4", "ModP2Bio5", "ModP2Bio6"), AIC_values, BIC_values)
+  print(Pots2AICBio)
+      #Model AIC_values BIC_values
+      #1 ModP2Bio3   115.7187   130.3760
+      #2 ModP2Bio4   109.7837   124.4411
+      #3 ModP2Bio5   109.7837   121.5643
+      #4 ModP2Bio6   116.6323   131.2896
 
 #emmeans using glmm model - simple,  AIC, highest rsq, df decent
-ModP2emBio <- emmeans(ModP2Bio3,~Treatment, type="response")
-ModP2emBio_cld <- cld(ModP2emBio, Letters = trimws(letters), reversed = TRUE) 
-View(ModP2emBio_cld)
-write.csv(ModP2emBio_cld, file="Pots2_Biomass.csv")
+  ModP2emBio <- emmeans(ModP2Bio3,~Treatment, type="response")
+  ModP2emBio_cld <- cld(ModP2emBio, Letters = trimws(letters), reversed = TRUE) 
+  View(ModP2emBio_cld)
+  write.csv(ModP2emBio_cld, file="Pots2_Biomass.csv")
 
-#create combined grain & straw data frame
-ModP2Gem_cld$origin <- "Grain"
-ModP2emS1_cld$origin <- "Straw"
-BiomassEm <- rbind(ModP2emS1_cld,ModP2Gem_cld)
-BiomassEm <- as.data.frame(BiomassEm)
-BiomassEm <- BiomassEm[, c("Treatment", "emmean", "SE", ".group", "origin")]
-BiomassEm$.group <- str_trim(BiomassEm$.group)
-write.csv(BiomassEm, file="BiomassEm.csv")
-View(BiomassEm)
-#reshape dataframe to longer format
-BiomassEm_long <- BiomassEm|> pivot_longer(cols = c("emmean", "SE"), names_to = "name", values_to = "value")|>
-  mutate(name = forcats::fct_rev(name))
-print(BiomassEm_long)
-View(BiomassEm_long)
+# Stacked barplot option 1 using emmeans from grain and straw  
+  ##create combined grain & straw data frame
+  ModP2Gem_cld$origin <- "Grain"
+  ModP2emS1_cld$origin <- "Straw"
+  BiomassEm <- rbind(ModP2emS1_cld,ModP2Gem_cld)
+  BiomassEm <- as.data.frame(BiomassEm)
+  BiomassEm <- BiomassEm[, c("Treatment", "emmean", "SE", ".group", "origin")]
+  BiomassEm$.group <- str_trim(BiomassEm$.group)
+    ### Set confidence intervals
+    for (i in 1:nrow(BiomassEm)) {
+      if (BiomassEm[i, 'origin'] == "Grain") {
+        treatment <- BiomassEm[i, 'Treatment']
+        fstraw_emmean <- BiomassEm[BiomassEm$Treatment == treatment & BiomassEm$origin == "Straw", 'emmean']
+        BiomassEm[i, 'u_conf'] <- BiomassEm[i, 'emmean'] + sum(fstraw_emmean) + BiomassEm[i, 'SE']
+        BiomassEm[i, 'l_conf'] <- BiomassEm[i, 'emmean'] + sum(fstraw_emmean) - BiomassEm[i, 'SE']
+      } else if (BiomassEm[i, 'origin'] == "Straw") {
+        BiomassEm[i, 'u_conf'] <- BiomassEm[i, 'emmean'] + BiomassEm[i, 'SE']
+        BiomassEm[i, 'l_conf'] <- BiomassEm[i, 'emmean'] - BiomassEm[i, 'SE']
+      }
+    }
+  View(BiomassEm)
+  print(BiomassEm)
+  write.xlsx(BiomassEm, file="Pots2_BiomassMeans.xlsx")
+  ## Visualization
+  ### Set geom_text colours & case
+  BiomassColour <- c("Grain" = "white", "Straw" = "black")
+  ModP2emBio_cld$.group <- toupper(ModP2emBio_cld$.group)
+  (Pots2BioStack1 <- ggplot(BiomassEm, aes(Treatment, y=emmean, fill=origin)) +
+      geom_bar(stat="identity", position = "stack", width=0.65) +
+      geom_errorbar(aes(ymin=l_conf, ymax=u_conf), width = .15, stat="identity")+
+      geom_text(aes(label = trimws(.group), y = ifelse(origin == "FStraw", emmean, emmean), color = origin),
+                position = position_stack(vjust = 0.5), size = 7, fontface="bold") +
+      geom_text(data = ModP2emBio_cld, aes(x=Treatment, y = emmean+1, label = trimws(.group)),
+                fontface="bold", color="black", size = 7, inherit.aes = FALSE) +
+      labs(x = "Treatment", y = "Biomass") +
+      scale_fill_manual(values = c("grey45", "grey89"), labels = c("Grain", "Straw"))+
+      scale_color_manual(values = BiomassColour, guide="none") +
+      scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
+                                  "Meat & Bone\nMeal- Fine", "Fertilizer\nPhosphorus"))+
+      theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+            legend.title = element_blank(), legend.text=element_text(size=18, face="bold"),
+            axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+            axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+            axis.title.x=element_blank(), 
+            axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(Pots2BioStack1, file="Pots2_biomass_stack1.jpg", width = 10, height = 8, dpi = 150)
 
-#Create stacked barplot
+
+# stacked barplot option 2
 ## call dataframe
 BiomassEm_Manual <- subset(Pots2, select=c("Treatment", "Grain", "Straw"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
 BiomassEm_Manual$Treatment <- factor(BiomassEm_Manual$Treatment, levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
