@@ -1,412 +1,429 @@
-##### Loading data in to R ####
-  Field<-read.csv("Field.csv", fileEncoding="UTF-8-BOM") #combined residuals
+# Loading data in to R  & Summaries ----
+  Field<-read.csv("Field.csv", fileEncoding="UTF-8-BOM") 
   View(Field)
-  FieldSplitraw<-read.csv("FieldSplitRaw.csv", fileEncoding="UTF-8-BOM")
-  Fieldraw <- read.csv("Fieldraw.csv", fileEncoding="UTF-8-BOM")
-
-#Loading libraries
-library(lme4)
-library(nlme)
-library(lmerTest)
-library(doBy)
-library(ggplot2)
-library(ggpattern)
-library(plotrix)
-library(car)
-library(afex)
-library(onewaytests)
-library(multcomp)
-library(dplyr)
-library(tidyr)
-library(magrittr)
-library(readr)
-library(broom)
-library(multcomp)
-library(multcompView)
-library(emmeans)
-library(lsmeans)
-library(e1071)
-library(rsq)
-library(pgirmess)
-library(dunn.test)
-library(directlabels)
-library(writexl)
-library(glmmTMB)
-
-##### Combining 0-30cm values   ####
-# Calculate mean of soil data from incremental depths to combined depth (0-30cm)
-  Trt_order <- c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus")
-  Fieldsplitraw$Block <- factor(Fieldsplitraw$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
-  Fieldsplitraw$Treatment <- factor(Fieldsplitraw$Treatment,levels = Trt_order)
-  Fieldsplitraw$Plot <- factor(Fieldsplitraw$Plot)
-  Fieldsplitraw$NO3 <- as.numeric(as.character(Fieldsplitraw$NO3))
-  Fieldsplitraw$PO4 <- as.numeric(as.character(Fieldsplitraw$PO4))
-  Fieldsplitraw$WatSolP <- as.numeric(as.character(Fieldsplitraw$WatSolP))
-  Fieldsplitraw$ResinP <- as.numeric(as.character(Fieldsplitraw$ResinP))
-  Fieldsplitraw$pH <- as.numeric(as.character(Fieldsplitraw$pH))
-  Fieldsplitraw$EC <- as.numeric(as.character(Fieldsplitraw$EC))
-  Fieldsplitraw$OC <- as.numeric(as.character(Fieldsplitraw$OC))
-  summary(Field)
-  str(Field) #displays the structure of the object
-#  Settiing up a new data frame containing combined values
-  FieldResGroup <- Fieldsplitraw %>%
-    group_by(Plot, Treatment, Block)
-  FieldResid <- FieldResGroup %>%
-    summarise(c(NO3c	= mean(NO3)), (PO4c=mean(PO4)), (WatSolPc=mean(WatSolP)), (ResinPc  = mean(ResinP)),
-                (pHc = mean(pH)), (ECc = mean(EC)), (OCc = mean(OC)))
-  View(FieldResid)
-  write.xlsx(FieldResid, file="FieldResidMean.xlsx")
-
-
-##### Summary and ordering of data   ####
-#Check for missing values in a specific field
-  missing <- colSums(is.na(Field[,]))
-  missing <- colSums(is.na(Fieldraw[,]))
-  print(missing)
-#Change columns in a dataframe to factors/categorical values, str displays 
-  Trt_order <- c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus")
-  Field$Block <- factor(Field$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
-  Field$Treatment <- factor(Field$Treatment,levels = Trt_order)
-  Field$LNO3 <- as.numeric(as.character(Fieldsplitraw$LNO3))
-  Field$LNH4 <- as.numeric(as.character(Fieldsplitraw$LNH3))
-  Field$LPO4 <- as.numeric(as.character(Fieldsplitraw$LPO4))
-  summary(Field)
-  str(Field) #displays the structure of the object
-# Summary data (means, SD, etc.) for each treatment and variable
-  FieldMean <- summary_by(.~Treatment, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) #overall means for the data set
-  View(FieldMean)
-  FieldSD <- summary_by(.~Treatment, data=Field,  FUN=function(x) sd(x, na.rm=TRUE)) #overall SD for the dataset
-  View(FieldSD)
-  StrawF_summary <- Field %>% #summary data specifically for Straw variable
-    group_by(Treatment) %>%
-    summarize(Mean=mean(FStraw), SD=sd(FStraw), SE=sd(FStraw)/sqrt(n()))
-  View(StrawF_summary) #summary data specifically for Grain variable
-  GrainF_summary <- Field %>%
-    group_by(Treatment) %>%
-    summarize(Mean=mean(FGrain), SD=sd(FGrain), SE=sd(FGrain)/sqrt(n()))
-  View(GrainF_summary)
+  Fieldsplitraw<-read.csv("FieldSplitRaw.csv", fileEncoding="UTF-8-BOM") # to combine residuals if necessary
+  Fieldraw <- read.csv("Fieldraw.csv", fileEncoding="UTF-8-BOM") # includes split data
+  
+## Loading libraries ----
+  library(lme4)
+  library(nlme)
+  library(lmerTest)
+  library(glmmTMB)
+  library(doBy)
+  library(ggplot2)
+  library(ggpattern)
+  library(plotrix)
+  library(car)
+  library(afex)
+  library(onewaytests)
+  library(multcomp)
+  library(dplyr)
+  library(tidyr)
+  library(magrittr)
+  library(readr)
+  library(broom)
+  library(multcomp)
+  library(multcompView)
+  library(emmeans)
+  library(lsmeans)
+  library(e1071) #skewness and kurtosis
+  library(moments) #skewness and kurtosis
+  library(rsq)
+  library(pgirmess)
+  library(dunn.test)
+  library(directlabels)
+  library(writexl)
+  library(glmmTMB)
+  library(stringr)
+  
+## Combining 0-30cm values   ----
+  ## Calculate mean of soil data from incremental depths to combined depth (0-30cm)
+  FieldTrt_order <- c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus")
+    Fieldsplitraw$Block <- factor(Fieldsplitraw$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
+    Fieldsplitraw$Treatment <- factor(Fieldsplitraw$Treatment,levels=Trt_order)
+    Fieldsplitraw$Plot <- factor(Fieldsplitraw$Plot)
+    Fieldsplitraw$NO3 <- as.numeric(as.character(Fieldsplitraw$NO3))
+    Fieldsplitraw$PO4 <- as.numeric(as.character(Fieldsplitraw$PO4))
+    Fieldsplitraw$WatSolP <- as.numeric(as.character(Fieldsplitraw$WatSolP))
+    Fieldsplitraw$ResinP <- as.numeric(as.character(Fieldsplitraw$ResinP))
+    Fieldsplitraw$pH <- as.numeric(as.character(Fieldsplitraw$pH))
+    Fieldsplitraw$EC <- as.numeric(as.character(Fieldsplitraw$EC))
+    Fieldsplitraw$OC <- as.numeric(as.character(Fieldsplitraw$OC))
+    summary(Field)
+    str(Field) #displays the structure of the object
+  ## Settiing up a new data frame containing combined values
+    FieldResGroup <- Fieldsplitraw %>%
+      group_by(Plot, Treatment, Block)
+    FieldResid <- FieldResGroup %>%
+      summarise(c(NO3c	= mean(NO3)), (PO4c=mean(PO4)), (WatSolPc=mean(WatSolP)), (ResinPc =mean(ResinP)),
+                  (pHc=mean(pH)), (ECc=mean(EC)), (OCc=mean(OC)))
+    View(FieldResid)
+    write.xlsx(FieldResid, file="FieldResidMean.xlsx")
 
 
+## Summary and ordering of data   ----
+  #Check for missing values in a specific field
+    missing <- colSums(is.na(Field[,]))
+    missing <- colSums(is.na(Fieldraw[,]))
+    print(missing)
+  #Change columns in a dataframe to factors/categorical values, str displays 
+    FieldTrt_order <- c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus")
+    Field$Block <- factor(Field$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
+    Field$Treatment <- factor(Field$Treatment,levels=Trt_order)
+    Field$LNO3 <- as.numeric(as.character(Fieldsplitraw$LNO3))
+    Field$LNH4 <- as.numeric(as.character(Fieldsplitraw$LNH3))
+    Field$LPO4 <- as.numeric(as.character(Fieldsplitraw$LPO4))
+    summary(Field)
+    str(Field) #displays the structure of the object
+  # Summary data (means, SD, etc.) for each treatment and variable
+    FieldMean <- summary_by(.~Treatment, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) #overall means for the data set
+    View(FieldMean)
+    FieldSD <- summary_by(.~Treatment, data=Field,  FUN=function(x) sd(x, na.rm=TRUE)) #overall SD for the dataset
+    View(FieldSD)
+    StrawF_summary <- Field %>% #summary data specifically for Straw variable
+      group_by(Treatment) %>%
+      summarize(Mean=mean(FStraw), SD=sd(FStraw), SE=sd(FStraw)/sqrt(n()))
+    View(StrawF_summary) #summary data specifically for Grain variable
+    GrainF_summary <- Field %>%
+      group_by(Treatment) %>%
+      summarize(Mean=mean(FGrain), SD=sd(FGrain), SE=sd(FGrain)/sqrt(n()))
+    View(GrainF_summary)
+    Field_stats <- function(data, variable_names) { #uses 'moments' instead of 'e1071' which results in much higher kurtosis
+      stats <- data %>%
+        summarise_at(vars(all_of(variable_names)), list(skewness = ~ skewness(., na.rm = TRUE), kurtosis = ~ kurtosis(., na.rm = TRUE)))
+      return(stats)
+    } # use later during skewness and kurtosis determination
 
-#####   Check for outliers   ####
-##Straw
-  ggplot(Fieldraw, aes(x = Treatment, y = FStraw, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "Straw")
-  ggsave("OutliersField_CanStraw24.jpg", width = 10, height = 10, dpi = 200)
-##Grain
-  ggplot(Fieldraw, aes(x = Treatment, y = FGrain, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "Grain")
-  ggsave("OutliersField_CanGrain24.jpg", width = 10, height = 10, dpi = 200)
-## Volumetric Moisture Content - Wet sample
-  ggplot(Fieldraw, aes(x = Treatment, y = MoistWet, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "MoistWet")
-  ggsave("OutliersField_VMCwet.jpg", width = 10, height = 10, dpi = 200)
-## Volumetric Moisture Content - drysample
-  ggplot(Fieldraw, aes(x = Treatment, y = MoistDry, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "MoistDry")
-  ggsave("OutliersField_VMCdry.jpg", width = 10, height = 10, dpi = 200)
-## Bulk Density - wet
-  ggplot(Fieldraw, aes(x = Treatment, y = BDwet, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "BDwet")
-  ggsave("OutliersField_BDwet.jpg", width = 10, height = 10, dpi = 200)
-## Bulk Density - dry
-  ggplot(Fieldraw, aes(x = Treatment, y = BDdry, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "BDdry")
-  ggsave("OutliersField_BDdry.jpg", width = 10, height = 10, dpi = 200)
-## Nuptake
-  ggplot(Fieldraw, aes(x = Treatment, y = Nuptake, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "N uptake")
-  ggsave("OutliersField_Nuptake.jpg", width = 10, height = 10, dpi = 200)
-## N recovery
-  ggplot(Fieldraw, aes(x = Treatment, y = Nrecovery, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "N recovery")
-  ggsave("OutliersField_Nrecovery.jpg", width = 10, height = 10, dpi = 200)
-## P uptake
-  ggplot(Fieldraw, aes(x = Treatment, y = Puptake, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "P uptake")
-  ggsave("OutliersField_Puptake.jpg", width = 10, height = 10, dpi = 200)
-## P recovery
-  ggplot(Fieldraw, aes(x = Treatment, y = Precovery, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "P recovery")
-  ggsave("OutliersField_Precovery.jpg", width = 10, height = 10, dpi = 200)
-## NO3
-  ggplot(Fieldraw, aes(x = Treatment, y = NO3, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "NO3")
-  ggsave("OutliersField_NO3.jpg", width = 10, height = 10, dpi = 200)
-## PO4
-  ggplot(Fieldraw, aes(x = Treatment, y = PO4, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "PO4")
-  ggsave("OutliersField_PO4.jpg", width = 10, height = 10, dpi = 200)
-## WatSolP
-  ggplot(Fieldraw, aes(x = Treatment, y = WatSolP, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "Water Soluble P")
-  ggsave("OutliersField_WatSolP.jpg", width = 10, height = 10, dpi = 200)
-## ResinP
-  ggplot(Fieldraw, aes(x = Treatment, y = ResinP, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "ResinP")
-  ggsave("OutliersField_ResinP.jpg", width = 10, height = 10, dpi = 200)
-## pH
-  ggplot(Fieldraw, aes(x = Treatment, y = pH, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "pH")
-  ggsave("OutliersField_pH.jpg", width = 10, height = 10, dpi = 200)
-## EC
-  ggplot(Fieldraw, aes(x = Treatment, y = EC, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "EC")
-  ggsave("OutliersField_EC.jpg", width = 10, height = 10, dpi = 200)
-## %OC
-  ggplot(Fieldraw, aes(x = Treatment, y = OC, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "OC")
-  ggsave("OutliersField_OC.jpg", width = 10, height = 10, dpi = 200)
-## NO3Load	
-  ggplot(Fieldraw, aes(x = Treatment, y = NO3Load, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "NO3Load")
-  ggsave("OutliersField_NO3Load.jpg", width = 10, height = 10, dpi = 200)
-## NH4Load	
-  ggplot(Fieldraw, aes(x = Treatment, y = NH4Load	, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "NH4Load	")
-  ggsave("OutliersField_NH4Load.jpg", width = 10, height = 10, dpi = 200)
-## PO4Load	
-  ggplot(Fieldraw, aes(x = Treatment, y = PO4Load, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "PO4Load")
-  ggsave("OutliersField_PO4Load.jpg", width = 10, height = 10, dpi = 200) 
-## ResinPO4	
-  ggplot(Fieldraw, aes(x = Treatment, y = ResinPO4, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "ResinPO4")
-  ggsave("OutliersField_ResinPO4.jpg", width = 10, height = 10, dpi = 200)
-## ResinNO3
-  ggplot(Fieldraw, aes(x = Treatment, y = ResinNO3, fill=Treatment)) +
-    geom_boxplot() +
-    facet_wrap(~ Treatment, scales = "free") +
-    labs(x = "Treatment", y = "ResinNO3")
-  ggsave("OutliersField_ResinNO3.jpg", width = 10, height = 10, dpi = 200)
+    
+##  Check for outliers   ----
+  #Straw
+    ggplot(Fieldraw, aes(x=Treatment, y=FStraw, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="Straw")
+    ggsave("OutliersField_CanStraw24.jpg", width=10, height=10, dpi=200)
+  #Grain
+    ggplot(Fieldraw, aes(x=Treatment, y=FGrain, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="Grain")
+    ggsave("OutliersField_CanGrain24.jpg", width=10, height=10, dpi=200)
+  # Volumetric Moisture Content - Wet sample
+    ggplot(Fieldraw, aes(x=Treatment, y=MoistWet, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="MoistWet")
+    ggsave("OutliersField_VMCwet.jpg", width=10, height=10, dpi=200)
+  # Volumetric Moisture Content - drysample
+    ggplot(Fieldraw, aes(x=Treatment, y=MoistDry, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="MoistDry")
+    ggsave("OutliersField_VMCdry.jpg", width=10, height=10, dpi=200)
+  # Bulk Density - wet
+    ggplot(Fieldraw, aes(x=Treatment, y=BDwet, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="BDwet")
+    ggsave("OutliersField_BDwet.jpg", width=10, height=10, dpi=200)
+  # Bulk Density - dry
+    ggplot(Fieldraw, aes(x=Treatment, y=BDdry, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="BDdry")
+    ggsave("OutliersField_BDdry.jpg", width=10, height=10, dpi=200)
+  # Nuptake
+    ggplot(Fieldraw, aes(x=Treatment, y=Nuptake, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="N uptake")
+    ggsave("OutliersField_Nuptake.jpg", width=10, height=10, dpi=200)
+  # N recovery
+    ggplot(Fieldraw, aes(x=Treatment, y=Nrecovery, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="N recovery")
+    ggsave("OutliersField_Nrecovery.jpg", width=10, height=10, dpi=200)
+  # P uptake
+    ggplot(Fieldraw, aes(x=Treatment, y=Puptake, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="P uptake")
+    ggsave("OutliersField_Puptake.jpg", width=10, height=10, dpi=200)
+  # P recovery
+    ggplot(Fieldraw, aes(x=Treatment, y=Precovery, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="P recovery")
+    ggsave("OutliersField_Precovery.jpg", width=10, height=10, dpi=200)
+  # NO3_10
+    ggplot(Fieldraw, aes(x=Treatment, y=NO3_10, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="NO3")
+    ggsave("OutliersField_NO3_10.jpg", width=10, height=10, dpi=200)
+  # PO4_10
+    ggplot(Fieldraw, aes(x=Treatment, y=PO4_10, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="PO4")
+    ggsave("OutliersField_PO4_10.jpg", width=10, height=10, dpi=200)
+  # WatSolP_10
+    ggplot(Fieldraw, aes(x=Treatment, y=WatSolP_10, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="Water Soluble P")
+    ggsave("OutliersField_WatSolP_10.jpg", width=10, height=10, dpi=200)
+  # ResinP_10
+    ggplot(Fieldraw, aes(x=Treatment, y=ResinP_10, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="ResinP")
+    ggsave("OutliersField_ResinP_10.jpg", width=10, height=10, dpi=200)
+  # pH_10
+    ggplot(Fieldraw, aes(x=Treatment, y=pH_10, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="pH")
+    ggsave("OutliersField_pH_10.jpg", width=10, height=10, dpi=200)
+  # EC_10
+    ggplot(Fieldraw, aes(x=Treatment, y=EC_10, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="EC")
+    ggsave("OutliersField_EC_10.jpg", width=10, height=10, dpi=200)
+  # OC_10
+    ggplot(Fieldraw, aes(x=Treatment, y=OC_10, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="OC")
+    ggsave("OutliersField_OC_10.jpg", width=10, height=10, dpi=200)
+  # NO3_20
+    ggplot(Fieldraw, aes(x=Treatment, y=NO3_20, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="NO3")
+    ggsave("OutliersField_NO3_20.jpg", width=10, height=10, dpi=200)
+  # PO4_20
+    ggplot(Fieldraw, aes(x=Treatment, y=PO4_20, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="PO4")
+    ggsave("OutliersField_PO4_20.jpg", width=10, height=10, dpi=200)
+  # WatSolP_20
+    ggplot(Fieldraw, aes(x=Treatment, y=WatSolP_20, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="Water Soluble P")
+    ggsave("OutliersField_WatSolP_20.jpg", width=10, height=10, dpi=200)
+  # ResinP_20
+    ggplot(Fieldraw, aes(x=Treatment, y=ResinP_20, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="ResinP")
+    ggsave("OutliersField_ResinP_20.jpg", width=10, height=10, dpi=200)
+  # pH_20
+    ggplot(Fieldraw, aes(x=Treatment, y=pH_20, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="pH")
+    ggsave("OutliersField_pH_20.jpg", width=10, height=10, dpi=200)
+  # EC_20
+    ggplot(Fieldraw, aes(x=Treatment, y=EC_20, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="EC")
+    ggsave("OutliersField_EC_20.jpg", width=10, height=10, dpi=200)
+  # OC_20
+    ggplot(Fieldraw, aes(x=Treatment, y=OC_20, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="OC")
+    ggsave("OutliersField_OC_20.jpg", width=10, height=10, dpi=200)
+  # NO3_30
+    ggplot(Fieldraw, aes(x=Treatment, y=NO3_30, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="NO3")
+    ggsave("OutliersField_NO3_30.jpg", width=10, height=10, dpi=200)
+  # PO4_30
+    ggplot(Fieldraw, aes(x=Treatment, y=PO4_30, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="PO4")
+    ggsave("OutliersField_PO4_30.jpg", width=10, height=10, dpi=200)
+  # WatSolP_30
+    ggplot(Fieldraw, aes(x=Treatment, y=WatSolP_30, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="Water Soluble P")
+    ggsave("OutliersField_WatSolP_30.jpg", width=10, height=10, dpi=200)
+  # ResinP_30
+    ggplot(Fieldraw, aes(x=Treatment, y=ResinP_30, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="ResinP")
+    ggsave("OutliersField_ResinP_30.jpg", width=10, height=10, dpi=200)
+  # pH_30
+    ggplot(Fieldraw, aes(x=Treatment, y=pH_30, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="pH")
+    ggsave("OutliersField_pH_30.jpg", width=10, height=10, dpi=200)
+  # EC_30
+    ggplot(Fieldraw, aes(x=Treatment, y=EC_30, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="EC")
+    ggsave("OutliersField_EC_30.jpg", width=10, height=10, dpi=200)
+  # OC_30
+    ggplot(Fieldraw, aes(x=Treatment, y=OC_30, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="OC")
+    ggsave("OutliersField_OC_30.jpg", width=10, height=10, dpi=200)
+  # NO3Load	
+    ggplot(Fieldraw, aes(x=Treatment, y=NO3Load, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="NO3Load")
+    ggsave("OutliersField_NO3Load.jpg", width=10, height=10, dpi=200)
+  # NH4Load	
+    ggplot(Fieldraw, aes(x=Treatment, y=NH4Load	, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="NH4Load	")
+    ggsave("OutliersField_NH4Load.jpg", width=10, height=10, dpi=200)
+  # PO4Load	
+    ggplot(Fieldraw, aes(x=Treatment, y=PO4Load, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="PO4Load")
+    ggsave("OutliersField_PO4Load.jpg", width=10, height=10, dpi=200) 
+  # ResinPO4	
+    ggplot(Fieldraw, aes(x=Treatment, y=ResinPO4, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="ResinPO4")
+    ggsave("OutliersField_ResinPO4.jpg", width=10, height=10, dpi=200)
+  # ResinNO3
+    ggplot(Fieldraw, aes(x=Treatment, y=ResinNO3, fill=Treatment)) +
+      geom_boxplot() +
+      facet_wrap(~ Treatment, scales="free") +
+      labs(x="Treatment", y="ResinNO3")
+    ggsave("OutliersField_ResinNO3.jpg", width=10, height=10, dpi=200)
 
 
 
-
-#####   STRAW   ########
+# PLANT ANALYSIS ----  
+##   Straw   ----
   FieldStraw_Mean <- summary_by(FStraw~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE))
-  FieldStraw_Mean <- as.numeric(FieldStraw_Mean$FStraw)
-  FieldStraw_skew <- skewness(FieldStraw_Mean)
-  FieldStraw_kur <- kurtosis(FieldStraw_Mean)
-  cat("Skewness:", FieldStraw_skew, "\n") # 0.6616705 
-  cat("Kurtosis:", FieldStraw_kur, "\n") # -0.7709748 
-  ggplot(Field, aes(x=Treatment, y=FStraw, fill=Treatment)) + geom_boxplot() + labs(x = "Treatment", y = "Straw")
+  FieldStraw_Mean <- as.numeric(FieldStraw_Mean$FStraw, na.rm=TRUE)
+  FieldStraw_skew <- skewness(FieldStraw_Mean, na.rm=TRUE)
+  FieldStraw_kur <- kurtosis(FieldStraw_Mean, na.rm=TRUE)
+  cat("Skewness:", FieldStraw_skew, "\n") # 0.7782955 
+  cat("Kurtosis:", FieldStraw_kur, "\n") # -0.4127568 
+  ggplot(Field, aes(x=Treatment, y=FStraw, fill=Treatment)) + geom_boxplot() + labs(x="Treatment", y="Straw")
   hist(Field$FStraw) #  left skew
-  shapiro.test(Field$FStraw) # p=0.04875
-  leveneTest(FStraw~Treatment, data=Field)  # P=0.1466
+  shapiro.test(Field$FStraw) # p=0.05474
+  leveneTest(FStraw~Treatment, data=Field)  # P=0.03911
 # transform
   hist(log(Field$FStraw)) #  left skew
   shapiro.test(log(Field$FStraw)) # p=0.3666
   leveneTest(log(FStraw)~Treatment, data=Field)  # P=0.1384
-#ModFStraw1 aov
-  ModFStraw1<- aov(log(FStraw)~Treatment+Block, data=Field)
-  anova(ModFStraw1) 
+# ModFStraw1
+  ModFStraw1<- lmer(FStraw~Treatment+(1|Block),data=Field)
+  anova(ModFStraw1) # no significant differences
   summary(ModFStraw1)
-  boxplot(residuals(ModFStraw1)~Treatment, data=Field, main="Residuals by Treatment")
-  hist(resid(ModFStraw1))
-  shapiro.test(resid(ModFStraw1)) # p=0.7166
-  plot(fitted(ModFStraw1),resid(ModFStraw1),pch=16)  
-  qqnorm(resid(ModFStraw1)) # slight to medium left tail
+  hist(resid(ModFStraw1)) 
+  shapiro.test(resid(ModFStraw1))  # 0.7146
+  plot(fitted(ModFStraw1),resid(ModFStraw1),pch=16)   
+  qqnorm(resid(ModFStraw1)) # medium left tail
   qqline(resid(ModFStraw1))
-  ModFStraw1_tidy <- tidy(ModFStraw1)
-  ModFStraw1sum_sq_reg <- ModFStraw1_tidy$sumsq[1] 
-  ModFStraw1sum_sq_resid <- ModFStraw1_tidy$sumsq[2]
-  ModFStraw1sum_sq_reg / (ModFStraw1sum_sq_reg + ModFStraw1sum_sq_resid) #  0.1722999
-#Lm Model for straw - same means and CLD, but dif upper and lower limits than for lmer
-  ModFStraw2 <- lm(log(FStraw)~Treatment+Block,data=Field)
-  anova(ModFStraw2)
+  rsq(ModFStraw1) # 0.4246
+# ModFStraw2
+  ModFStraw2 <- glmer(FStraw~Treatment+(1|Block),data=Field,family=Gamma(link="log"), na.action=na.omit)
+  anova(ModFStraw2) # no significant differences
   summary(ModFStraw2)
-  hist(resid(ModFStraw2))  # data is normally distributed
-  shapiro.test(resid(ModFStraw2))  # p=0.7166
-  boxplot(residuals(ModFStraw2)~Treatment, data=Field, main="Residuals by Treatment")
-  plot(fitted(ModFStraw2),resid(ModFStraw2),pch=16)  
-  qqnorm(resid(ModFStraw2)) # slight tails
-  qqline(resid(ModFStraw2))
-  rsq(ModFStraw2) # 0.6258265
-# lmer - model preferred due to blocking effect
-  ModFStraw3 <- lmer(log(FStraw)~Treatment+(1|Block),data=Field)
-  anova(ModFStraw3)
+  shapiro.test(resid(ModFStraw2)) # p=0.7505
+  bf.test(FStraw~Treatment, data=Field) # 0.80 
+  rsq.glmm(ModFStraw2)
+# ModFStraw3
+  ModFStraw3 <- lme(FStraw~Treatment,random=~1|Block, data=Field, na.action=na.exclude)
+  anova(ModFStraw3)  # no significant differences
   summary(ModFStraw3)
-  hist(resid(ModFStraw3)) 
-  shapiro.test(resid(ModFStraw3))  # 0.7146
-  plot(fitted(ModFStraw3),resid(ModFStraw3),pch=16)   
-  qqnorm(resid(ModFStraw3)) # medium left tail
-  qqline(resid(ModFStraw3))
-  rsq(ModFStraw3) # 0.476
-# weighted lm model
-  ModFStrawvar <- tapply(log(Field$FStraw), Field$Treatment, var, na.rm=TRUE)
-  weightsFstraw <- 1 / ModFStrawvar
-  weightsFstraw_full <- rep(weightsFstraw, each = length(Field$FStraw) / length(weightsFstraw))
-  ModFStraw4 <- lm(FStraw ~ Treatment + Block, data=Field, weights=weightsFstraw_full) 
-  anova(ModFStraw3)
-  summary(ModFStraw3)
-  hist(resid(ModFStraw4)) # left skewed
-  shapiro.test(resid(ModFStraw4))  # 0.3059
-  plot(fitted(ModFStraw4),resid(ModFStraw4),pch=16)   # clusters forming
-  qqnorm(resid(ModFStraw4)) # slight tails
-  qqline(resid(ModFStraw4))
-  rsq(ModFStraw4) # 0.536
-#ModFStraw4 - glmer model
-  ModFStraw5 <- glmer(FStraw~Treatment+(1|Block),data=Field,family=Gamma(link="log"))
-  anova(ModFStraw5)
-  summary(ModFStraw5)
-  shapiro.test(resid(ModFStraw5)) # p=0.5819
-  bf.test(Straw~Treatment, data=Field) # 0.7851604 
-  rsq(ModFStraw5) # 0.5733773
-#Kruskal-Wallis on Straw
-  ModFStraw6 <- kruskal.test(FStraw~Treatment,data = Field) # non-parametric comparing equalness of the medians
-  print(ModFStraw6)  # chi squared p=0.8107
-  rsq(ModFStraw6)
-#Comparing models - highest rsq and lowest AIC?BIC = ModFStraw2
-  ##rsq values: ModFStraw1=0.173, ModFStraw2=0.625, ModFStraw3=0.463, ModFStraw4 =0.536, ModFStraw5=0.573
-  Fstraw_modlist <- list(ModFStraw1, ModFStraw2, ModFStraw3, ModFStraw4, ModFStraw5)
+  rsq.lmm(ModFStraw3)
+# ModFStraw4
+  ModFStraw4 <- glmmTMB(FStraw~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFStraw4, type="III") # no significant differences
+  summary(ModFStraw4)
+  performance::r2(ModFStraw4) # 0.502
+#Comparing models - highest rsq and lowest AIC?BIC=ModFStraw2
+  # cannot get most rsq values so this wasn't assessed
+  Fstraw_modlist <- list(ModFStraw1, ModFStraw2, ModFStraw3, ModFStraw4)
   AIC_values <- sapply(Fstraw_modlist, AIC)
   BIC_values <- sapply(Fstraw_modlist, BIC)
-  N_AB <- data.frame(Model=c("ModFStraw1", "ModFStraw2", "ModFStraw3", "ModFStraw4", "ModFStraw5"), AIC_values, BIC_values)
+  N_AB <- data.frame(Model=c("ModFStraw1", "ModFStraw2", "ModFStraw3", "ModFStraw4"), AIC_values, BIC_values)
   print(N_AB)
-    #MModel AIC_values BIC_values
-    #1 ModFStraw1  -3.099557   8.680981
-    #2 ModFStraw2  -3.099557   8.680981
-    #3 ModFStraw3  21.257225  30.681656
-    #4 ModFStraw4 370.977642 382.758180
-    #5 ModFStraw5 373.872434 383.296865
+    #       Model AIC_values BIC_values
+    #1 ModFStraw1  286.4133   295.4973 - has fractional df
+    #2 ModFStraw2  358.49187  367.57582 - has infinite df
+    #3 ModFStraw3  286.41332  293.07903 - has df of only 3
+    #4 ModFStraw4  363.98722  373.07118
 # emmeans 
-  ModFStrawem <- emmeans(ModFStraw2,~Treatment, alpha=0.1, type="response")
-  ModFStrawem_cld <- cld(ModFStrawem, Letters = letters, type="response") 
-  ModFStrawem_cld <- ModFStrawem_cld %>% rename(emmean = "response")
+  ModFStrawem <- emmeans(ModFStraw4,~Treatment, alpha=0.1)
+  ModFStrawem_cld <- cld(ModFStrawem, Letters=trimws(letters), reversed=TRUE) 
   View(ModFStrawem_cld)
   write.xlsx(ModFStrawem_cld, file="Field_Straw.xlsx")
-# Developing visualizations
-  ggplot(ModFStrawem_cld, aes(x = Treatment, y = response)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = response - SE, ymax = response + SE), 
-                  width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=response+SE), size=4, vjust=-1) +
-    labs(x = "Treatments", y = "Canola straw yield (kg/ha)") +
-    scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kg P/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "Fertilizer\nPhosphorus"))+
-    scale_y_continuous(limits = c(-10, 70))+
-    theme_bw() +
-    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-          legend.text=element_text(size=12))+
-    theme(plot.title = element_text(size = 18))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-          axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("LargePlots_straw.jpg", width = 12, height = 8, dpi = 600)
-  
 
 
 
-#####   GRAIN   ########
+##   Grain   ----
   FieldGrain_Mean <- summary_by(FGrain~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE))
   FieldGrain_Mean <- as.numeric(FieldGrain_Mean$FGrain)
-  FieldGrain_skew <- skewness(FieldGrain_Mean)
-  FieldGrain_kur <- kurtosis(FieldGrain_Mean)
-  cat("Skewness:", FieldGrain_skew, "\n") # 1.33558
-  cat("Kurtosis:", FieldGrain_kur, "\n") # 0.8658551 
+  FieldGrain_skew <- skewness(FieldGrain_Mean, na.rm=TRUE)
+  FieldGrain_kur <- kurtosis(FieldGrain_Mean, na.rm=TRUE)
+  cat("Skewness:", FieldGrain_skew, "\n") # 1.589016 
+  cat("Kurtosis:", FieldGrain_kur, "\n") # 2.121085 
   hist(FieldGrain_Mean) # severe left skew
-  shapiro.test(FieldGrain_Mean) # p=0.0007133
-  leveneTest(FGrain~Treatment, data=Field) # 0.1344
+  shapiro.test(FieldGrain_Mean) # p=0.0004853
+  leveneTest(FGrain~Treatment, data=Field) # 0.0413
 # transform
   hist(log(FieldGrain_Mean)) # severe left skew
-  shapiro.test(log(FieldGrain_Mean)) # p=0.1062
-  leveneTest(log(FGrain)~Treatment, data=Field) # 0.119
+  shapiro.test(log(FieldGrain_Mean)) # p=0.1371
+  leveneTest(log(FGrain)~Treatment, data=Field) # 0.04796 
   hist(sqrt(FieldGrain_Mean)) # severe left skew
-  shapiro.test(sqrt(FieldGrain_Mean)) # p=0.009866
-  leveneTest(sqrt(FGrain)~Treatment, data=Field) # 0.1182
-#ModFGrain1 aov
-  ModFGrain1<- aov(log(FGrain)~Treatment+Block, data=Field) #Two-way anova for Grain
-  anova(ModFGrain1)
+  shapiro.test(sqrt(FieldGrain_Mean)) # p=0.009663
+  leveneTest(sqrt(FGrain)~Treatment, data=Field) # 0.03847
+#ModFGrain1 
+  ModFGrain1<- lmer(log(FGrain)~Treatment+(1|Block),data=Field)
+  anova(ModFGrain1) # no significant differences
   summary(ModFGrain1)
-  hist(resid(ModFGrain1))
-  shapiro.test(resid(ModFGrain1)) # p=0.6778
-  plot(fitted(ModFGrain1),resid(ModFGrain1),pch=16)  # V or W shape
-  qqnorm(resid(ModFGrain1)) # slight tails
+  hist(resid(ModFGrain1)) # normal
+  shapiro.test(resid(ModFGrain1))  # 0.8632
+  plot(fitted(ModFGrain1),resid(ModFGrain1),pch=16)   # random
+  qqnorm(resid(ModFGrain1)) # small left tail
   qqline(resid(ModFGrain1))
-  ModFGrain1_tidy <- tidy(ModFGrain1)
-  ModFGrain1sum_sq_reg <- ModFGrain1_tidy$sumsq[1] 
-  ModFGrain1sum_sq_resid <- ModFGrain1_tidy$sumsq[2]
-  ModFGrain1sum_sq_reg / (ModFGrain1sum_sq_reg + ModFGrain1sum_sq_resid) #  0.149
-#Lm Model for Grain - same means and CLD, but dif upper and lower limits than for lmer
-  ModFGrain2 <- lm(log(FGrain)~Treatment+Block,data=Field)
-  anova(ModFGrain2)
+  rsq(ModFGrain1) # 0.5477
+  # ModFGrain2
+  ModFGrain2 <- glmer(log(FGrain)~Treatment+(1|Block),data=Field,family=Gamma(link="log"), na.action=na.omit)
+  anova(ModFGrain2) # no significant differences
   summary(ModFGrain2)
-  hist(resid(ModFGrain2)) 
-  shapiro.test(resid(ModFGrain2))  # p=0.6778
-  plot(fitted(ModFGrain2),resid(ModFGrain2),pch=16)  # V shape
-  qqnorm(resid(ModFGrain2)) # slight tails
-  qqline(resid(ModFGrain2))
-  rsq(ModFGrain2) # 0.6837072
-# weighted lm model
-  ModFGrainvar <- tapply(log(Field$FGrain), Field$Treatment, var, na.rm=TRUE)
-  weightsFGrain <- 1 / ModFGrainvar
-  weightsFGrain_full <- rep(weightsFGrain, each = length(Field$FGrain) / length(weightsFGrain))
-  ModFGrain3 <- lm(FGrain ~ Treatment + Block, data=Field, weights=weightsFGrain_full) 
-  anova(ModFGrain3)
+  shapiro.test(resid(ModFGrain2)) # p=0.557
+  bf.test(FGrain~Treatment, data=Field) # 0.656
+  rsq(ModFGrain2)
+  # ModFGrain3
+  ModFGrain3 <- lme(log(FGrain)~Treatment,random=~1|Block, data=Field, na.action=na.exclude)
+  anova(ModFGrain3)  # no significant differences
   summary(ModFGrain3)
-  hist(resid(ModFGrain3)) 
-  shapiro.test(resid(ModFGrain3))  # p=0.04943
-  plot(fitted(ModFGrain3),resid(ModFGrain3),pch=16)   # fan shape
-  qqnorm(resid(ModFGrain3)) # right tail pronounced
-  qqline(resid(ModFGrain3))
-  rsq(ModFGrain3) # 0.505
-#ModFGrain1 lmer 
-  ModFGrain4 <- lmer(log(FGrain)~Treatment+(1|Block),data=Field)
-  anova(ModFGrain4)
+  rsq.lmm(ModFGrain3)
+  # ModFGrain4
+  ModFGrain4 <- glmmTMB(log(FGrain)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFGrain4, type="III") # no significant differences
   summary(ModFGrain4)
-  hist(resid(ModFGrain4))  
-  shapiro.test(resid(ModFGrain4))  # p= 0.3143
-  plot(fitted(ModFGrain4),resid(ModFGrain4),pch=16)  # V shape
-  qqnorm(resid(ModFGrain4)) # slight tails
-  qqline(resid(ModFGrain4))
-  rsq(ModFGrain4) # 0.547
-#Comparing models - decent rsq and AIC?BIC = ModFGrain4
-  #rsq values: ModFGrain1=0.149, ModFGrain2=0.684, ModFGrain3=0.505, ModFGrain4 =0.547
+  performance::r2(ModFGrain4) # 0.502
+#Comparing models - decent rsq and AIC?BIC=ModFGrain4
+  # cannot get most rsq values so this wasn't assessed
   FGrain_modlist <- list(ModFGrain1, ModFGrain2, ModFGrain3, ModFGrain4)
   AIC_values <- sapply(FGrain_modlist, AIC)
   BIC_values <- sapply(FGrain_modlist, BIC)
@@ -414,577 +431,1220 @@ library(glmmTMB)
                      AIC_values, BIC_values)
   print(N_AB)
     #Model AIC_values BIC_values
-    #1 ModFGrain1   22.47981   34.26035
-    #2 ModFGrain2   22.47981   34.26035
-    #3 ModFGrain3  333.53229  345.31283
-    #4 ModFGrain4   41.29446   50.71889
+    #1 ModFGrain1   38.12774   47.21170
+    #2 ModFGrain2   23.74094   32.82489 - results in Infinite df in emmeans
+    #3 ModFGrain3   38.12774   44.79345
+    #4 ModFGrain4   28.04527   37.12923
 #emmeans 
-  ModFGrainem <- emmeans(ModFGrain2,~Treatment, alpha=0.1, type = "response")
-  ModFGrainem_cld <- cld(ModFGrainem, Letters = letters, type = "response") 
-  ModFGrainem_cld <- ModFGrainem_cld %>% rename(emmean = "response")
+  ModFGrainem <- emmeans(ModFGrain4,~Treatment, alpha=0.1, type="response")
+  ModFGrainem_cld <- cld(ModFGrainem, Letters=trimws(letters), reversed=TRUE, type="response") 
+  ModFGrainem_cld <- ModFGrainem_cld %>% dplyr::rename(emmean="response")
   View(ModFGrainem_cld)
   write.xlsx(ModFGrainem_cld, file="Field_Grain.xlsx")
-##Developing visualizations
-  ggplot(ModFGrainem_cld, aes(x = Treatment, y = response, fill=Treatment)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = response - SE, ymax = response + SE), 
-                  width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=response+SE), size=4, vjust=-1) +
-    labs(x = "Treatments", y = "Canola grain yield (g)") +
-    scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "Fertilizer\nPhosphorus"))+
-    scale_y_continuous(limits = c(-10, 70))+
-    theme_bw() +
-    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-          legend.text=element_text(size=12))+
-    theme(plot.title = element_text(size = 18))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-          axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("LargePlots_Grain.jpg", width = 12, height = 8, dpi = 600)
 
 
-#####   BIOMASS   #####
-  ModFGrainem_cld$origin <- "FGrain"
-  ModFStrawem_cld$origin <- "FStraw"
-  BiomassFieldEm <- rbind(ModFGrainem_cld,ModFStrawem_cld)
-  BiomassFieldEm <- as.data.frame(BiomassFieldEm)
-  View(BiomassFieldEm)
-# Plot option 3 - side by side
-  ggplot(BiomassFieldEm, aes(x=Treatment, y=emmean, pattern=origin)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1, position = position_dodge(width = 0.9))+
-    labs(x = "Treatment", y = "Canola grain and straw yield (kg/ha)", pattern="") +
-    scale_pattern_manual(values = c("FGrain" = "stripe", "FStraw" = "crosshatch"), 
-                         labels = c("Grain", "Straw"))+
-    scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "Fertilizer\nPhosphorus"))+
-    scale_y_continuous(limits = c(0, 3000))+
-    theme_bw() +
-    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-          legend.text=element_text(size=12))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=20, face="bold", colour="black"),
-          axis.title.x = element_blank(), axis.title.y = element_text(size = 24, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("LarePlots_biomass.jpg", width = 12, height = 8, dpi = 500)
+##   Biomass   ----
+  FieldYield_Mean <- summary_by(Yield~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE))
+  FieldYield_Mean <- as.numeric(FieldYield_Mean$Yield)
+  FieldYield_skew <- skewness(FieldYield_Mean, na.rm=TRUE)
+  FieldYield_kur <- kurtosis(FieldYield_Mean, na.rm=TRUE)
+  cat("Skewness:", FieldYield_skew, "\n") # 0.8933767 
+  cat("Kurtosis:", FieldYield_kur, "\n") # -0.3604379 
+  hist(FieldYield_Mean) # moderate left skew
+  shapiro.test(FieldYield_Mean) # p=0.01478
+  leveneTest(Yield~Treatment, data=Field) # 0.09011
+  # transform
+  hist(log(FieldYield_Mean)) # mild left skew
+  shapiro.test(log(FieldYield_Mean)) # p=0.2559
+  leveneTest(log(Yield)~Treatment, data=Field) # 0.09588
+  hist(sqrt(FieldYield_Mean)) # mild left skew
+  shapiro.test(sqrt(FieldYield_Mean)) # p=0.06997
+  leveneTest(sqrt(Yield)~Treatment, data=Field) # 0.09459
+  #ModFYield1 
+  ModFYield1<- lmer(log(Yield)~Treatment+(1|Block),data=Field)
+  anova(ModFYield1) # no significant differences
+  summary(ModFYield1)
+  hist(resid(ModFYield1)) # normal
+  shapiro.test(resid(ModFYield1))  # 0.1307
+  plot(fitted(ModFYield1),resid(ModFYield1),pch=16)   # random
+  qqnorm(resid(ModFYield1)) # medium left tail
+  qqline(resid(ModFYield1))
+  rsq(ModFYield1) # 0.5177
+  # ModFYield2
+  ModFYield2 <- glmer(log(Yield)~Treatment+(1|Block),data=Field,family=Gamma(link="log"), na.action=na.omit)
+  anova(ModFYield2) # no significant differences
+  summary(ModFYield2)
+  shapiro.test(resid(ModFYield2)) # p=0.249
+  bf.test(Yield~Treatment, data=Field) # 0.7566
+  rsq(ModFYield2) #0.629
+  # ModFYield3
+  ModFYield3 <- lme(log(Yield)~Treatment,random=~1|Block, data=Field, na.action=na.exclude)
+  anova(ModFYield3)  # no significant differences
+  summary(ModFYield3)
+  rsq.lmm(ModFYield3) #0.5177
+  # ModFYield4
+  ModFYield4 <- glmmTMB(log(Yield)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFYield4, type="III") # no significant differences
+  summary(ModFYield4)
+  performance::r2(ModFYield4) # 0.594
+  #Comparing models
+  # Rsq = ModFYield2 is highest at 0.629
+    # AIC & BIC
+    FYield_modlist <- list(ModFYield1, ModFYield2, ModFYield3, ModFYield4)
+    AIC_values <- sapply(FYield_modlist, AIC)
+    BIC_values <- sapply(FYield_modlist, BIC)
+    N_AB <- data.frame(Model=c("ModFYield1", "ModFYield2", "ModFYield3", "ModFYield4"),
+                       AIC_values, BIC_values)
+    print(N_AB)
+      #Model AIC_values BIC_values
+      #1 ModFYield1  24.585345   34.00978
+      #2 ModFYield2   6.006701   15.43113 - Infinite DF
+      #3 ModFYield3  24.585345   31.70832
+      #4 ModFYield4   9.452402   18.87683
+  # emmeans 
+  ModFYieldem <- emmeans(ModFYield4,~Treatment, alpha=0.1, type="response")
+  ModFYieldem_cld <- cld(ModFYieldem, Letters=trimws(letters), reversed=TRUE, type="response") 
+  ModFYieldem_cld <- ModFYieldem_cld %>% dplyr::rename(emmean="response")
+  View(ModFYieldem_cld)
+  write.xlsx(ModFYieldem_cld, file="Field_Yield.xlsx")
+  
+  # Plot option 1 - using grain and straw emmeans
+    ## Create combined dataframe
+    ModFGrainem_cld$origin <- "FGrain"
+    ModFStrawem_cld$origin <- "FStraw"
+    BiomassFieldEm <- rbind(ModFGrainem_cld,ModFStrawem_cld)
+    BiomassFieldEm <- as.data.frame(BiomassFieldEm)
+    BiomassFieldEm <-  BiomassFieldEm[, c("Treatment", "emmean", "SE", ".group", "origin")]
+    BiomassFieldEm$.group <- str_trim(BiomassFieldEm$.group)
+    BiomassFieldEm$Treatment <- factor(BiomassFieldEm$Treatment, levels=FieldTrt_order)
+    BiomassFieldEm <- BiomassFieldEm[order(BiomassFieldEm$Treatment), ]
+    ### Set confidence intervals
+    for (i in 1:nrow(BiomassFieldEm)) {
+      if (BiomassFieldEm[i, 'origin'] == "FGrain") {
+        treatment <- BiomassFieldEm[i, 'Treatment']
+        fstraw_emmean <- BiomassFieldEm[BiomassFieldEm$Treatment == treatment & BiomassFieldEm$origin == "FStraw", 'emmean']
+        BiomassFieldEm[i, 'u_conf'] <- BiomassFieldEm[i, 'emmean'] + sum(fstraw_emmean) + BiomassFieldEm[i, 'SE']
+        BiomassFieldEm[i, 'l_conf'] <- BiomassFieldEm[i, 'emmean'] + sum(fstraw_emmean) - BiomassFieldEm[i, 'SE']
+      } else if (BiomassFieldEm[i, 'origin'] == "FStraw") {
+        BiomassFieldEm[i, 'u_conf'] <- BiomassFieldEm[i, 'emmean'] + BiomassFieldEm[i, 'SE']
+        BiomassFieldEm[i, 'l_conf'] <- BiomassFieldEm[i, 'emmean'] - BiomassFieldEm[i, 'SE']
+      }
+    }
+    View(BiomassFieldEm)
+    print(BiomassFieldEm)
+    write.xlsx(BiomassFieldEm, file="Field_BiomassMeans.xlsx")
+    ## Visualization
+    ### Set text labels colours & fontface
+    YieldColour <- c("FGrain" = "white", "FStraw" = "black")
+    TotLetMax <- aggregate(u_conf ~ Treatment, data = BiomassFieldEm, FUN = max)
+    (FieldYield1 <- ggplot(BiomassFieldEm, aes(Treatment, y=emmean, fill=origin)) +
+        geom_bar(stat="identity", position = "stack", width=0.65) +
+        geom_errorbar(aes(ymin=l_conf, ymax=u_conf), width = .15, stat="identity")+
+        geom_text(aes(label = trimws(.group), y = ifelse(origin == "FStraw", emmean, emmean), color = origin), #color specified within aes layer
+                  position = position_stack(vjust = 0.5), hjust = -1, size = 7, fontface="bold") +
+        geom_text(data=TotLetMax, (aes(x=Treatment, y = u_conf+150, label = "A")),
+                  fontface="bold", color="black", size = 7, inherit.aes = FALSE) +
+        labs(x = "Treatment", y = "Biomass") +
+        scale_fill_manual(values = c("grey30", "grey89"), labels = c("Grain", "Straw"))+
+        scale_color_manual(values = YieldColour, guide="none") + # need to specify geom_text colur and guide removes associated legend
+        scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar 25kg P/ha", "Biochar 10t/ha", "Biochar 10t/ha\n& TS",
+                                    "TSP\nFertilizer"))+
+        theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+              legend.title = element_blank(), legend.text=element_text(size=18, face="bold"),
+              axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+              axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+              axis.title.x=element_blank(), 
+              axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+        ggsave(FieldYield1, file="Field_Yield1.jpg", width = 10, height = 8, dpi = 150)
+    
+  # Plot option 2 - using ordinary means
+    ## call dataframe
+    BiomassField_Manual <- subset(Field, select=c("Treatment", "FGrain", "FStraw"), subset = complete.cases(Field[, c("FGrain", "FStraw")]))
+    BiomassField_Manual$Treatment <- recode(BiomassField_Manual$Treatment,
+                                            "Control1" = "Control 1", "Control2" = "Control 2", "Biochar25kgPha" = "Biochar 25kg P/ha",
+                                            "Biochar10tha" = "Biochar 10t/ha", "Biochar10thaTSP" = "Biochar 10t/ha\n& TSP",
+                                            "Phosphorus" = "TSP\nFertilizer")
+    print(BiomassField_Manual)
+    ## Visualization
+    (FieldYield2 <- BiomassField_Manual|>
+        pivot_longer(-Treatment) |>
+        mutate(name = forcats::fct_relevel(name, "FGrain", "FStraw")) |>
+        ggbarplot(x = "Treatment", y = "value", fill = "name", add = "mean_se") +
+        labs(x = "Treatment", y = "Total grain and straw yield (kg/ha)", fill = "") +
+        scale_fill_manual(values = c("grey30", "grey89"), labels = c("Grain", "Straw")) +
+        scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar 25kg P/ha", "Biochar 10t/ha", "Biochar 10t/ha\n& TS",
+                                    "TSP\nFertilizer"))+
+        theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+              legend.title = element_blank(), legend.text=element_text(size=18),
+              axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+              axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+              axis.title.x=element_blank(), 
+              axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(FieldYield2, file="Field_Yield2.jpg", width = 10, height = 8, dpi = 150)
 
 
-
-
-#####   N UPTAKE   ########
+##   N uptake   ----
   FieldNup_Mean <- summary_by(Nuptake~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldNup_Mean <- as.numeric(FieldNup_Mean$Nuptake)
   FieldNup_skew <- skewness(FieldNup_Mean,na.rm=TRUE)
   FieldNup_kur <- kurtosis(FieldNup_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldNup_skew, "\n") # 0.7926221 
-  cat("Kurtosis:", FieldNup_kur, "\n") # 1.19171 
-  shapiro.test(Field$Nuptake) # p=0.02798
+  cat("Skewness:", FieldNup_skew, "\n") # 0.7944
+  cat("Kurtosis:", FieldNup_kur, "\n") # 1.405 
+  shapiro.test(Field$Nuptake) # p=0.02145
   hist(Field$Nuptake) #  missing pieces to right
-  leveneTest(Nuptake~Treatment, data=Field)  # 0.3655
+  leveneTest(Nuptake~Treatment, data=Field)  # 0.4566
 # transform
-  shapiro.test(log(Field$Nuptake)) # p=0.09166
-  hist(log(Field$Nuptake)) #  
-  leveneTest(log(Nuptake)~Treatment, data=Field)  # 0.4053
-#ModFieldNup1 - all SE values are identical
-  ModFieldNup1 <- aov(log(Nuptake)~Treatment+Block, data=Field)
-  anova(ModFieldNup1)
+  shapiro.test(log(Field$Nuptake)) # p=0.06483
+  hist(log(Field$Nuptake)) # more towards right, less 'missing'  
+  leveneTest(log(Nuptake)~Treatment, data=Field)  # 0.559
+# ModFieldNup1
+  ModFieldNup1 <- lmer(log(Nuptake)~Treatment+(1|Block),data=Field)
+  anova(ModFieldNup1) # significant differences p=0.0075
   summary(ModFieldNup1)
-  hist(resid(ModFieldNup1))
-  shapiro.test(resid(ModFieldNup1))  # p=0.7751
-  plot(fitted(ModFieldNup1),resid(ModFieldNup1),pch=16) #slightly right  skewed but very random
-  qqnorm(resid(ModFieldNup1)) # slight right tail
+  hist(resid(ModFieldNup1)) # normal but flat
+  shapiro.test(resid(ModFieldNup1))  # 0.393
+  plot(fitted(ModFieldNup1),resid(ModFieldNup1),pch=16)   # random, right skew
+  qqnorm(resid(ModFieldNup1)) # medium right tail
   qqline(resid(ModFieldNup1))
-  ModFieldNup1_tidy <- tidy(ModFieldNup1)
-  ModFieldNup1sum_sq_reg <- ModFieldNup1_tidy$sumsq[1] 
-  ModFieldNup1sum_sq_resid <- ModFieldNup1_tidy$sumsq[2]
-  ModFieldNup1sum_sq_reg / (ModFieldNup1sum_sq_reg + ModFieldNup1sum_sq_resid) # rsq =0.746
-# lm model with weighted least squares
-  ModFieldNupvar <- tapply(log(Field$Nuptake), Field$Treatment, var) 
-  weightsFNup <- 1 / ModFieldNupvar 
-  weightsFNup_full <- rep(weightsFNup, each = length(Field$Nuptake) / length(weightsFNup))
-  ModFieldNup2 <- lm(Nuptake ~ Treatment + Block, data=Field, weights=weightsFNup_full) 
-  hist(resid(ModFieldNup2))  # slight left skew
-  shapiro.test(resid(ModFieldNup2))  # p=0.1785
-  plot(fitted(ModFieldNup2),resid(ModFieldNup2),pch=16) 
-  qqnorm(resid(ModFieldNup2)) #right tail somewhat longer
-  qqline(resid(ModFieldNup2))
-  rsq(ModFieldNup2)  # 0.684
+  rsq(ModFieldNup1) # 0.583
+# ModFieldNup2
+  ModFieldNup2 <- glmer(log(Nuptake)~Treatment+(1|Block),data=Field,family=gaussian(link="log"), na.action=na.omit)
+  anova(ModFieldNup2) # significant differences
+  summary(ModFieldNup2)
+  shapiro.test(resid(ModFieldNup2)) # p=0.3776
+  bf.test(Nuptake~Treatment, data=Field) # 0.0739
+  rsq(ModFieldNup2) #0.634
+# ModFieldNup3
+  ModFieldNup3 <- glmmTMB(log(Nuptake)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFieldNup3, type="III") # significant differences p=4.6e-6
+  summary(ModFieldNup3)
+  performance::r2(ModFieldNup3) # 0.594
+# ModFieldNup4
+  ModFieldNup4 <- lme(log(Nuptake)~Treatment,random=~1|Block, data=Field, na.action=na.exclude)
+  anova(ModFieldNup4)  # no significant differences
+  summary(ModFieldNup4)
+  rsq.lmm(ModFieldNup4) #0.609
+#Comparing models
+  # Rsq = ModFieldNup2 is highest followed by ModFieldNup4
+  # AIC & BIC
+  FNup_modlist <- list(ModFieldNup1, ModFieldNup2, ModFieldNup3, ModFieldNup4)
+  AIC_values <- sapply(FNup_modlist, AIC)
+  BIC_values <- sapply(FNup_modlist, BIC)
+  N_AB <- data.frame(Model=c("ModFieldNup1", "ModFieldNup2", "ModFieldNup3", "ModFieldNup4"),
+                     AIC_values, BIC_values)
+  print(N_AB)
+      # Model AIC_values BIC_values
+      #1 ModFieldNup1  24.585345   34.00978  - fractional df
+      #2 ModFieldNup2   6.006701   15.43113  - infinite df
+      #3 ModFieldNup3  24.585345   31.70832  - 3rd best AIC/BIC and only one with no df issues in emmeans
+      #4 ModFieldNup4   9.452402   18.87683  - infinite df
 #emmeans 
-  ModFieldNupem <- emmeans(ModFieldNup1,~Treatment)
-  ModFieldNupem_cld <- cld(ModFieldNupem, Letters = letters, type="response") 
-  View(ModFieldNupem_cld)
+  ModFieldNupem <- emmeans(ModFieldNup2,~Treatment, alpha=0.1)
+  ModFieldNupem_cld <- cld(ModFieldNupem, Letters=trimws(letters), reversed=TRUE, type="response") 
+  ModFieldNupem_cld$Treatment <- factor(ModFieldNupem_cld$Treatment, levels = FieldTrt_order)
+  print(ModFieldNupem_cld)
   write.xlsx(ModFieldNupem_cld, file="Field_Nuptake.xlsx")
 # Visualizations
-  par(mar=c(5,6,4,2)+0.2) #c(bottom, left, top, right) + 0.1 lines
-  ggplot(ModFieldNupem_cld, aes(x = Treatment, y = response, fill=Treatment)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = response - SE, ymax = response + SE), 
-                  width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=response+SE), size=8, vjust=-1) +
-    labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
-    scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "Fertilizer\nPhosphorus"))+
-    scale_y_continuous(limits = c(-10, 70))+
-    theme_bw() +
-    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
-          legend.text=element_text(size=12))+
-    theme(plot.title = element_text(size = 18))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-          axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("LargePlots_Nuptake.jpg", width = 12, height = 8, dpi = 500)
+  (FieldNup_plot <- ggplot(ModFieldNupem_cld, aes(x=Treatment, y=response))+
+      geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
+                     pattern_density=0.05, pattern_spacing=0.01, width=0.65)+
+      geom_errorbar(aes(ymin=response - SE, ymax=response + SE), 
+                    width=0.2, position=position_dodge(width=0.9)) +
+      geom_text(aes(label=trimws(.group), y=response+SE), size=8, vjust=-1) +
+      labs(x="Treatments", y="Canola nitrogen uptake (mg/kg)") +
+      scale_x_discrete(labels=c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                  "TSP\nFertilizer"))+
+      scale_y_continuous(limits=c(0, 85))+
+      theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+            legend.title = element_blank(), legend.text=element_text(size=18),
+            axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+            axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+            axis.title.x=element_blank(), 
+            axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FieldNup_plot, file="Field_Nuptake.jpg", width=8, height=8, dpi=150)
 
 
-#####   N RECOVERY   ########
+##   N recovery   ----
   FieldNrec_Mean <- summary_by(Nrecovery~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldNrec_Mean <- as.numeric(FieldNrec_Mean$Nrecovery)
   FieldNrec_skew <- skewness(FieldNrec_Mean,na.rm=TRUE)
   FieldNrec_kur <- kurtosis(FieldNrec_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldNrec_skew, "\n") # 1.909018
-  cat("Kurtosis:", FieldNrec_kur, "\n") # 3.260107
-  shapiro.test(Field$Nrecovery) # p=0.0003128
+  cat("Skewness:", FieldNrec_skew, "\n") # 1.9169
+  cat("Kurtosis:", FieldNrec_kur, "\n") # 3.536
+  shapiro.test(Field$Nrecovery) # p=0.000294
   hist(Field$Nrecovery) #  severe left skew
-  leveneTest(Nrecovery~Treatment, data=Field)  # 0.2388
+  leveneTest(Nrecovery~Treatment, data=Field)  # 0.2904
 # Nrecovery has missing values for Control1 
   FNrec_out <- Field[complete.cases(Field$Nrecovery),] #set up a subset removing the missing data from column Nrecovery
-  View(FNrec_out)
-  leveneTest(Nrecovery~Treatment, data=FNrec_out) # 0.2388
-  hist(FNrec_out$Nrecovery)
-  shapiro.test(FNrec_out$Nrecovery) #0.0003128
-#transform
-  shapiro.test(log(Field$Nrecovery)) # p=0.7052
-  hist(log(FNrec_out$Nrecovery)) #  severe left skew
+  FNrec_out$Block <- as.factor(FNrec_out$Block)
+  FNrec_out$Treatment <- factor(FNrec_out$Treatment, levels=FieldTrt_order)
+  print(FNrec_out)
+  plot(Nrec_out$Nrecovery)
+  leveneTest(Nrecovery~Treatment, data=FNrec_out) # 0.2904
+  hist(FNrec_out$Nrecovery) #  severe left skew
+  shapiro.test(FNrec_out$Nrecovery) #0.000294
+# transform - produces NaNs when tested or used in model, transformation thus not used
+  shapiro.test(log(FNrec_out$Nrecovery)) # p=0.7052
+  hist(log(FNrec_out$Nrecovery)) #  normal
   leveneTest(log(Nrecovery)~Treatment, data=FNrec_out)  # 0.2388
-#ModFieldNrec1 - all SE values are identical
-  ModFieldNrec1 <- aov(Nrecovery~Treatment+Block, data=FNrec_out)
-  anova(ModFieldNrec1)
+  shapiro.test(sqrt(FNrec_out$Nrecovery)) # p=0.0458
+  hist(sqrt(FNrec_out$Nrecovery)) #  slight left skew
+  leveneTest(sqrt(Nrecovery)~Treatment, data=FNrec_out)  # 0.4403
+# models - tried glmer (needs a valid starting point) and lmer (signularity issues).
+# ModFieldNrec1 - it showed singularity issues when running the rsq to do with zero variance components
+  ModFieldNrec1 <- glmmTMB(Nrecovery~Treatment+(1|Block), data=FNrec_out, family=gaussian(),
+                           control = glmmTMBControl(optCtrl = list(iter.max=5000, eval.max=4000)))
+  glmmTMB:::Anova.glmmTMB(ModFieldNrec1, type="III") # no significant differences 
   summary(ModFieldNrec1)
-  hist(resid(ModFieldNrec1))
-  shapiro.test(resid(ModFieldNrec1))  # p=0.2044
-  plot(fitted(ModFieldNrec1),resid(ModFieldNrec1),pch=16) # not quite normal
-  qqnorm(resid(ModFieldNrec1)) # long tails
-  qqline(resid(ModFieldNrec1))
-  ModFieldNrec1_tidy <- tidy(ModFieldNrec1)
-  ModFieldNrec1sum_sq_reg <- ModFieldNrec1_tidy$sumsq[1] 
-  ModFieldNrec1sum_sq_resid <- ModFieldNrec1_tidy$sumsq[2]
-  ModFieldNrec1sum_sq_reg / (ModFieldNrec1sum_sq_reg + ModFieldNrec1sum_sq_resid) # rsq =0.475
-# lm model with weighted least squares
-  ModFieldNrecvar <- tapply(FNrec_out$Nrecovery, FNrec_out$Treatment, var) 
-  weightsFNrec <- 1 / ModFieldNrecvar 
-  weightsFNrec_full <- rep(weightsFNrec, each = length(FNrec_out$Nrecovery) / length(weightsFNrec))
-  ModFieldNrec2 <- lm(Nrecovery ~ Treatment + Block, data=FNrec_out, weights=weightsFNrec_full) 
-  hist(resid(ModFieldNrec2))  # slight left skew
-  shapiro.test(resid(ModFieldNrec2))  # p=0.001184
-  plot(fitted(ModFieldNrec2),resid(ModFieldNrec2),pch=16) # towards the bottom of the graph
-  qqnorm(resid(ModFieldNrec2)) # very long right tail
-  qqline(resid(ModFieldNuField))
-  rsq(ModFieldNrec2)  #0.869
+  performance::r2(ModFieldNrec1) # NA for full model - singularity with random effects
+  # ModFieldNrec2 - has only 3 degrees of freedom
+  ModFieldNrec2 <- lme(Nuptake~Treatment,random=~1|Block, data=FNrec_out)
+  anova(ModFieldNrec2)  #  significant differences
+  summary(ModFieldNrec2)
+  rsq.lmm(ModFieldNrec2) #0.179
+# Comparing models
+  # Rsq = 
+  # AIC & BIC
+  FNrec_modlist <- list(ModFieldNrec1, ModFieldNrec2)
+  AIC_values <- sapply(FNrec_modlist, AIC)
+  BIC_values <- sapply(FNrec_modlist, BIC)
+  N_AB <- data.frame(Model=c("ModFieldNrec1", "ModFieldNrec2"), AIC_values, BIC_values)
+  print(N_AB)
+    # Model AIC_values BIC_values
+    #1 ModFieldNrec1  165.2383   172.2084 - best AIC/BIC model but with singularity issues it is not the best choice
+    #2 ModFieldNrec2  142.2151   147.1715
 #emmeans 
-  ModFieldNrecem <- emmeans(ModFieldNrec1,~Treatment)
-  ModFieldNrecem_cld <- cld(ModFieldNrecem, Letters = letters, type="response") 
+  ModFieldNrecem <- emmeans(ModFieldNrec2,~Treatment, alpha=0.1) # can also do model,~Soil or other
+  #ModFieldNrecem_contrast <- contrast(ModFieldNrecem, method = "tukey") # obtain t & p values, removes upper & lower conf int data
+  ModFieldNrecem_cld <- cld(ModFieldNrecem, Letters=letters, type="response")
   View(ModFieldNrecem_cld)
   write.xlsx(ModFieldNrecem_cld, file="Field_Nrecovery.xlsx")
 # Visualizations
-  ggplot(ModFieldNrecem_cld, aes(x = Treatment, y = emmean, fill=Treatment)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                  width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=emmean+SE), size=4, vjust=-1) +
-    labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
-    scale_x_discrete(labels = c("Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+    (FielNrecPlot <- ggplot(ModFieldNrecem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
+      geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
+                       pattern_density=0.05, pattern_spacing=0.01, width = 0.65)+
+      geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                    width=0.2, position=position_dodge(width=0.9)) +
+      geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1) +
+      labs(x="Treatments", y="Canola nitrogen recovery (%)") +
+      scale_x_discrete(labels=c("Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                                 "Fertilizer\nPhosphorus"))+
-    theme_bw() +
-    theme(plot.title = element_text(size = 18))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-          axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("LargePlots_Nreocvery.jpg", width = 8, height = 8, dpi = 600)
+      scale_y_continuous(limits=c(0, 90))+
+      theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+          legend.title = element_blank(), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FielNrecPlot, file="LargePlots_Nreocvery.jpg", width=8, height=8, dpi=150)
 
 
 
-#####   P UPTAKE   ########
+##   P uptake  ----
   FieldPup_Mean <- summary_by(Puptake~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldPup_Mean <- as.numeric(FieldPup_Mean$Puptake)
   FieldPup_skew <- skewness(FieldPup_Mean,na.rm=TRUE)
   FieldPup_kur <- kurtosis(FieldPup_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldPup_skew, "\n") # 0.05881886
-  cat("Kurtosis:", FieldPup_kur, "\n") #  -1.003361 
-  shapiro.test(Field$Puptake) # p=0.8292
-  hist(Field$Puptake) 
-  leveneTest(Puptake~Treatment, data=Field)  # 0.08774
+  cat("Skewness:", FieldPup_skew, "\n") # 0.01110207 
+  cat("Kurtosis:", FieldPup_kur, "\n") #  -1.097268 
+  shapiro.test(Field$Puptake) # p=0.6779
+  hist(Field$Puptake) # Normalish
+  leveneTest(Puptake~Treatment, data=Field)  # 0.4865
 #ModFieldPup1
-  ModFieldPup1 <- aov(Puptake~Treatment+Block, data=Field)
-  anova(ModFieldPup1)
+  ModFieldPup1 <- glmmTMB(Puptake~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFieldPup1, type="III") # no significant differences
   summary(ModFieldPup1)
-  hist(resid(ModFieldPup1))
-  shapiro.test(resid(ModFieldPup1))  # p=0.6408
-  plot(fitted(ModFieldPup1),resid(ModFieldPup1),pch=16) 
-  qqnorm(resid(ModFieldPup1)) # slight right tail
-  qqline(resid(ModFieldPup1))
-  ModFieldPup1_tidy <- tidy(ModFieldPup1)
-  ModFieldPup1sum_sq_reg <- ModFieldPup1_tidy$sumsq[1] 
-  ModFieldPup1sum_sq_resid <- ModFieldPup1_tidy$sumsq[2]
-  ModFieldPup1sum_sq_reg / (ModFieldPup1sum_sq_reg + ModFieldPup1sum_sq_resid) # 0.279
-# lm model with weighted least squares
-  ModFieldPupvar <- tapply(Field$Puptake, Field$Treatment, var, na.rm=TRUE)
-  weightsFPup <- 1 / ModFieldPupvar
-  weightsFPup_full <- rep(weightsFPup, each = length(Field$Puptake) / length(weightsFPup))
-  ModFieldPup2 <- lm(Puptake ~ Treatment + Block, data=Field, weights=weightsFPup_full) 
-  hist(resid(ModFieldPup2))  
-  shapiro.test(resid(ModFieldPup2))  # p= 0.5431
-  plot(fitted(ModFieldPup2),resid(ModFieldPup2),pch=16) #slightly left  skewed but very random
-  qqnorm(resid(ModFieldPup2)) 
-  qqline(resid(ModFieldPup2))
-  rsq(ModFieldPup2)  # 0.512
-#emmeans on lm model
-  ModFieldPupem <- emmeans(ModFieldPup2,~Treatment)
-  ModFieldPupem_cld <- cld(ModFieldPupem, Letters = letters, type="response") 
+  performance::r2(ModFieldPup1) # 0.45
+  # ModFieldPup2
+  ModFieldPup2 <- glmer(Puptake~Treatment+(1|Block),data=Field,family=gaussian(link="log"), na.action=na.omit)
+  anova(ModFieldPup2) # no significant differences in block
+  coef(summary(ModFieldPup2))[, "Pr(>|z|)"]
+  summary(ModFieldPup2)
+  shapiro.test(resid(ModFieldPup2)) # p=0.522
+  bf.test(Puptake~Treatment, data=Field) # 0.777
+  rsq(ModFieldPup2) #  0.512
+  # ModFieldPup3
+  ModFieldPup3 <- lmer(Puptake~Treatment+(1|Block),data=Field)
+  anova(ModFieldPup3) # no significant differences
+  summary(ModFieldPup3)
+  hist(resid(ModFieldPup3)) # normal
+  shapiro.test(resid(ModFieldPup3))  # 0.771
+  plot(fitted(ModFieldPup3),resid(ModFieldPup3),pch=16)   # random
+  qqnorm(resid(ModFieldPup3)) # small  tails
+  qqline(resid(ModFieldPup3))
+  rsq::rsq(ModFieldPup3) # 0.37
+  # ModFieldPup4
+  ModFieldPup4 <- lme(Puptake~Treatment,random=~1|Block, data=Field, na.action=na.exclude)
+  anova(ModFieldPup4)  # no significant differences
+  summary(ModFieldPup4)
+  rsq.lmm(ModFieldPup4) #0.37
+#Comparing models
+  # Rsq = ModFieldPup2 (glmer) is highest followed by ModFieldPup1 (glmm)
+  # AIC & BIC
+  FPup_modlist <- list(ModFieldPup1, ModFieldPup2, ModFieldPup3, ModFieldPup4)
+  AIC_values <- sapply(FPup_modlist, AIC)
+  BIC_values <- sapply(FPup_modlist, BIC)
+  N_AB <- data.frame(Model=c("ModFieldPup1", "ModFieldPup2", "ModFieldPup3", "ModFieldPup4"),
+                     AIC_values, BIC_values)
+  print(N_AB)
+  # Model AIC_values BIC_values
+  #1 ModFieldPup1   92.20457  101.62900 - looks reasonable in emmeans
+  #2 ModFieldPup2   94.53165  103.95608 - emmeans resulted in iinfinite df
+  #3 ModFieldPup3   86.64947   96.07390 - fractional df in emmeans
+  #4 ModFieldPup4   86.64947   93.77244 - only 3 df in emmeans
+#emmeans - chosen ModFieldPup1 as second highest rsq, reasonable AIC/BIC and seems to be fine in emmeans function
+  ModFieldPupem <- emmeans(ModFieldPup1,~Treatment, alpha=0.1)
+  ModFieldPupem_cld <- cld(ModFieldPupem, Letters=letters, reversed=TRUE, type="response") 
   View(ModFieldPupem_cld)
   write.xlsx(ModFieldPupem_cld, file="Field_Puptake.xlsx")
 # Visualizations
-  ggplot(ModFieldPupem_cld, aes(x = Treatment, y = emmean, fill=Treatment)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                  width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=emmean+SE), size=4, vjust=-1) +
-    labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
-    scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "Fertilizer\nPhosphorus"))+
-    theme_bw() +
-    theme(plot.title = element_text(size = 18))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-          axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("Field_Puptake.jpg", width = 8, height = 8, dpi = 600)
+    (FieldPuptakePlot <- ggplot(ModFieldPupem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
+      geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
+                       pattern_density=0.05, pattern_spacing=0.01, width=0.65)+
+      geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                    width=0.2, position=position_dodge(width=0.9)) +
+      geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1) +
+      labs(x="Treatments", y="Canola phosphorus uptake (mg/kg)") +
+      scale_x_discrete(limits=c(FieldTrt_order),
+                       labels=c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                "TSP\nFertilizer"))+
+      scale_y_continuous(limits=c(0, 10))+
+      theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+            legend.title = element_blank(), legend.text=element_text(size=18),
+            axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+            axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+            axis.title.x=element_blank(), 
+            axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FieldPuptakePlot, file="Field_Puptake.jpg", width=8, height=8, dpi=150)
 
 
 
-#####   P RECOVERY   ########
+##  P recovery   ----
   FieldPrec_Mean <- summary_by(Precovery~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldPrec_Mean <- as.numeric(FieldPrec_Mean$Precovery)
   FieldPrec_skew <- skewness(FieldPrec_Mean,na.rm=TRUE)
   FieldPrec_kur <- kurtosis(FieldPrec_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldPrec_skew, "\n") # 0.423411 
-  cat("Kurtosis:", FieldPrec_kur, "\n") # -1.044605 
-  shapiro.test(Field$Precovery) # p=0.5601
+  cat("Skewness:", FieldPrec_skew, "\n") # 0.3092057 
+  cat("Kurtosis:", FieldPrec_kur, "\n") # -1.288574 
+  shapiro.test(Field$Precovery) # p=0.4454
   hist(Field$Precovery) 
-  leveneTest(Precovery~Treatment, data=Field)  # 0.2463
-#ModFieldPrec1
-  ModFieldPrec1 <- aov(Precovery~Treatment+Block, data=Field)
-  anova(ModFieldPrec1)
+  leveneTest(Precovery~Treatment, data=Field)  # 0.8084
+  #ModFieldPrec1
+  ModFieldPrec1 <- glmmTMB(Precovery~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFieldPrec1, type="III") # no significant differences
   summary(ModFieldPrec1)
-  hist(resid(ModFieldPrec1))
-  shapiro.test(resid(ModFieldPrec1))  # p=0.6397
-  plot(fitted(ModFieldPrec1),resid(ModFieldPrec1),pch=16) #slightly left skewed but very random
-  qqnorm(resid(ModFieldPrec1))
-  qqline(resid(ModFieldPrec1))
-  ModFieldPrec1_tidy <- tidy(ModFieldPrec1)
-  ModFieldPrec1sum_sq_reg <- ModFieldPrec1_tidy$sumsq[1] 
-  ModFieldPrec1sum_sq_resid <- ModFieldPrec1_tidy$sumsq[2]
-  ModFieldPrec1sum_sq_reg / (ModFieldPrec1sum_sq_reg + ModFieldPrec1sum_sq_resid) # 0.369
-# lm model with weighted least squares
-  ModFieldPrecvar <- tapply(Field$Precovery, Field$Treatment, var, na.rm=TRUE)
-  weightsFPrec <- 1 / ModFieldPrecvar
-  weightsFPrec_full <- rep(weightsFPrec, each = length(Field$Precovery) / length(weightsFPrec))
-  ModFieldPrec2 <- lm(Precovery ~ Treatment + Block, data=Field, weights=weightsFPrec_full) 
-  hist(resid(ModFieldPrec2))  # slight left skew
-  shapiro.test(resid(ModFieldPrec2))  # p= 0.4504
-  plot(fitted(ModFieldPrec2),resid(ModFieldPrec2),pch=16) #slightly left  skewed but very random
-  qqnorm(resid(ModFieldPrec2)) #slight tails
+  performance::r2(ModFieldPrec1) # 0.402
+  # ModFieldPrec2
+  ModFieldPrec2 <- lmer(Precovery~Treatment+(1|Block),data=Field)
+  anova(ModFieldPrec2) # no significant differences
+  summary(ModFieldPrec2)
+  hist(resid(ModFieldPrec2)) # normalish
+  shapiro.test(resid(ModFieldPrec2))  # 0.176
+  plot(fitted(ModFieldPrec2),resid(ModFieldPrec2),pch=16)   # random
+  qqnorm(resid(ModFieldPrec2)) # small  tails
   qqline(resid(ModFieldPrec2))
-  rsq(ModFieldPrec2)  # 0.601
+  rsq::rsq(ModFieldPrec2) # 0.332
+  #Comparing models
+  # Rsq = ModFieldPrec1 (glmm) is highest 
+  # AIC & BIC
+  FPrec_modlist <- list(ModFieldPrec1, ModFieldPrec2)
+  AIC_values <- sapply(FPrec_modlist, AIC)
+  BIC_values <- sapply(FPrec_modlist, BIC)
+  N_AB <- data.frame(Model=c("ModFieldPrec1", "ModFieldPrec2"),
+                     AIC_values, BIC_values)
+  print(N_AB)
+      #Model AIC_values BIC_values
+      #1 ModFieldPrec1  103.83462  108.47015 - only 10 df
+      #2 ModFieldPrec2   89.87332   94.50886 - fractional df
 #emmeans on lm model
-  ModFieldPrecem <- emmeans(ModFieldPrec1,~Treatment)
-  ModFieldPrecem_cld <- cld(ModFieldPrecem, Letters = letters, type="response") 
+  ModFieldPrecem <- emmeans(ModFieldPrec2,~Treatment, alpha=0.1)
+  ModFieldPrecem_cld <- cld(ModFieldPrecem, Letters=letters, type="response") 
   View(ModFieldPrecem_cld)
   write.xlsx(ModFieldPrecem_cld, file="Field_Precovery.xlsx")
 # Visualizations
-  ggplot(ModFieldPrecem_cld, aes(x = Treatment, y = emmean, fill=Treatment)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                  width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=emmean-SE), size=4, vjust=1) +
-    labs(x = "Treatments", y = "Canola Nitrogen uptake (ug)") +
-    scale_x_discrete(labels = c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "Fertilizer\nPhosphorus"))+
-    theme_bw() +
-    theme(plot.title = element_text(size = 18))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-          axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("Field_Precovery.jpg", width = 8, height = 8, dpi = 600)
+  (FieldPrecPlot <- ggplot(ModFieldPrecem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
+    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
+                     pattern_density=0.05, pattern_spacing=0.01, width = 0.65)+
+    geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                  width=0.2, position=position_dodge(width=0.9)) +
+    geom_text(aes(label=trimws(.group), y=emmean-SE), size=8, vjust=1) +
+    labs(x="Treatments", y="Canola Nitrogen uptake (ug)") +
+    scale_x_discrete(limits=c("Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                     labels=c("Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                "TSP\nFertilizer"))+
+      scale_y_continuous(limits = c(-12,0))+
+    theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+          legend.title = element_blank(), legend.text=element_text(size=18),
+          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+          axis.title.x=element_blank(), 
+          axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+          panel.background = element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FieldPrecPlot, file="Field_Precovery.jpg", width=8, height=8, dpi=150)
 
 
-
-
-
-#####   BULK DENSITY - WET   ########
-  FieldBDW_Mean <- summary_by(BDWet~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldBDW_Mean <- as.numeric(FieldBDW_Mean$BDWet)
-  FieldBDW_skew <- skewness(FieldBDW_Mean,na.rm=TRUE)
-  FieldBDW_kur <- kurtosis(FieldBDW_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldBDW_skew, "\n") # -0.1449922 
-  cat("Kurtosis:", FieldBDW_kur, "\n") # -0.8374298
-  shapiro.test(Field$BDWet) # p=0.5904
-  hist(Field$BDWet) 
-  leveneTest(BDWet~Treatment, data=Field)  # 0.1659
-
-  
-  
-#emmeans on lm model
-  ModFieldemPup <- emmeans(ModFieldPuField,~Treatment, type="response")
-  ModFieldemPup_cld <- cld(ModFieldemPup, Letters = letters) 
-  View(ModFieldemPup_cld)
-  write.xlsx(ModFieldemPup_cld, file="Field_Puptake.xlsx")
-# Visualizations
-  ggplot(ModFieldemPup_cld, aes(x=Treatment, y=emmean)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-    geom_text(aes(label=trimws(.group), y=emmean+SE), size=4, vjust=-1)+
-    labs(x = "Treatment", y = "Wheat P uptake (ug)") +
-    scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
-                                "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
-    theme_bw() +
-    theme(plot.title = element_text(size = 18))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-          axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("Field_Puptake.jpg", width = 8, height = 8, dpi = 600)
-
-
-
-
-#####   BULK DENSITY - DRY   ########
-
-
-
-
-#####   VOLUMETRIC MOISTURE - WET   ########
-
-
-
-
-#####   VOLUMETRIC MOISTURE - DRY   ########
-
-
-
-
-
-
-#####   SOIL NO3   ########
-  FieldSNO3_Mean <- summary_by(SNO3~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldSNO3_Mean <- as.numeric(FieldSNO3_Mean$SNO3)
-  FieldSNO3_skew <- skewness(FieldSNO3_Mean,na.rm=TRUE)
-  FieldSNO3_kur <- kurtosis(FieldSNO3_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldSNO3_skew, "\n") # 2.721196 
-  cat("Kurtosis:", FieldSNO3_kur, "\n") # 9.18808 
-  shapiro.test(Field$SNO3) # p=2.965e-06
-  hist(Field$SNO3) #  extreme left skew
-  leveneTest(SNO3~Treatment, data=Field)  # P=0.3258
-#transformations
-  shapiro.test(log(Field$SNO3)) # p=0.2487
-  hist(log(Field$SNO3)) #  left skew
-  leveneTest(log(SNO3)~Treatment, data=Field)  # P=0.2182
-#ModFieldSNO31
-  ModFieldSNO31 <- 
-# lm model
-  ModFieldSNO32 <- 
-#emmeans 
-  ModFieldemSNO3 <- emmeans(ModFieldSNO32,~Treatment, type="response")
-  ModFieldemSNO3_cld <- cld(ModFieldemSNO3, Letters = letters) 
+# SOIL ANALYSIS ----
+  ### Soils at 3 different depths will be analysed for differences as well as auto-correlated
+##   Soil NO3   ----
+  # Calculating skewness and kurtosis
+    NO3_stats <- function(data, variable_names) { #uses 'moments' instead of 'e1071' which results in much higher kurtosis
+    stats <- data %>%
+      summarise_at(vars(all_of(variable_names)), list(skewness = ~ skewness(., na.rm = TRUE), kurtosis = ~ kurtosis(., na.rm = TRUE)))
+    return(stats)
+  }
+  variable_names <- c("NO3_10", "NO3_20", "NO3_30") # Specify the variable names to calculate stats for
+  NO3_stats_all <- NO3_stats(Field, variable_names)# Call the function
+  print(NO3_stats_all)
+          #NO3_10_skewness NO3_20_skewness NO3_30_skewness NO3_10_kurtosis NO3_20_kurtosis NO3_30_kurtosis
+          #1       0.6327243        1.261657      -0.2870261        4.929834        3.858688        2.415493
+  # Normality and equality of variance
+  shapiro.test(Field$NO3_10) # p=0.137
+  hist(Field$NO3_10) #  norma 
+  leveneTest(NO3_10~Treatment, data=Field)  # P=0.559
+  shapiro.test(Field$NO3_20) # p=0.0056
+  hist(Field$NO3_20) #  left skew
+  leveneTest(NO3_20~Treatment, data=Field)  # P=0.0114
+  shapiro.test(Field$NO3_30) # p=0.955
+  hist(Field$NO3_30) #  slight right skew
+  leveneTest(NO3_30~Treatment, data=Field)  # P=0.301
+# Change data to long format
+  NO3_long <- Field |>
+    gather(key="Depth", value="NO3", matches("^NO3_"))
+  #ModFieldSNO31
+  ModFieldSNO31 <- lmer(NO3~Treatment*Depth + (1|Block), data=NO3_long)
+  Anova(ModFieldSNO31, alpha=0.1) # significant differences
+  summary(ModFieldSNO31, alpha=0.1)
+  print(coef(summary(ModFieldSNO31))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+  hist(resid(ModFieldSNO31)) #normal
+  shapiro.test(resid(ModFieldSNO31))  # 0.0169
+  plot(fitted(ModFieldSNO31),resid(ModFieldSNO31),pch=16)   # fish shaped
+  qqnorm(resid(ModFieldSNO31)) # moderate tails
+  qqline(resid(ModFieldSNO31))
+  rsq(ModFieldSNO31) # 0.625
+# ModFieldSNO32
+  ModFieldSNO32 <- glmer(NO3~Treatment*Depth+(1|Block),data=NO3_long,family=gaussian(link="log"), na.action=na.omit)
+  Anova(ModFieldSNO32, type = "III") # significant differences
+  summary(ModFieldSNO32)
+  shapiro.test(resid(ModFieldSNO32)) # p=0.159
+  # ModFieldSNO33
+  ModFieldSNO33 <- glmmTMB(NO3~Treatment*Depth+(1|Block), data=NO3_long, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFieldSNO33, type="III") # significant differences
+  summary(ModFieldSNO33)
+  performance::r2(ModFieldSNO33) # 0.650
+  # ModFieldSNO34
+  ModFieldSNO34 <- lme(NO3~Treatment*Depth,random=~1|Block, data=NO3_long, na.action=na.exclude)
+  anova(ModFieldSNO34)  # significant differences
+  summary(ModFieldSNO34)
+  rsq(ModFieldSNO34) # NA
+#Comparing models
+  # Rsq = ModFieldNup3 is highest of the measured rsq
+  # AIC & BIC
+  FNO3_modlist <- list(ModFieldSNO31, ModFieldSNO32, ModFieldSNO33, ModFieldSNO34)
+  AIC_values <- sapply(FNO3_modlist, AIC)
+  BIC_values <- sapply(FNO3_modlist, BIC)
+  N_AB <- data.frame(Model=c("ModFieldSNO31", "ModFieldSNO32", "ModFieldSNO33", "ModFieldSNO34"), AIC_values, BIC_values)
+  print(N_AB)
+      # Model AIC_values BIC_values
+      #1 ModFieldSNO31   300.9198   344.4076 - fractional df
+      #2 ModFieldSNO32   349.4724   392.9602 - results in Inf df
+      #3 ModFieldSNO33   347.9463   391.4340
+      #4 ModFieldSNO34   300.9198   337.9228 - only 3 df
+#emmeans - ModFieldSNO33 chosen as best mod based on rsq and it's response in the emmeans function
+  ModFieldemSNO3 <- emmeans(ModFieldSNO33,~Treatment|Depth, type="response", alpha=0.1)
+  ModFieldemSNO3a <- emmeans(ModFieldSNO33,~Depth|Treatment, type="response", alpha=0.1)
+  ModFieldemSNO3_cld <- cld(ModFieldemSNO3, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
   View(ModFieldemSNO3_cld)
-  write.xlsx(ModFieldemSNO3_cld, file="Field_SoilNO3.xlsx")
+  ModFieldemSNO3_clda <- cld(ModFieldemSNO3a, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
+  View(ModFieldemSNO3_clda)
+  NO3_combEm <- list(Treatment=ModFieldemSNO3_cld, Depth=ModFieldemSNO3_clda)
+  write.xlsx(NO3_combEm, file="Field_SoilNO3.xlsx")
 
 
 
-#####   SOIL PO4   ########
-  FieldSPO4_Mean <- summary_by(SPO4~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldSPO4_Mean <- as.numeric(FieldSPO4_Mean$SPO4)
-  FieldSPO4_skew <- skewness(FieldSPO4_Mean,na.rm=TRUE)
-  FieldSPO4_kur <- kurtosis(FieldSPO4_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldSPO4_skew, "\n") # 0.7319427 
-  cat("Kurtosis:", FieldSPO4_kur, "\n") # -0.7178281 
-  shapiro.test(Field$SPO4) # p=0.007283
-  hist(Field$SPO4) #  left skew
-  leveneTest(SPO4~Treatment, data=Field)  # P=0.5364
-# transform
-  shapiro.test(log(Field$SPO4)) # p=0.1813
-  hist(log(Field$SPO4)) 
-  leveneTest(log(SPO4)~Treatment, data=Field)  # P=0.8856
-#ModFieldSPO41
-  ModFieldSPO41 <- 
+##  Soil PO4   ----
+  # Calculating skewness and kurtosis
+  PO4_VarNames <- c("PO4_10", "PO4_20", "PO4_30") # Specify the variable names to calculate stats for
+  PO4_stats_all <- Field_stats(Field, PO4_VarNames)# Call the function
+  print(PO4_stats_all)
+            #PO4_10_skewness PO4_20_skewness PO4_30_skewness PO4_10_kurtosis PO4_20_kurtosis PO4_30_kurtosis
+            #1       -0.390592      0.03913544      0.05779742        2.004251        1.633379        1.711494
+  # Normality and equality of variance
+  shapiro.test(Field$PO4_10) # p=0.207
+  hist(Field$PO4_10) #  normal
+  leveneTest(PO4_10~Treatment, data=Field)  # P=0.1086
+  shapiro.test(Field$PO4_20) # p=0.109
+  hist(Field$PO4_20) #  slight left skew
+  leveneTest(PO4_20~Treatment, data=Field)  # P=0.00219
+  shapiro.test(Field$PO4_30) # p=0.1994
+  hist(Field$PO4_30) #  normal
+  leveneTest(PO4_30~Treatment, data=Field)  # P=0.893
+# Change data to long format
+  PO4_long <- Field |>
+    gather(key="Depth", value="PO4", matches("^PO4_"))
+  print(PO4_long)
+#ModFieldSPO41 - model is singular, not a good fit
+  ModFieldSPO41 <-  lmer(PO4~Treatment*Depth + (1|Block), data=PO4_long)
+  Anova(ModFieldSPO41, alpha=0.1) # significant differences
+  summary(ModFieldSPO41, alpha=0.1)
+  print(coef(summary(ModFieldSPO41))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+  hist(resid(ModFieldSPO41)) #normal
+  shapiro.test(resid(ModFieldSPO41))  # 0.0111
+  plot(fitted(ModFieldSPO41),resid(ModFieldSPO41),pch=16)   # normal around 0
+  qqnorm(resid(ModFieldSPO41)) # moderate to heavy tails
+  qqline(resid(ModFieldSPO41))
+  rsq(ModFieldSPO41) # 0.938
+  # ModFieldSPO42 - model is singular, not a god fit
+  ModFieldSPO42 <- glmer(PO4~Treatment*Depth+(1|Block),data=PO4_long,family=gaussian(link="log"), na.action=na.omit)
+  Anova(ModFieldSPO42, type = "III") # significant differences
+  summary(ModFieldSPO42)
+  shapiro.test(resid(ModFieldSPO42)) # p=0.0111
+    #rsq(ModFieldSPO42)  #doesn't work
+  # ModFieldSPO43
+  ModFieldSPO43 <- glmmTMB(PO4~Treatment*Depth+(1|Block), data=PO4_long, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFieldSPO43, type="III") # significant differences
+  summary(ModFieldSPO43)
+  performance::r2(ModFieldSPO43) # NA singularity issues
+  # ModFieldSPO44
+  ModFieldSPO44 <- lme(PO4~Treatment*Depth,random=~1|Block, data=PO4_long, na.action=na.exclude)
+  anova(ModFieldSPO44)  # significant differences
+  summary(ModFieldSPO44)
+  rsq(ModFieldSPO44) # NA
+#Comparing models
+  # Rsq = can't tell
+  # AIC & BIC
+  FPO4_modlist <- list(ModFieldSPO41, ModFieldSPO42, ModFieldSPO43, ModFieldSPO44)
+  AIC_values <- sapply(FPO4_modlist, AIC)
+  BIC_values <- sapply(FPO4_modlist, BIC)
+  N_AB <- data.frame(Model=c("ModFieldSPO41", "ModFieldSPO42", "ModFieldSPO43", "ModFieldSPO44"), AIC_values, BIC_values)
+  print(N_AB)
+        #Model AIC_values BIC_values
+        #1 ModFieldSPO41   268.4968   312.5906
+        #2 ModFieldSPO42   301.3189   345.4127
+        #3 ModFieldSPO43   299.3189   343.4127
+        #4 ModFieldSPO44   268.4968   306.3332
 #emmeans 
-  ModFieldemSPO4 <- emmeans(ModFieldSPO41,~Treatment, type="response")
-  ModFieldemSPO4_cld <- cld(ModFieldemSPO4, Letters = letters) 
+  ModFieldemSPO4 <- emmeans(ModFieldSPO44,~Treatment|Depth, type="response", alpha=0.1)
+  ModFieldemSPO4a <- emmeans(ModFieldSPO44,~Depth|Treatment, type="response", alpha=0.1)
+  ModFieldemSPO4_cld <- cld(ModFieldemSPO4,Letters=trimws(letters), reversed=TRUE, by = "Depth") 
+  ModFieldemSPO4_cld$Depth <- factor(ModFieldemSPO4_cld$Depth,
+                                     levels = c("PO4_10", "PO4_20", "PO4_30"),
+                                     labels = c("0-10cm", "10-20cm", "20-30cm"))
   View(ModFieldemSPO4_cld)
-  write.xlsx(ModFieldemSPO4_cld, file="Field_SoilPO4.xlsx")
+  ModFieldemSPO4_clda <- cld(ModFieldemSPO4a, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
+  View(ModFieldemSPO4_clda)
+  PO4_combEm <- list(Treatment=ModFieldemSPO4_cld, Depth=ModFieldemSPO4_clda)
+  write.xlsx(PO4_combEm, file="Field_SoilPO4.xlsx")
+# Visualizations
+  (FieldPO4Plot <- ggplot(ModFieldemSPO4_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
+      geom_point(size = 6, color="black", aes(fill=Treatment)) +
+      scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+      scale_shape_manual(values = c(21,24,22)) +
+      geom_text(aes(label = trimws(.group)), size = 4, nudge_x = 0.3) +  # Add this line for geom_text
+      scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                       labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                "TSP\nFertilizer"))+
+      labs(x = "Treatment", y = bquote(bold("Residual soil PO"[4] ~ "(mg/kg)"))) +
+      theme(legend.position = "right", legend.key.size=unit(8,"mm"), legend.key = element_blank(),
+            legend.title = element_blank(), legend.text=element_text(size=12),
+            axis.text.x=element_text(angle=45, hjust=1, size=18, face="bold", colour="black"),
+            axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+            axis.title.x=element_text(size = 25, face = "bold", colour = "black"),
+            axis.title.y=element_text(size=25, face="bold", margin=margin(r=15)),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FieldPO4Plot, file="Field_soilPO4.jpg", height=8, width = 8, dpi=150)
+### PO4 autocorrelation ----
+  # This method is not really applicable as I have only 3 depths, need more data for autocorrelation
+  ## option 1 - more related to time series with lags, see explanation in word document in Thesis folder
+    PO4TS <- ts(PO4TS[which(!is.na(PO4TS))], start = start(PO4TS)[which(!is.na(PO4TS))], frequency = frequency(PO4TS)) # convert data to time series
+    acf(PO4TS)
+    acf(PO4TS, plot = FALSE)
+    pacf(PO4TS)
+  ## option 2
+    # convert Depth to numeric values for use in correlation
+    PO4_long_sub <- subset(PO4_long, select=c(Block, Treatment, Depth, PO4))
+    PO4_long_sub <- PO4_long_sub[complete.cases(PO4_long_sub[, c("Block", "Treatment", "Depth", "PO4")]), ]
+    PO4_long_sub <- PO4_long_sub %>%
+      mutate(Depth_numeric = as.numeric(gsub("PO4_(\\d+)", "\\1", Depth))) %>%
+      filter(!is.na(Depth_numeric))
+    PO4_long_sub$Depth <- factor(PO4_long_sub$Depth,
+                                       levels = c("PO4_10", "PO4_20", "PO4_30"),
+                                       labels = c("0-10cm", "10-20cm", "20-30cm"))
+    print(PO4_long_sub)
+    # run the regression model - format is to allow by function for us in the cor function
+    ModFieldSPO4sub <- PO4_long_sub %>% ### cannot run ANOVA, summary or rsq on this model. Need to investigate
+      group_by(Depth_numeric) %>%
+      do(model = lme(PO4 ~ Treatment, random = ~1|Block, data = ., na.action = na.exclude))
+    Anova(ModFieldSPO4sub)
+    # run correlation on regression by Depth - this doesn't work as the depths are the same number for each depth causing SD=0
+    soilPO4Cor <- PO4_long_sub %>%
+      group_by(Depth_numeric) %>%
+      summarise(correlation = cor(PO4, Depth_numeric))
+    # autocorrelation for longitudinal data
+    PO4acf <- PO4_long_sub %>%
+      group_by(Depth_numeric) %>%
+      summarise(acf = acf(PO4))
+    print(PO4acf)
 
-
-
-
-#####   WATER SOLUBLE P   ########
-  FieldWSP_Mean <- summary_by(WatSolP~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldWSP_Mean <- as.numeric(FieldWSP_Mean$WatSolP)
-  FieldWSP_skew <- skewness(FieldWSP_Mean,na.rm=TRUE)
-  FieldWSP_kur <- kurtosis(FieldWSP_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldWSP_skew, "\n") # 1.575096 
-  cat("Kurtosis:", FieldWSP_kur, "\n") # 3.261601 
-  shapiro.test(Field$WatSolP) # p=0.001116
-  hist(Field$WatSolP) #  left skew
-  leveneTest(WatSolP~Treatment, data=Field)  # P=0.3716
-# transform
-  shapiro.test(log(Field$WatSolP)) # p=0.1204
-  hist(log(Field$WatSolP)) #  slight left skew
-  leveneTest(log(WatSolP)~Treatment, data=Field)  # P=0.4992
-#ModFieldWSP1
-  ModFieldWSP1 <- 
+###  Cross-correlation  ----
+    # This method correlates the relationship between each depth and the next
+    # need to subtract and add very small values to create variation in dataset
+    PO4_sub_var <- PO4_long_sub %>%
+      mutate(DepthVar = case_when(
+        Depth_numeric == 10 & row_number() %in% c(1, 2) ~ Depth_numeric + 0.01,
+        Depth_numeric == 10 & row_number() %in% c(3, 4) ~ Depth_numeric - 0.01,
+        Depth_numeric == 20 & row_number() %in% c(25, 26) ~ Depth_numeric + 0.01,
+        Depth_numeric == 20 & row_number() %in% c(27, 28) ~ Depth_numeric - 0.01,
+        Depth_numeric == 30 & row_number() %in% c(46, 47) ~ Depth_numeric + 0.01,
+        Depth_numeric == 30 & row_number() %in% c(48, 49) ~ Depth_numeric - 0.01,
+        TRUE ~ Depth_numeric
+      ))
+    print(PO4_sub_var$DepthVar)
+    # undertake cross-correlation & develop plot
+    Depth_names <- unique(PO4_sub_var$Depth)
+    print(Depth_names)
+    PO4croscor <- with(PO4_sub_var, ccf(PO4, DepthVar, lag.max = length(Depth_names))) # lag.max can be changed to any number
+    plot(PO4croscor, xlab = "Lag", ylab = "Cross-correlation", main = "Cross-correlation of PO4 across Depths")
+    axis(1, at = seq(0, length(Depth_names)-1), labels = Depth_names) # does not work as the axis labels are not linked to the depths
+    # Find the lag with maximum correlation
+    Po4maxCorLag <- PO4croscor$lag[which.max(PO4croscor$acf)]
+    cat("Maximum correlation at lag:", Po4maxCorLag) # Print the lag with maximum correlation
+    # Cross corr by treatment
+    PO4croscorTrt <- by(PO4_sub_var, PO4_sub_var$Treatment, function(df) { # cross corr by treatment
+      with(df, ccf(PO4, DepthVar, lag.max = length(Depth_names) - 1))
+    })
+    PO4croscorTrtDf <- do.call(rbind, lapply(names(PO4croscorTrt), function(treatment) {
+      ccf_result <- PO4croscorTrt[[treatment]]
+      data.frame(Treatment = treatment, lag = ccf_result$lag, correlation = ccf_result$acf)
+    }))
+    print(PO4croscorTrtDf)
+    ggplot(PO4croscorTrtDf, aes(x = lag, y = correlation)) + #plot corr plot
+      geom_line() +
+      facet_wrap(~ Treatment, ncol = 2) +
+      xlab("Lag") +
+      ylab("Cross-correlation") +
+      ggtitle("Cross-correlation of PO4 across Depths by Treatment")
+    
+    
+##  Water soluble P   ----
+    # Skewness and kurtosis
+    WSP_VarNames <- c("WatSolP_10", "WatSolP_20", "WatSolP_30") # Specify the variable names to calculate stats for
+    WSP_stats_all <- Field_stats(Field, WSP_VarNames)# Call the function
+    print(WSP_stats_all)
+        #WatSolP_10_skewness WatSolP_20_skewness WatSolP_30_skewness WatSolP_10_kurtosis WatSolP_20_kurtosis WatSolP_30_kurtosis
+        #1          0.08689468            1.208605            1.668301             2.82506             3.98232            6.578185
+    # Normality and equality of variance
+    shapiro.test(Field$WatSolP_10) # p=0.597
+    hist(Field$WatSolP_10) #  slight right skew
+    leveneTest(WatSolP_10~Treatment, data=Field)  # P=0.2
+    shapiro.test(Field$WatSolP_20) # p=0.011
+    hist(Field$WatSolP_20) #  left skew
+    leveneTest(WatSolP_20~as.factor(Treatment), data=Field)  # P=9.6e-07
+    shapiro.test(Field$WatSolP_30) # p=03000635
+    hist(Field$WatSolP_30) #  severe left skew
+    leveneTest(WatSolP_30~as.factor(Treatment), data=Field)  # P=0.061
+  # transform - log did not work on depth 20. Very difficult to do different transformations and scaling. All transformed to sqrt
+    shapiro.test(sqrt(Field$WatSolP_10)) # p=0.073
+    hist(sqrt(Field$WatSolP_10)) #  slight right  skew
+    leveneTest(sqrt(WatSolP_10)~Treatment, data=Field)  # P=0.21
+    shapiro.test(sqrt(Field$WatSolP_20)) # p=0.073
+    hist(sqrt(Field$WatSolP_20)) #  slight right  skew
+    leveneTest(sqrt(WatSolP_20)~Treatment, data=Field)  # P=0.21
+    shapiro.test(log(Field$WatSolP_30)) # NAN
+    hist(log(Field$WatSolP_30)) #  normalish, two spikes
+    leveneTest(log(WatSolP_30)~Treatment, data=Field)  # NAN/Inf
+    shapiro.test(sqrt(Field$WatSolP_30)) # 0.4
+    hist(sqrt(Field$WatSolP_30)) #  normalish
+    leveneTest(sqrt(WatSolP_30)~Treatment, data=Field)  # NAN/0.024
+# Change data to long format
+    WSP_long <- Field |>
+      gather(key="Depth", value="WSP", matches("WatSolP_"))
+    WSP_long_sub <- subset(WSP_long, select=c(Block, Treatment, Depth, WSP))
+    WSP_long_sub <- WSP_long_sub[complete.cases(WSP_long_sub[, c("Block", "Treatment", "Depth", "WSP")]), ]
+    WSP_long_sub$Depth <- factor(WSP_long_sub$Depth,
+                                 levels = c("WatSolP_10", "WatSolP_20", "WatSolP_30"),
+                                 labels = c("0-10cm", "10-20cm", "20-30cm"))
+    WSP_long_sub$WSP<- as.numeric(WSP_long_sub$WSP)
+    print(WSP_long_sub)
+# Models
+  # ModFieldWSP1 - model is singular
+  ModFieldWSP1 <-   lmer(sqrt(WSP)~Treatment*Depth + (1|Block), data=WSP_long_sub)
+  Anova(ModFieldWSP1, alpha=0.1) # significant differences
+  summary(ModFieldWSP1, alpha=0.1)
+  print(coef(summary(ModFieldWSP1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+  hist(resid(ModFieldWSP1)) # normal
+  shapiro.test(resid(ModFieldWSP1))  # 0.116
+  plot(fitted(ModFieldWSP1),resid(ModFieldWSP1),pch=16)   # two clusters, equal around 0
+  qqnorm(resid(ModFieldWSP1)) # moderate to heavy tails
+  qqline(resid(ModFieldWSP1))
+  rsq(ModFieldWSP1) # 0.873
+  # ModFieldWSP2 - only model that seems to work fine
+  ModFieldWSP2 <- lme(sqrt(WSP)~Treatment*Depth,random=~1|Block, data=WSP_long_sub)
+  Anova(ModFieldWSP2, type="III")  # significant differences
+  summary(ModFieldWSP2)
+  rsq(ModFieldWSP2) # 0.873
+  # ModFieldWSP3 - singularity picked up in r2
+  ModFieldWSP3 <- glmmTMB(sqrt(WSP)~Treatment*Depth+(1|Block), data=WSP_long_sub, family=gaussian())
+  glmmTMB:::Anova.glmmTMB(ModFieldWSP3, type="III") # significant differences
+  summary(ModFieldWSP3)
+  performance::r2(ModFieldWSP3) # NA singularity issues
+  #Comparing models
+  # Rsq = can't tell
+  # AIC & BIC
+    FWSP_modlist <- list(ModFieldWSP1, ModFieldWSP2, ModFieldWSP3)
+    AIC_values <- sapply(FWSP_modlist, AIC)
+    BIC_values <- sapply(FWSP_modlist, BIC)
+    N_AB <- data.frame(Model=c("ModFieldWSP1", "ModFieldWSP2", "ModFieldWSP3"), AIC_values, BIC_values)
+    print(N_AB)
+          #Model AIC_values BIC_values
+          #1 ModFieldWSP1   97.16340   141.2573 - similar output to WSP2, singularity issues
+          #2 ModFieldWSP2   97.16340   134.9998 - only 3 df
+          #3 ModFieldWSP3   65.04675   109.1406 - singularity issues
 #emmeans 
-  ModFieldemWSP <- emmeans(ModFieldWSP1,~Treatment, type="response")
-  ModFieldemWSP_cld <- cld(ModFieldemWSP, Letters = letters) 
-  View(ModFieldemWSP_cld)
-  write.xlsx(ModFieldemWSP_cld, file="Field_WatSolP.xlsx")
+    ModFieldemWSP <- emmeans(ModFieldWSP3,~Treatment|Depth, alpha=0.1, type="response")
+    ModFieldemWSP_cld <- cld(ModFieldemWSP,Letters=trimws(letters), reversed=TRUE, by = "Depth")
+    ModFieldemWSP_cld <- ModFieldemWSP_cld %>% dplyr::rename(emmean="response")
+    View(ModFieldemWSP_cld)
+    write.xlsx(ModFieldemWSP_cld, file="Field_SoilWSP.xlsx")
+# Visualizations
+    (FieldWSPPlot <- ggplot(ModFieldemWSP_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
+        geom_point(size = 6, color="black", aes(fill=Treatment)) +
+        scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+        scale_shape_manual(values = c(21,24,22)) +
+        geom_text(aes(label = trimws(.group)), size = 4, nudge_x = 0.3) +  # Add this line for geom_text
+        scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                         labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                  "TSP\nFertilizer"))+
+        labs(x = "Treatment", y = "Residual soil water soluble P (mg/kg)") +
+        theme(legend.position = "right", legend.key.size=unit(8,"mm"), 
+              legend.title = element_blank(), legend.text=element_text(size=12), legend.key = element_blank(),
+              axis.text.x=element_text(angle=45, hjust=1, size=18, face="bold", colour="black"),
+              axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+              axis.title.x=element_text(size = 25, face = "bold", colour = "black"),
+              axis.title.y=element_text(size=25, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(FieldWSPPlot, file="Field_soilWSP.jpg", height=8, width = 8, dpi=150)
 
 
 
-#####   SOIL RESIN P   ########
-  FieldResP_Mean <- summary_by(ResinP~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldResP_Mean <- as.numeric(FieldResP_Mean$ResinP)
-  FieldResP_skew <- skewness(FieldResP_Mean,na.rm=TRUE)
-  FieldResP_kur <- kurtosis(FieldResP_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldResP_skew, "\n") # 1.404125 
-  cat("Kurtosis:", FieldResP_kur, "\n") # 2.710147  
-  shapiro.test(Field$ResinP) # p=0.001659
-  hist(Field$ResinP) #  left skew
-  leveneTest(ResinP~Treatment, data=Field)  # P=0.0674
-  shapiro.test(log(Field$ResinP))  #p=0.2711
-  leveneTest(log(ResinP)~Treatment, data=Field)  # p=0.0627
-#ModFieldResP1
-  ModFieldResP1 <- aov(log(ResinP)~Treatment+Block, data=Field)
-  anova(ModFieldesP1)
-  summary(ModFieldesP1)
-  hist(resid(ModFieldesP1))
-  shapiro.test(resid(ModFieldesP1))  # p=0.4569
-  plot(fitted(ModFieldesP1),resid(ModFieldesP1),pch=16) 
-  qqnorm(resid(ModFieldesP1))
-  qqline(resid(ModFieldesP1))
-  ModFieldesP1_tidy <- tidy(ModFieldesP1)
-  ModFieldesP1sum_sq_reg <- ModFieldesP1_tidy$sumsq[1] 
-  ModFieldesP1sum_sq_resid <- ModFieldesP1_tidy$sumsq[2]
-  ModFieldesP1sum_sq_reg / (ModFieldesP1sum_sq_reg + ModFieldesP1sum_sq_resid) #0.539
-#emmeans 
-  ModFieldemResP1 <- emmeans(ModFieldesP1,~Treatment, type="response")
-  ModFieldemResP1_cld <- cld(ModFieldemNrec, Letters = letters) 
-  View(ModFieldemResP1_cld)
-  write.xlsx(ModFieldemResP1_cld, file="Field_resinP.xlsx")
+##  Soil resin P   ----
+  # Skewness and kurtosis
+    ResP_VarNames <- c("ResinP_10", "ResinP_20", "ResinP_30") 
+    ResP_stats_all <- Field_stats(Field, ResP_VarNames)
+    print(ResP_stats_all)
+          #ResinP_10_skewness ResinP_20_skewness ResinP_30_skewness ResinP_10_kurtosis ResinP_20_kurtosis ResinP_30_kurtosis
+          #1          0.1096331           1.062363          0.7336615           1.921336           3.379832           2.079667
+  # Normality and equality of variance
+    shapiro.test(Field$ResinP_10) # p=0.312
+    hist(Field$ResinP_10) #  normalish, two spikes
+    leveneTest(ResinP_10~Treatment, data=Field)  # P=0.039
+    shapiro.test(Field$ResinP_20) # p=0.014
+    hist(Field$ResinP_20) #  left skew
+    leveneTest(ResinP_20~as.factor(Treatment), data=Field)  # P=0.0185
+    shapiro.test(Field$ResinP_30) # p=0.00072
+    hist(Field$ResinP_30) #  severe left skew
+    leveneTest(ResinP_30~as.factor(Treatment), data=Field)  # P=0.0149
+  # Transformations - log doesn't work on ResinP_30, sqrt improves normality but not variance: use sqrt
+    shapiro.test(log(Field$ResinP_10))  #p=0.174
+    leveneTest(log(ResinP_10)~Treatment, data=Field)  # p=0.229
+    shapiro.test(log(Field$ResinP_20))  #p=0.831
+    leveneTest(log(ResinP_20)~Treatment, data=Field)  # p=0.0052
+    shapiro.test(log(Field$ResinP_30))  #p=NA
+    leveneTest(log(ResinP_30)~Treatment, data=Field)  # p=NA
+    shapiro.test(sqrt(Field$ResinP_10))  #p=0.323
+    leveneTest(sqrt(ResinP_10)~Treatment, data=Field)  # p=0.103
+    shapiro.test(sqrt(Field$ResinP_20))  #p=0.374
+    leveneTest(sqrt(ResinP_20)~Treatment, data=Field)  # p=0.00603
+    shapiro.test(sqrt(Field$ResinP_30))  #p=0.0097
+    leveneTest(sqrt(ResinP_30)~Treatment, data=Field)  # p=0.00046
+  # Change data to long format
+    ResP_long <- Field |>
+    gather(key="Depth", value="ResP", matches("ResinP_"))
+    ResP_long_sub <- subset(ResP_long, select=c(Block, Treatment, Depth, ResP))
+    ResP_long_sub <- ResP_long_sub[complete.cases(ResP_long_sub[, c("Block", "Treatment", "Depth", "ResP")]), ]
+    ResP_long_sub$Depth <- factor(ResP_long_sub$Depth,
+                                 levels = c("ResinP_10", "ResinP_20", "ResinP_30"),
+                                 labels = c("0-10cm", "10-20cm", "20-30cm"))
+    ResP_long_sub$ResP<- as.numeric(ResP_long_sub$ResP)
+    print(ResP_long_sub)
+# Models
+  # ModFieldResP1 
+  ModFieldResP1 <- lmer(sqrt(ResP)~Treatment*Depth + (1|Block), data=ResP_long_sub)
+  Anova(ModFieldResP1, alpha=0.1) # significant differences
+  summary(ModFieldResP1, alpha=0.1)
+  print(coef(summary(ModFieldResP1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+  hist(resid(ModFieldResP1)) # normal
+  shapiro.test(resid(ModFieldResP1))  # 0.97
+  plot(fitted(ModFieldResP1),resid(ModFieldResP1),pch=16)   # normal
+  qqnorm(resid(ModFieldResP1)) # almost no tails
+  qqline(resid(ModFieldResP1))
+  rsq(ModFieldResP1) # 0.92
+  # ModFieldResP2 
+  ModFieldResP2 <- lme(sqrt(ResP)~Treatment*Depth,random=~1|Block, data=ResP_long_sub)
+  Anova(ModFieldResP2, type="III")  # significant differences
+  summary(ModFieldResP2)
+  rsq(ModFieldResP2) # 0.92
+  # ModFieldResP3
+  ModFieldResP3 <- glmmTMB(sqrt(ResP)~Treatment*Depth+(1|Block), data=ResP_long_sub, family=gaussian())
+  glmmTMB:::Anova.glmmTMB(ModFieldResP3, type="III") # significant differences
+  summary(ModFieldResP3)
+  performance::r2(ModFieldResP3) # 0.92
+  #Comparing models
+  # Rsq = all equal
+  # AIC & BIC
+  FResP_modlist <- list(ModFieldResP1, ModFieldResP2, ModFieldResP3)
+  AIC_values <- sapply(FResP_modlist, AIC)
+  BIC_values <- sapply(FResP_modlist, BIC)
+  N_AB <- data.frame(Model=c("ModFieldResP1", "ModFieldResP2", "ModFieldResP3"), AIC_values, BIC_values)
+  print(N_AB)
+        #Model AIC_values BIC_values
+        #1 ModFieldResP1  -33.96354  10.130309 - fractional df, better AIC/BIC than mod3 - use this
+        #2 ModFieldResP2  -33.96354   3.872862 - best model for AIC/BIC, only 3df 
+        #3 ModFieldResP3 -114.25215 -70.158296
+# emmeans 
+  ModFieldemResP <- emmeans(ModFieldResP1,~Treatment|Depth, alpha=0.1, type="response")
+  ModFieldemResP_cld <- cld(ModFieldemResP,Letters=trimws(letters), reversed=TRUE, by = "Depth")
+  ModFieldemResP_cld <- ModFieldemResP_cld %>% dplyr::rename(emmean="response")
+  View(ModFieldemResP_cld)
+  write.xlsx(ModFieldemResP_cld, file="Field_SoilResinP.xlsx")
+# Visualizations
+  (FieldResPPlot <- ggplot(ModFieldemResP_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
+      geom_point(size = 6, color="black", aes(fill=Treatment)) +
+      scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+      scale_shape_manual(values = c(21,24,22)) +
+      geom_text(aes(label = trimws(.group)), size = 4, nudge_x = 0.3) +  # Add this line for geom_text
+      scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                       labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                "TSP\nFertilizer"))+
+      labs(x = "Treatment", y = "Residual soil resin P (ug/cm)") +
+      theme(legend.position = "right", legend.key.size=unit(8,"mm"), 
+            legend.title = element_blank(), legend.text=element_text(size=12), legend.key = element_blank(),
+            axis.text.x=element_text(angle=45, hjust=1, size=18, face="bold", colour="black"),
+            axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+            axis.title.x=element_text(size = 25, face = "bold", colour = "black"),
+            axis.title.y=element_text(size=25, face="bold", margin=margin(r=15)),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FieldResPPlot, file="Field_soilResP.jpg", height=8, width = 8, dpi=150)    
 
 
 
-#####   pH   ########
-  FieldpH_Mean <- summary_by(pH~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldpH_Mean <- as.numeric(FieldpH_Mean$pH)
-  FieldpH_skew <- skewness(FieldpH_Mean,na.rm=TRUE)
-  FieldpH_kur <- kurtosis(FieldpH_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldpH_skew, "\n") # 0.8153002 
-  cat("Kurtosis:", FieldpH_kur, "\n") # -0.06151628  
-  shapiro.test(Field$pH) # p=0.01752
-  hist(Field$pH) # left skew
-  leveneTest(pH~Treatment, data=Field)  # P=0.9357
-#transform
-  shapiro.test(log(Field$pH)) # p=0.02644
-  hist(log(Field$pH)) # left skew
-  leveneTest(log(pH)~Treatment, data=Field)  # P=0.9321
-  shapiro.test(sqrt(Field$pH)) # p=0.02156
-  hist(sqrt(Field$pH)) # left skew
-  leveneTest(sqrt(pH)~Treatment, data=Field)  # P=0.934
-#ModFieldpH1
-  ModFieldpH1 <-
-# ModFieldpH2
-  ModFieldpH2 <- 
-#emmeans 
-  ModFieldempH1 <- emmeans(ModFieldpH2,~Treatment, type="response")
-  ModFieldempH1_cld <- cld(ModFieldempH1, Letters = letters) 
-  View(ModFieldempH1_cld)
-  write.xlsx(ModFieldempH1_cld, file="Field_pH.xlsx")
+##  pH   ----
+  # Skewness and kurtosis
+    pH_VarNames <- c("pH_10", "pH_20", "pH_30") 
+    pH_stats_all <- Field_stats(Field, pH_VarNames)
+    print(pH_stats_all)
+        #pH_10_skewness pH_20_skewness pH_30_skewness pH_10_kurtosis pH_20_kurtosis pH_30_kurtosis
+        #  1     -0.1769981      0.1608135       0.069542       1.964359       2.972009        1.93708
+  # Normality and equality of variance
+    shapiro.test(Field$pH_10) # p=0.357
+    hist(Field$pH_10) #  normalish, two spikes
+    leveneTest(pH_10~Treatment, data=Field)  # P=0.0035
+    shapiro.test(Field$pH_20) # p=0.667
+    hist(Field$pH_20) #  normal
+    leveneTest(pH_20~as.factor(Treatment), data=Field)  # P=0.00013
+    shapiro.test(Field$pH_30) # p=0.139
+    hist(Field$pH_30) #  normalish
+    leveneTest(pH_30~as.factor(Treatment), data=Field)  # P=0.39
+  # Change data to long format
+    pH_long <- Field |>
+      gather(key="Depth", value="pH", matches("pH_"))
+    pH_long_sub <- subset(pH_long, select=c(Block, Treatment, Depth, pH))
+    pH_long_sub <- pH_long_sub[complete.cases(pH_long_sub[, c("Block", "Treatment", "Depth", "pH")]), ]
+    pH_long_sub$Depth <- factor(pH_long_sub$Depth,
+                                  levels = c("pH_10", "pH_20", "pH_30"),
+                                  labels = c("0-10cm", "10-20cm", "20-30cm"))
+    pH_long_sub$pH<- as.numeric(pH_long_sub$pH)
+    print(pH_long_sub)
+  # Models
+  # ModFieldpH1 
+    ModFieldpH1 <- lmer(pH~Treatment*Depth + (1|Block), data=pH_long_sub)
+    Anova(ModFieldpH1, alpha=0.1) # significant differences
+    summary(ModFieldpH1, alpha=0.1)
+    print(coef(summary(ModFieldpH1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+    hist(resid(ModFieldpH1)) # normal
+    shapiro.test(resid(ModFieldpH1))  # 0.29
+    plot(fitted(ModFieldpH1),resid(ModFieldpH1),pch=16)   # normal
+    qqnorm(resid(ModFieldpH1)) # small righttail
+    qqline(resid(ModFieldpH1))
+    rsq(ModFieldpH1) # 0.63
+  # ModFieldpH2 
+    ModFieldpH2 <- lme(pH~Treatment*Depth,random=~1|Block, data=pH_long_sub)
+    Anova(ModFieldpH2, type="III")  # significant differences
+    summary(ModFieldpH2)
+    rsq(ModFieldpH2) # 0.63
+  # ModFieldpH3
+    ModFieldpH3 <- glmmTMB(pH~Treatment*Depth+(1|Block), data=pH_long_sub, family=gaussian())
+    glmmTMB:::Anova.glmmTMB(ModFieldpH3, type="III") # significant differences
+    summary(ModFieldpH3)
+    performance::r2(ModFieldpH3) # 0.64
+  #Comparing models
+  # Rsq = Mo3 slightly better
+  # AIC & BIC
+    FpH_modlist <- list(ModFieldpH1, ModFieldpH2, ModFieldpH3)
+    AIC_values <- sapply(FpH_modlist, AIC)
+    BIC_values <- sapply(FpH_modlist, BIC)
+    N_AB <- data.frame(Model=c("ModFieldpH1", "ModFieldpH2", "ModFieldpH3"), AIC_values, BIC_values)
+    print(N_AB)
+        #Model AIC_values BIC_values
+        #1 ModFieldpH1  48.841897   93.52403
+        #2 ModFieldpH2  48.841897   87.47841
+        #3 ModFieldpH3  -1.491188   43.19094 - best model
+  # emmeans 
+    ModFieldempH <- emmeans(ModFieldpH3,~Treatment|Depth, alpha=0.1, type="response")
+    ModFieldempH_cld <- cld(ModFieldempH, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
+    View(ModFieldempH_cld)
+    write.xlsx(ModFieldempH1_cld, file="Field_pH.xlsx")
+  # Visualizations
+    (FieldpHPlot <- ggplot(ModFieldempH_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
+        geom_point(size = 6, color="black", aes(fill=Treatment)) +
+        scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+        scale_shape_manual(values = c(21,24,22)) +
+        geom_text(aes(label = trimws(.group)), size = 4, nudge_x = 0.3) +  # Add this line for geom_text
+        scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                         labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                  "TSP\nFertilizer"))+
+        labs(x = "Treatment", y = "Residual soil pH") +
+        theme(legend.position = "right", legend.key.size=unit(8,"mm"), 
+              legend.title = element_blank(), legend.text=element_text(size=12), legend.key = element_blank(),
+              axis.text.x=element_text(angle=45, hjust=1, size=18, face="bold", colour="black"),
+              axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+              axis.title.x=element_text(size = 25, face = "bold", colour = "black"),
+              axis.title.y=element_text(size=25, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(FieldpHPlot, file="Field_soilpH.jpg", height=8, width = 8, dpi=150)    
 
 
 
+##   Electrical conductivity   ----
+    # Skewness and kurtosis
+      EC_VarNames <- c("EC_10", "EC_20", "EC_30") 
+      EC_stats_all <- Field_stats(Field, EC_VarNames)
+      print(EC_stats_all)
+          #EC_10_skewness EC_20_skewness EC_30_skewness EC_10_kurtosis EC_20_kurtosis EC_30_kurtosis
+          #1       1.798002       4.027183       2.409736       6.651053       18.06702       8.314175
+    # Normality and equality of variance
+      shapiro.test(Field$EC_10) # p=0.00104
+      hist(Field$EC_10) #  left skew, very flat
+      leveneTest(EC_10~Treatment, data=Field)  # P=0.049
+      shapiro.test(Field$EC_20) # p=1.39e-08
+      hist(Field$EC_20) #  severe left skew
+      leveneTest(EC_20~as.factor(Treatment), data=Field)  # P=0.126
+      shapiro.test(Field$EC_30) # p=3.27e-06
+      hist(Field$EC_30) #  severe left skew
+      leveneTest(EC_30~as.factor(Treatment), data=Field)  # P=0.28
+    # transform - log transform worked best
+      shapiro.test(log(Field$EC_10))  # p=0.098
+      leveneTest(log(EC_10)~Treatment, data=Field)  # p= 0.036
+      shapiro.test(log(Field$EC_20))  # p=5.64e-05
+      leveneTest(log(EC_20)~Treatment, data=Field)  # p= 0.00087
+      shapiro.test(log(Field$EC_30))  # p=0.059
+      leveneTest(log(EC_30)~Treatment, data=Field)  # p=0.186
+      shapiro.test(sqrt(Field$EC_10))  # p=0.011
+      leveneTest(sqrt(EC_10)~Treatment, data=Field)  # p= 0.038
+      shapiro.test(sqrt(Field$EC_20))  # p=3.07e-07
+      leveneTest(sqrt(EC_20)~Treatment, data=Field)  # p= 0.023
+      shapiro.test(sqrt(Field$EC_30))  # p=0.00036
+      leveneTest(sqrt(EC_30)~Treatment, data=Field)  # p=0.029
+    # Change data to long format
+    EC_long <- Field |>
+      gather(key="Depth", value="EC", matches("EC_"))
+    EC_long_sub <- subset(EC_long, select=c(Block, Treatment, Depth, EC))
+    EC_long_sub <- EC_long_sub[complete.cases(EC_long_sub[, c("Block", "Treatment", "Depth", "EC")]), ]
+    EC_long_sub$Depth <- factor(EC_long_sub$Depth,
+                                levels = c("EC_10", "EC_20", "EC_30"),
+                                labels = c("0-10cm", "10-20cm", "20-30cm"))
+    EC_long_sub$EC<- as.numeric(EC_long_sub$EC)
+    print(EC_long_sub)
+    # Models
+    # ModFieldEC1 
+    ModFieldEC1 <- lmer(log(EC)~Treatment*Depth + (1|Block), data=EC_long_sub)
+    Anova(ModFieldEC1, alpha=0.1) # significant differences
+    summary(ModFieldEC1, alpha=0.1)
+    print(coef(summary(ModFieldEC1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+    hist(resid(ModFieldEC1)) # normal
+    shapiro.test(resid(ModFieldEC1))  # 0.0018
+    plot(fitted(ModFieldEC1),resid(ModFieldEC1),pch=16)   # equal around 0
+    qqnorm(resid(ModFieldEC1)) # moderate tails
+    qqline(resid(ModFieldEC1))
+    rsq(ModFieldEC1) # 0.575
+    # ModFieldEC2 
+    ModFieldEC2 <- lme(log(EC)~Treatment*Depth,random=~1|Block, data=EC_long_sub)
+    Anova(ModFieldEC2, type="III")  # significant differences
+    summary(ModFieldEC2)
+    rsq(ModFieldEC2) # 0.575
+    # ModFieldEC3
+    ModFieldEC3 <- glmmTMB(log(EC)~Treatment*Depth+(1|Block), data=EC_long_sub, family=gaussian())
+    glmmTMB:::Anova.glmmTMB(ModFieldEC3, type="III") # significant differences
+    summary(ModFieldEC3)
+    performance::r2(ModFieldEC3) # 0.585
+    #Comparing models
+    # Rsq = Mo3 slightly better
+    # AIC & BIC
+    FEC_modlist <- list(ModFieldEC1, ModFieldEC2, ModFieldEC3)
+    AIC_values <- sapply(FEC_modlist, AIC)
+    BIC_values <- sapply(FEC_modlist, BIC)
+    N_AB <- data.frame(Model=c("ModFieldEC1", "ModFieldEC2", "ModFieldEC3"), AIC_values, BIC_values)
+    print(N_AB)
+          #Model AIC_values BIC_values
+          #1 ModFieldEC1   165.4088   209.2019
+          #2 ModFieldEC2   165.4088   202.8328
+          #3 ModFieldEC3   159.4709   203.2640 - best model
+    # emmeans 
+    ModFieldemEC <- emmeans(ModFieldEC3,~Treatment|Depth, alpha=0.1, type="response")
+    ModFieldemEC_cld <- cld(ModFieldemEC, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
+    ModFieldemEC_cld <- ModFieldemEC_cld %>% dplyr::rename(emmean="response")
+    View(ModFieldemEC_cld)
+    write.xlsx(ModFieldemEC_cld, file="Field_EC.xlsx")
+    # Visualizations
+    (FieldECPlot <- ggplot(ModFieldemEC_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
+        geom_point(size = 6, color="black", aes(fill=Treatment)) +
+        scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+        scale_shape_manual(values = c(21,24,22)) +
+        geom_text(aes(label = trimws(.group)), size = 4, nudge_x = 0.3) +  # Add this line for geom_text
+        scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                         labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                  "TSP\nFertilizer"))+
+        labs(x = "Treatment", y = "Residual soil electric conductivity (mS/cm)") +
+        theme(legend.position = "right", legend.key.size=unit(8,"mm"), 
+              legend.title = element_blank(), legend.text=element_text(size=12), legend.key = element_blank(),
+              axis.text.x=element_text(angle=45, hjust=1, size=18, face="bold", colour="black"),
+              axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+              axis.title.x=element_text(size = 22, face = "bold", colour = "black"),
+              axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(FieldECPlot, file="Field_soilEC.jpg", height=8, width = 8, dpi=150)    
 
-#####   ELECTROCAL CONDUCTIVITY   ########
-  FieldEC_Mean <- summary_by(EC~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldEC_Mean <- as.numeric(FieldEC_Mean$EC)
-  FieldEC_skew <- skewness(FieldEC_Mean,na.rm=TRUE)
-  FieldEC_kur <- kurtosis(FieldEC_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldEC_skew, "\n") # 1.293181 
-  cat("Kurtosis:", FieldEC_kur, "\n") # 0.7705139
-  hist(Field$EC) # slight left skew
-  shapiro.test(Field$EC) # p=0.0001406
-  leveneTest(EC~Treatment, data=Field)  # P=0.8016
-# transform
-  shapiro.test(log(Field$EC))  # p=0.05701
-  leveneTest(log(EC)~Treatment, data=Field)  # p =  0.7405
-  shapiro.test(log10(Field$EC))  # p=0.05701
-  leveneTest(log10(EC)~Treatment, data=Field)  # p =  0.7405
-  shapiro.test(sqrt(Field$EC))  # p=0.003086
-  leveneTest(sqrt(EC)~Treatment, data=Field)  # p = 0.7786
-#ModFieldEC1
-  ModFieldEC1 <- 
-# weighted lm model
-  ModFieldEC2 <- 
-#emmeans 
-  ModFieldemEC1 <- emmeans(ModFieldEC2,~Treatment, type="response")
-  ModFieldemEC1_cld <- cld(ModFieldemEC1, Letters = letters) 
-  View(ModFieldemEC1_cld)
-  write.xlsx(ModFieldemEC1_cld, file="Field_EC.xlsx")
 
 
+##  Organic carbon   ----
+  # Skewness and kurtosis
+    OC_VarNames <- c("OC_10", "OC_20", "OC_30") 
+    OC_stats_all <- Field_stats(Field, OC_VarNames)
+    print(OC_stats_all)
+            #OC_10_skewness OC_20_skewness OC_30_skewness OC_10_kurtosis OC_20_kurtosis OC_30_kurtosis
+            #1      -2.050084    -0.03850754      -0.226943       9.304963        1.96851       1.829608
+  # Normality and equality of variance
+      shapiro.test(Field$OC_10) # p=0.00041
+      hist(Field$OC_10) #  severe right skew
+      leveneTest(OC_10~Treatment, data=Field)  # P=0.467
+      shapiro.test(Field$OC_20) # p=0.449
+      hist(Field$OC_20) #  normalish
+      leveneTest(OC_20~as.factor(Treatment), data=Field)  # P=1.86e-06
+      shapiro.test(Field$OC_30) # p=0.154
+      hist(Field$OC_30) #  normalish
+      leveneTest(OC_30~as.factor(Treatment), data=Field)  # P=0.874
+  # transform - transformaions made it worse, didn't use
+      shapiro.test(log(Field$OC_10))  # p=1.66e-06
+      leveneTest(log(OC_10)~Treatment, data=Field)  # p= 0.45
+      shapiro.test(log(Field$OC_20))  # p=0.32
+      leveneTest(log(OC_20)~Treatment, data=Field)  # p= 9.3e-07
+      shapiro.test(log(Field$OC_30))  # p=0.089
+      leveneTest(log(OC_30)~Treatment, data=Field)  # p=0.811
+      shapiro.test(sqrt(Field$OC_10))  # p=2.29e-05
+      leveneTest(sqrt(OC_10)~Treatment, data=Field)  # p= 0.45
+      shapiro.test(sqrt(Field$OC_20))  # p=0.41
+      leveneTest(sqrt(OC_20)~Treatment, data=Field)  # p= 1.22e-06
+      shapiro.test(sqrt(Field$OC_30))  # p=0.125
+      leveneTest(sqrt(OC_30)~Treatment, data=Field)  # p=0.855
+  # Change data to long format
+    OC_long <- Field |>
+      gather(key="Depth", value="OC", matches("OC_"))
+    OC_long_sub <- subset(OC_long, select=c(Block, Treatment, Depth, OC))
+    OC_long_sub <- OC_long_sub[complete.cases(OC_long_sub[, c("Block", "Treatment", "Depth", "OC")]), ]
+    OC_long_sub$Depth <- factor(OC_long_sub$Depth,
+                                levels = c("OC_10", "OC_20", "OC_30"),
+                                labels = c("0-10cm", "10-20cm", "20-30cm"))
+    OC_long_sub$OC<- as.numeric(OC_long_sub$OC)
+    print(OC_long_sub)
+  # Models
+  # ModFieldOC1  - model is singular
+    ModFieldOC1 <- lmer(OC~Treatment*Depth + (1|Block), data=OC_long_sub)
+    Anova(ModFieldOC1, alpha=0.1) # significant differences
+    summary(ModFieldOC1, alpha=0.1)
+    print(coef(summary(ModFieldOC1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+    hist(resid(ModFieldOC1)) # right skew
+    shapiro.test(resid(ModFieldOC1))  # 2.69e-06
+    plot(fitted(ModFieldOC1),resid(ModFieldOC1),pch=16)   # above 0
+    qqnorm(resid(ModFieldOC1)) # moderate tails, higher on plot
+    qqline(resid(ModFieldOC1))
+    rsq(ModFieldOC1) # 0.867
+  # ModFieldOC2 
+    ModFieldOC2 <- lme(OC~Treatment*Depth,random=~1|Block, data=OC_long_sub)
+    Anova(ModFieldOC2, type="III")  # significant differences
+    summary(ModFieldOC2)
+    rsq(ModFieldOC2) # 0.867
+  # ModFieldOC3 - singularity issue in R2
+    ModFieldOC3 <- glmmTMB(OC~Treatment*Depth+(1|Block), data=OC_long_sub, family=gaussian())
+    glmmTMB:::Anova.glmmTMB(ModFieldOC3, type="III") # significant differences
+    summary(ModFieldOC3)
+    performance::r2(ModFieldOC3) # NA
+  #Comparing models
+    # Rsq = either of first two models
+    # AIC & BIC
+    FOC_modlist <- list(ModFieldOC1, ModFieldOC2, ModFieldOC3)
+    AIC_values <- sapply(FOC_modlist, AIC)
+    BIC_values <- sapply(FOC_modlist, BIC)
+    N_AB <- data.frame(Model=c("ModFieldOC1", "ModFieldOC2", "ModFieldOC3"), AIC_values, BIC_values)
+    print(N_AB)
+      #Model AIC_values BIC_values
+      #1 ModFieldOC1   43.50440   87.59825 - looks fine, using this one as mod3 has singularity issue
+      #2 ModFieldOC2   43.50440   81.34080 - only 3 df
+      #3 ModFieldOC3   -8.32373   35.77012 Best model AIC/BIC
+  # emmeans 
+    ModFieldemOC <- emmeans(ModFieldOC1,~Treatment|Depth, alpha=0.1, type="response")
+    ModFieldemOC_cld <- cld(ModFieldemOC, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
+    View(ModFieldemOC_cld)
+    write.xlsx(ModFieldemOC_cld, file="Field_OC.xlsx")
+  # Visualizations
+    (FieldOCPlot <- ggplot(ModFieldemOC_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
+        geom_point(size = 6, color="black", aes(fill=Treatment)) +
+        scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+        scale_shape_manual(values = c(21,24,22)) +
+        geom_text(aes(label = trimws(.group)), size = 4, nudge_x = 0.3) +  # Add this line for geom_text
+        scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                         labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                  "TSP\nFertilizer"))+
+        labs(x = "Treatment", y = "Residual soil organic carbon (%)") +
+        theme(legend.position = "right", legend.key.size=unit(8,"mm"), 
+              legend.title = element_blank(), legend.text=element_text(size=12), legend.key = element_blank(),
+              axis.text.x=element_text(angle=45, hjust=1, size=18, face="bold", colour="black"),
+              axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
+              axis.title.x=element_text(size = 25, face = "bold", colour = "black"),
+              axis.title.y=element_text(size=25, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(FieldOCPlot, file="Field_soilOC.jpg", height=8, width = 8, dpi=150)    
+  
 
-
-#####   ORGANIC CARBON   ########
-  FieldOC_Mean <- summary_by(OC~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldOC_Mean <- as.numeric(FieldOC_Mean$OC)
-  FieldOC_skew <- skewness(FieldOC_Mean,na.rm=TRUE)
-  FieldOC_kur <- kurtosis(FieldOC_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldOC_skew, "\n") # 2.122192 
-  cat("Kurtosis:", FieldOC_kur, "\n") # 4.694283 
-  shapiro.test(Field$OC) # p=5.96e-06
-  hist(Field$OC) #  heavy left skew
-  leveneTest(OC~Treatment, data=Field)  # P=1.097e-05
-#Transforming
-  shapiro.test(log(Field$OC)) # p=0.0002123
-  leveneTest(log(OC)~Treatment, data=Field)  # P=0.0008862
-  shapiro.test(log10(Field$OC)) # p=0.0002123
-  leveneTest(log10(OC)~Treatment, data=Field)  # P=0.0008862
-  shapiro.test(sqrt(Field$OC)) # p=3.431e-05
-  leveneTest(sqrt(OC)~Treatment, data=Field)  # P=0.000106 
-#ModFieldOC1
-  ModFieldOC1 <- 
-# lm model with weighted least squares
-  ModFieldNup2 <- 
-#emmeans 
-  ModFieldemOC1 <- emmeans(ModFieldOC1,~Treatment, type="response")
-  ModFieldemOC1_cld <- cld(ModFieldemNrec, Letters = letters) 
-  View(ModFieldemOC1_cld)
-  write.xlsx(ModFieldemOC1_cld, file="Field_OC.xlsx")
-
-
-
-
-#####   NO3 LOAD - SNOWMELT   ########
+# SNOWMELT ----
+##  NO3 load    ----
   FieldLNO3_Mean <- summary_by(LNO3~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldLNO3_Mean <- as.numeric(FieldLNO3_Mean$LNO3)
   FieldLNO3_skew <- skewness(FieldLNO3_Mean,na.rm=TRUE)
@@ -1004,14 +1664,14 @@ library(glmmTMB)
   performance::r2(Mod3i) # 0.752
 #emmeans 
   ModFieldemLNO3 <- emmeans(ModFieldLNO3c,~Treatment) 
-  ModFieldemLNO3_cld <- cld(ModFieldemLNO3, Letters = letters, type="response") 
+  ModFieldemLNO3_cld <- cld(ModFieldemLNO3, Letters=letters, type="response") 
   View(ModFieldemLNO3_cld)
   write.xlsx(ModFieldemLNO3_cld, file="Field_NO3Load.xlsx")
 
 
 
 
-#####   NH4 LOAD - SNOWMELT   ########
+##   NH4 load  ----
   FieldLNH4_Mean <- summary_by(LNH4~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldLNH4_Mean <- as.numeric(FieldLNH4_Mean$LNH4)
   FieldLNH4_skew <- skewness(FieldLNH4_Mean,na.rm=TRUE)
@@ -1056,7 +1716,7 @@ library(glmmTMB)
   #3 ModFieldLNH4c  -50.35223  -38.99728
 #emmeans 
   ModFieldemLNH4 <- emmeans(ModFieldLNH4c, ~Treatment, alpha=0.1)
-  ModFieldemLNH4_cld <- cld(ModFieldemLNH4, Letters = letters, type="response") 
+  ModFieldemLNH4_cld <- cld(ModFieldemLNH4, Letters=letters, type="response") 
   View(ModFieldemLNH4_cld)
   ModFieldemLNH4$contrasts
   summary(ModFieldemLNH4)
@@ -1069,7 +1729,7 @@ library(glmmTMB)
 
   ModFieldemLNH4a <- TukeyHSD(ModFieldLNH4c)
   View(ModFieldemLNH4a)
-  ModFieldemLNH4_cld2 <- cld(ModFieldemLNH4a$diff, alpha = 0.05, Letters = letters) 
+  ModFieldemLNH4_cld2 <- cld(ModFieldemLNH4a$diff, alpha=0.05, Letters=letters) 
   View(ModFieldemLNH4_cld2)
   summary(ModFieldemLNH4_cld)
   ModFieldemLNH4_pairs <- pairs(ModFieldemLNH4)
@@ -1077,17 +1737,17 @@ library(glmmTMB)
   write.xlsx(ModFieldemLNH4_cld, file="Field_LNH4.xlsx")
 
 # Perform the Sheffe's test
-  LNH4contrasts <- glht(ModFieldLNH4c, linfct = as.list(mcp(Treatment = "Tukey")))
-  LNH4_sheffes <- summary(LNH4contrasts, test = adjusted(type = "single-step"))
+  LNH4contrasts <- glht(ModFieldLNH4c, linfct=as.list(mcp(Treatment="Tukey")))
+  LNH4_sheffes <- summary(LNH4contrasts, test=adjusted(type="single-step"))
   print(LNH4_sheffes)
-  LNH4contrasts <- glht(ModFieldLNH4c, linfct = as.list(mcp(Treatment = "Tukey")))$test$pvalues
+  LNH4contrasts <- glht(ModFieldLNH4c, linfct=as.list(mcp(Treatment="Tukey")))$test$pvalues
   LNH4pval <- LNH4_sheffes$tTable[, "p value"]
-  LNH4F_cld <- cld(LNH4pval, alpha = 0.05, Letters = letters)
+  LNH4F_cld <- cld(LNH4pval, alpha=0.05, Letters=letters)
   print(LNH4F_cld)
 
 
 
-#####   PO4 LOAD - SNOWMELT   ########
+##   PO4 load ----
   FieldLPO4_Mean <- summary_by(LPO4~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldLPO4_Mean <- as.numeric(FieldLPO4_Mean$LPO4)
   FieldLPO4_skew <- skewness(FieldLPO4_Mean,na.rm=TRUE)
@@ -1112,8 +1772,8 @@ library(glmmTMB)
   ModFieldLPO4c <- 
 # one-way Kruskal-Wallis
   LPO4_subset <- subset(Field, !is.na(LPO4))
-  ModFieldLPO4e = kruskal.test(LPO4 ~Treatment, data=LPO4_subset)
-  ModFPO4_Dunn <- dunn.test(LPO4_subset$LPO4, LPO4_subset$Treatment, method = "bonferroni")
+  ModFieldLPO4e=kruskal.test(LPO4 ~Treatment, data=LPO4_subset)
+  ModFPO4_Dunn <- dunn.test(LPO4_subset$LPO4, LPO4_subset$Treatment, method="bonferroni")
   print(ModFieldLPO4e)
   print(ModFPO4_Dunn)
 # AIC& BIC
@@ -1129,8 +1789,8 @@ library(glmmTMB)
     #4 ModFieldLPO4d -102.88242  -92.43720
 #emmeans 
   ModFieldemLPO4 <- emmeans(ModFieldLPO4c,~Treatment)
-  ModFieldemLPO4_cld <- cld(ModFieldemLPO4, Letters = letters, type="response") 
-  ModFieldemLPO4_cld <- ModFieldemLPO4_cld %>% rename(emmean = "response")
+  ModFieldemLPO4_cld <- cld(ModFieldemLPO4, Letters=letters, type="response") 
+  ModFieldemLPO4_cld <- ModFieldemLPO4_cld %>% rename(emmean="response")
   View(ModFieldemLPO4_cld)
   write.xlsx(ModFieldemLPO4_cld, file="Field_PO4Load.xlsx")
 
@@ -1139,35 +1799,35 @@ library(glmmTMB)
   emNO3 <- as.data.frame(ModFieldemLNO3_cld)
   emNH4 <- as.data.frame(ModFieldemLNH4_cld)
   emPO4 <- as.data.frame(ModFieldemLPO4_cld)
-  em_labels <- list("EM1" = "NO3", "EM2" = "NH4", "EM3" = "PO4")
-  em_all <- bind_rows(list(EM1 = emNO3, EM2 = emNH4, EM3 = emPO4), .id = "EM") 
-  em_all$EM <- factor(em_all$EM, levels = names(em_labels), labels = unlist(em_labels))
+  em_labels <- list("EM1"="NO3", "EM2"="NH4", "EM3"="PO4")
+  em_all <- bind_rows(list(EM1=emNO3, EM2=emNH4, EM3=emPO4), .id="EM") 
+  em_all$EM <- factor(em_all$EM, levels=names(em_labels), labels=unlist(em_labels))
   View(em_all)
 # define function to calculate position adjustment for secondary axis
   ggplot(em_all, aes(x=Treatment, y=emmean, pattern=EM)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white",
+    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
                       pattern_density=0.005, pattern_spacing=0.01)+
-    scale_pattern_manual(values = c("NO3" = "stripe", "NH4" = "crosshatch", "PO4" = "wave"))+
-    facet_wrap(~ EM, scales = "free_y", ) +
-    labs(x = "Treatment", y="Nutrient load in runoff (kg/ha)") +
-    scale_x_discrete(labels = c("Control1", "Control2", "Biochar\n25kgP/ha", "Biochar 10t/ha", "Biochar\n10t/ha&TSP",
+    scale_pattern_manual(values=c("NO3"="stripe", "NH4"="crosshatch", "PO4"="wave"))+
+    facet_wrap(~ EM, scales="free_y", ) +
+    labs(x="Treatment", y="Nutrient load in runoff (kg/ha)") +
+    scale_x_discrete(labels=c("Control1", "Control2", "Biochar\n25kgP/ha", "Biochar 10t/ha", "Biochar\n10t/ha&TSP",
                                 "Fertilizer\nPhosphorus"))+
     theme_bw() +
-    theme(legend.title = element_blank() , legend.key.size=unit(10,"mm"), legend.text=element_text(size=12),
-          strip.text.x.top = element_text(size = 18, face = "bold"))+
-    theme(plot.title = element_text(size = 16))+
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-          axis.title.x = element_blank(), axis.title.y = element_text(size = 24, face="bold")) +
-    theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), 
-          axis.line = element_line(colour = "black"))
-    ggsave("LargePlots_Snowmelt.jpg", width = 12, height = 8, dpi = 150)
+    theme(legend.title=element_blank() , legend.key.size=unit(10,"mm"), legend.text=element_text(size=12),
+          strip.text.x.top=element_text(size=18, face="bold"))+
+    theme(plot.title=element_text(size=16))+
+    theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=16, face="bold", colour="black"),
+          axis.title.x=element_blank(), axis.title.y=element_text(size=24, face="bold")) +
+    theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(), 
+          axis.line=element_line(colour="black"))
+    ggsave("LargePlots_Snowmelt.jpg", width=12, height=8, dpi=150)
   
-  #geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +  
+  #geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +  
   
  
 
 
-#####   RESIN PO4 - SNOWMELT   ########
+##  Resin PO4 load ----
   FieldResPO4_Mean <- summary_by(ResinPO4~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldResPO4_Mean <- as.numeric(FieldResPO4_Mean$ResinPO4)
   FieldResPO4_skew <- skewness(FieldResPO4_Mean,na.rm=TRUE)
@@ -1185,7 +1845,7 @@ library(glmmTMB)
 ModFieldResPO41 <- 
 #emmeans 
   ModFieldemResPO41 <- emmeans(ModFieldResPO41,~Treatment)
-  ModFieldemResPO41_cld <- cld(ModFieldemResPO41, Letters = letters, type="response") 
+  ModFieldemResPO41_cld <- cld(ModFieldemResPO41, Letters=letters, type="response") 
   View(ModFieldemResPO41_cld)
   write.xlsx(ModFieldemResPO41_cld, file="Field_ResinPO4.xlsx")
 
@@ -1193,7 +1853,7 @@ ModFieldResPO41 <-
 
 
 
-#####   RESIN NO3 - SNOWMELT   ########
+##  Resin NO3 load ----
   FieldResinNO3_Mean <- summary_by(ResinNO3~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldResinNO3_Mean <- as.numeric(FieldResinNO3_Mean$ResinNO3)
   FieldResinNO3_skew <- skewness(FieldResinNO3_Mean,na.rm=TRUE)
@@ -1211,13 +1871,13 @@ ModFieldResPO41 <-
   ModFieldResNO31 <- 
 #emmeans 
   ModFieldResNO3em <- emmeans(ModFieldResNO31,~Treatment)
-  ModFieldResNO3em_cld <- cld(ModFieldResNO3em, Letters = letters, type="response") 
+  ModFieldResNO3em_cld <- cld(ModFieldResNO3em, Letters=letters, type="response") 
   View(ModFieldResNO3em_cld)
   write.xlsx(ModFieldResNO3em_cld, file="Field_ResinNO3.xlsx")
 
 
-####  Covariance heat maps  ####
-#####   Yield  #####
+# COVARIANCE HEAT MAPS ----
+##   Yield  ----
   FieldCovVar <- c("Yield", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
   FieldCovYield <- subset(Field, select=c("Treatment", FieldCovVar), 
                          na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1280,7 +1940,7 @@ ModFieldResPO41 <-
 
 
 
-#####   Uptake  #####
+##   Uptake  ----
   UptakeCovVar <- c("Puptake", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
   FieldCovUptake <- subset(Field, select=c("Treatment", UptakeCovVar), 
                           na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1342,7 +2002,7 @@ ModFieldResPO41 <-
       labs(x="", y=""))
   ggsave(UptakeCovFieldHeat, file="Field_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
 
-#####   P Recovery  #####
+##   P Recovery  ----
   RecoveryCovVar <- c("Precovery", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
   FieldCovRecovery <- subset(Field, select=c("Treatment", RecoveryCovVar), 
                             na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1408,13 +2068,13 @@ ModFieldResPO41 <-
   ggsave(RecoveryCovFieldHeat, file="Field_RecoveryCovHeat.jpg", width=20, height=15, dpi=150)
 
 
-####   Yield to N & P Recovery  ####
+# YIELD TO N & P ----
   Field$Treatment <- as.factor(Field$Treatment)
   Field$Yield <- as.numeric(Field$Yield)
   Field$Nrecovery <- as.numeric(Field$Nrecovery)
   Field$Precovery <- as.numeric(Field$Precovery)
   FieldContourSub <- subset(Field, Treatment != "Control1" & Treatment != "Control2", 
-                            select = c(Block, Treatment, Yield, Nrecovery, Precovery))
+                            select=c(Block, Treatment, Yield, Nrecovery, Precovery))
   View(FieldContourSub)
   FieldContourSub$Treatment <- factor(FieldContourSub$Treatment,
                                       levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
@@ -1426,44 +2086,45 @@ ModFieldResPO41 <-
   FieldContourExcl <- na.exclude(FieldContourSub)
   View(FieldContourExcl)
   
-  FieldContourMod <- glmmTMB(Yield ~ Nrecovery + Precovery + Treatment + (1|Block), data = FieldContourExcl, 
+  FieldContourMod <- glmmTMB(Yield ~ Nrecovery + Precovery + Treatment + (1|Block), data=FieldContourExcl, 
                             na.action=na.exclude)
   summary(FieldContourMod)
   Anova(FieldContourMod)
 #Set up N & P recovery grids per soil
-  FieldNrecovery_grid <- seq(min(FieldContourExcl$Nrecovery, na.rm = TRUE), max(FieldContourExcl$Nrecovery, na.rm = TRUE),
-                            length.out = 100)
-  FieldPrecovery_grid <- seq(min(FieldContourExcl$Precovery, na.rm = TRUE), max(FieldContourExcl$Precovery, na.rm = TRUE),
-                            length.out = 100)
+  FieldNrecovery_grid <- seq(min(FieldContourExcl$Nrecovery, na.rm=TRUE), max(FieldContourExcl$Nrecovery, na.rm=TRUE),
+                            length.out=100)
+  FieldPrecovery_grid <- seq(min(FieldContourExcl$Precovery, na.rm=TRUE), max(FieldContourExcl$Precovery, na.rm=TRUE),
+                            length.out=100)
 # Set up expanded grids then assign yield - must include block as it was used in the model!!
-  FieldContour_grid <- expand.grid(Block=unique(FieldContourExcl$Block), Treatment = unique(FieldContourExcl$Treatment), 
-                                  Nrecovery = FieldNrecovery_grid, Precovery = FieldPrecovery_grid)
-  FieldContour_grid$Yield <- predict(FieldContourMod, newdata = FieldContour_grid)
+  FieldContour_grid <- expand.grid(Block=unique(FieldContourExcl$Block), Treatment=unique(FieldContourExcl$Treatment), 
+                                  Nrecovery=FieldNrecovery_grid, Precovery=FieldPrecovery_grid)
+  FieldContour_grid$Yield <- predict(FieldContourMod, newdata=FieldContour_grid)
   FieldContour_grid <- FieldContour_grid[,-1] # remove block so it doesn't appear in the plot
   View(FieldContour_grid)
 # develop contour plot
-  (FieldContours <- ggplot(FieldContour_grid, aes(x = Nrecovery, y = Precovery, z = Yield)) +
+  (FieldContours <- ggplot(FieldContour_grid, aes(x=Nrecovery, y=Precovery, z=Yield)) +
       geom_raster(aes(fill=Yield)) + #use rastar to get smooth lines
-      geom_contour(aes(z=Yield), color='gray30', binwidth = 100) + #contour line, adjust binwidth depending on yield
-      facet_wrap(~Treatment, nrow = 2) +
-      scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
-      labs(x = "% N Recovery", y = "% P Recovery", fill = "Yield\n(kg/ha)") +
-      theme(legend.title = element_text(size = 25, face = "bold"),
-            legend.key.size = unit(15, "mm"),
-            legend.text = element_text(size = 20),
-            strip.text = element_text(size = 25, face = "bold"),
-            strip.placement = "outside",
-            strip.background = element_blank(),
-            strip.text.x = element_text(vjust = 1),
+      geom_contour(aes(z=Yield), color='gray30', binwidth=100) + #contour line, adjust binwidth depending on yield
+      facet_wrap(~Treatment, nrow=2) +
+      scale_fill_gradientn(colors=brewer.pal(9, "BuPu")) +
+      labs(x="% N Recovery", y="% P Recovery", fill="Yield\n(kg/ha)") +
+      theme(legend.title=element_text(size=25, face="bold"),
+            legend.key.size=unit(15, "mm"),
+            legend.text=element_text(size=20),
+            strip.text=element_text(size=25, face="bold"),
+            strip.placement="outside",
+            strip.background=element_blank(),
+            strip.text.x=element_text(vjust=1),
             axis.text.x=element_text(size=15),
             axis.text.y=element_text(size=15),
             axis.title.x=element_text(size=30, face="bold"),
             axis.title.y=element_text(size=30, face="bold"),
-            panel.spacing = unit(0.5, "cm")))
+            panel.spacing=unit(0.5, "cm")))
   ggsave(FieldContours, file="Field_YieldContour.jpg", width=20, height=20, dpi=150)
 
-####  Extract ANOVA tables  ####
-
+  
+  
+# EXTRACT ANOVA TABLES ----
   FYieldAN$RowNames <- row.names(FYieldAN)
   rownames(FYieldAN) <- NULL
   
@@ -1513,4 +2174,4 @@ ModFieldResPO41 <-
                            FecAN, FocAN, FLNO3AN, FLNH4AN, FLPO4AN, FResPo4, FResNO3)
   names(FieldANOVAtables) <- c("Yield", "Nuptake", "Nrecovery", "Puptake", "Precovery", "SoilNO3", "SoilPO4", "ResinP", 
                                "WaterSolP", "pH", "EC", "OC", "SnowNO3", "SnowNH4", "SnowPO4", "ResinPO4", "ResinNO3")
-  write_xlsx(FieldANOVAtables, path = "FieldANOVAtables.xlsx")
+  write_xlsx(FieldANOVAtables, path="FieldANOVAtables.xlsx")
