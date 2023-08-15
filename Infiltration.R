@@ -60,7 +60,7 @@
     Infilsubraw$Slope <- as.numeric(Infilsubraw$S)
     Infilsubraw$Block <- factor(Infilsubraw$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
     Infilsubraw$Treatment <- factor(Infilsubraw$Treatment,levels = FieldTrt_order)
-# check data from Infilub
+# check data from Infilsub
     # Slopes calculated using philips model
     ggplot(Infilsubraw, aes(x=Treatment, y=Slope, fill=Treatment)) +
       geom_boxplot() +
@@ -105,25 +105,31 @@
     (Infilcurve_MultiRaw <- ggplot(Infiltrationraw, aes(x = TimeH, y = CI/10, fill=Block)) + #fill by block shows individual lines for each plot
       facet_wrap(~ Treatment, scales="free")+
       geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1) + # higher span reduces the curvature of the line
-      geom_point() +
+      geom_point() + # shows a smooth combined line for all plots
       labs(x = "Time (hours)", y = "Cumulative Infiltration (cm)")+
-      theme(axis.title = element_text(size=16, face="bold"), axis.text = element_text(size=12, face="bold"),
-              strip.text.x = element_text(size = 14, face="bold"), strip.background = element_blank(), legend.position = "bottom",
-              legend.key.size=unit(9,"mm"), legend.text=element_text(size=14, face="bold"), legend.title = element_blank()))
-    ggsave(Infilcurve_MultiRaw, file="Raw_InfiltrationMultiCurve.jpg", width=10, height=10, dpi=150) # shows a smooth combined line for all plots
+      theme(axis.title = element_text(size=18, face="bold"), axis.text = element_text(size=14, face="bold"),
+            strip.text.x = element_text(size = 14, face="bold"), strip.background = element_blank(), legend.position = "bottom",
+            legend.key.size=unit(9,"mm"), legend.text=element_text(size=14, face="bold"), legend.title = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(), panel.background = element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(Infilcurve_MultiRaw, file="Raw_InfiltrationMultiCurve.jpg", width=10, height=8, dpi=150) 
     (Infilcurve_SingleRaw <- ggplot(Infiltrationraw, aes(x = TimeH, y = CI/10)) +
         facet_wrap(~ Treatment, scales="free")+
         geom_smooth(method="loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1) +
         geom_point() +
-        labs(x = "Time (hours)", y = "Cumulative Infiltration (cm)"))
-    ggsave(Infilcurve_SingleRaw, file="Raw_InfiltrationSingleCurve.jpg", width=10, height=10, dpi=150)
+        labs(x = "Time (hours)", y = "Cumulative Infiltration (cm)")+
+        theme(axis.title = element_text(size=18, face="bold"), axis.text = element_text(size=14, face="bold"),
+              strip.text.x = element_text(size = 14, face="bold"), strip.background = element_blank(), legend.position = "bottom",
+              legend.key.size=unit(9,"mm"), legend.text=element_text(size=14, face="bold"), legend.title = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(), panel.background = element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(Infilcurve_SingleRaw, file="Raw_InfiltrationSingleCurve.jpg", width=10, height=8, dpi=150)
 # Check curves - outliers removed
-    (Infilcurve_MultiFinal <- ggplot(Infil, aes(x = Time, y = CI, fill=Block)) + #fill by block shows individual lines for each plot
-        facet_wrap(~ Treatment, scales="free")+
-        geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1) + # higher span reduces the curvature of the line
+    (Infilcurve_MultiFinal <- ggplot(Infil, aes(x = Time, y = CI, fill=Block)) + 
+        geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1) +
         geom_point() +
         labs(x = "Time (hours)", y = "Cumulative Infiltration (mm)"))
-    ggsave(Infilcurve_MultiFinal, file="OutlierRemoved_InfiltrationMultiCurve.jpg", width=10, height=10, dpi=150) # shows a smooth combined line for all plots
+    ggsave(Infilcurve_MultiFinal, file="OutlierRemoved_InfiltrationMultiCurve.jpg", width=10, height=10, dpi=150) 
     (Infilcurve_SingleFinal <- ggplot(Infil, aes(x = Time, y = CI)) +
         facet_wrap(~ Treatment, scales="free")+
         geom_smooth(method="loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1) +
@@ -223,24 +229,27 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
                        names_to = "Variable", values_to = "Value")
         View(InfilReady_long)
         color_palette <- c("darkred", "steelblue", "green4")
+        #transparent_palette <- alpha(color_palette, alpha = 0.8)  # Adjust the alpha value as needed (0 = fully transparent, 1 = fully opaque)
         InfilLegend <- c("Cumulative infiltration (CI)", "Measured infiltration", "Predicted CI")
         InfilReady_long$Treatment <- factor(InfilReady_long$Treatment,
                                             levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
                                             labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                                                      "TSP\nFertilizer"))
-        #transparent_palette <- alpha(color_palette, alpha = 0.8)  # Adjust the alpha value as needed (0 = fully transparent, 1 = fully opaque)
         (InfilPlot <- ggplot(InfilReady_long, aes(x=Time, y=Value, color=Variable)) + #fill by block shows individual lines for each plot
             facet_wrap(~ Treatment, scales="free")+
-            geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1) + # higher span reduces the curvature of the line
+            geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1, aes(fill=Variable)) + 
+                #aes(fill) sets the colour of the error bands
+                # higher span reduces the curvature of the line
                 # SE in geom_smooth adds the error band, can also use confidence band
-            scale_color_manual(values = color_palette, labels = InfilLegend) +
+            scale_color_manual(values = color_palette, labels = InfilLegend, guide="none") + # sets the colour of the lines
             labs(x = "Time (hours)", y = "Infiltration (cm)")+
-            theme(axis.title = element_text(size=16, face="bold"), axis.text = element_text(size=12, face="bold"),
+            theme(axis.title = element_text(size=18, face="bold"), axis.text = element_text(size=14, face="bold"),
               strip.text.x = element_text(size = 14, face="bold"), strip.background = element_blank(), legend.position = "bottom",
-              legend.key.size=unit(9,"mm"), legend.text=element_text(size=14, face="bold"), legend.title = element_blank()))
-        
-        ggsave(InfilPlot, file="Infiltration curves.jpg", width=10, height=10, dpi=150)
-        
+              legend.key.size=unit(9,"mm"), legend.text=element_text(size=14, face="bold"), legend.title = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(), panel.background = element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+        ggsave(InfilPlot, file="Infiltration curves.jpg", width=10, height=8, dpi=150)
+# warning related to blank outlier data for CI & I
 
 
 # OBTAIN ALL SLOPE AND INTERCEPT VALUES ----    

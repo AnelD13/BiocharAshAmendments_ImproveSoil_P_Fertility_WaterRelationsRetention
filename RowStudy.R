@@ -1,9 +1,9 @@
-##### Loading data in to R ####
+# Loading data in to R  & Summaries ----
 Rows<-read.csv("Rows.csv", fileEncoding="UTF-8-BOM")
 View(Rows)
 Rowsraw<-read.csv("Rowsraw.csv", fileEncoding="UTF-8-BOM")
 
-#Loading libraries
+## Loading libraries ----
 library(lme4)
 library(nlme)
 library(lmerTest)
@@ -33,7 +33,7 @@ library(RColorBrewer)
 library(writexl)
 library(openxlsx)
 
-##### Summary and ordering of data   ####
+## Summary and ordering of data ----
 #Check for missing values in a specific field
 missing <- colSums(is.na(Rows[,]))
 missing <- colSums(is.na(Rowsraw[,]))
@@ -41,8 +41,9 @@ print(missing)
 
 #Change columns in a dataframe: set order that treatments appear in any analysis and in figures
 # set to factors/categorical values, str displays 
-Rows$Treatment <- factor(Rows$Treatment,levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
-                                                 "MBMACoarse", "MBMAFine", "Phosphorus"))
+RowsTrt_order <-c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus")
+Rows$Treatment <- factor(Rows$Treatment,levels=RowsTrt_order)
+RowsTrt_sub <- c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus")
 Rows$Block <- factor(Rows$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
 Rows$Biomass <- as.numeric(as.character(Rows$Biomass)) #only set if issues happen when running analysis
 summary(Rows)
@@ -51,7 +52,7 @@ View(Rows) #view the object in a separate window (e.g. as a table)
 RowsMean <- summary_by(.~Treatment, data=Rows, FUN=mean, na.rm=TRUE)
 View(RowsMean)
 
-#####   Check for outliers   ####
+## Check for outliers ----
 ## Biomass
 ggplot(Rowsraw, aes(x = Treatment, y = Biomass, fill=Treatment)) +
   geom_boxplot() +
@@ -137,8 +138,9 @@ View(RowsSD)
 
 
 
-####  BIOMASS   ######
-# Skewness & kurtosis on biomass
+
+# PLANT ANALYSIS ----  
+##   Biomass   ----
 Bio_Mean <- summary_by(Biomass~Treatment+Block, data=Rows, FUN=mean) 
 Bio_Mean <- as.numeric(Bio_Mean$Biomass)
 Bio_skew <- skewness(Bio_Mean,na.rm=TRUE)
@@ -235,7 +237,7 @@ write.csv(ModRemBio_cld, file="Rows_Biomass.csv")
     labs(x = "Treatment", y = "Canola biomass (g)") +
     scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
                                 "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
-                                "Fertilizer\nPhosphorus"))+
+                                "TSP\nFertilizer"))+
     scale_y_continuous(limits = c(0, 750))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
@@ -250,7 +252,7 @@ ggsave(RowsBioPlot, file="Rows_biomass.jpg", width = 8, height = 8, dpi = 150)
 
 
 
-#####   N UPTAKE   ##########
+## N uptake   ----
 RowNup_Mean <- summary_by(Nuptake~Treatment+Block, data=Rows, FUN=mean) 
 RowNup_Mean <- as.numeric(RowNup_Mean$Nuptake)
 RowNup_skew <- skewness(RowNup_Mean,na.rm=TRUE)
@@ -339,7 +341,7 @@ write.csv(ModRemNup_cld, file="Rows_Nuptake.csv")
   labs(x = "Treatment", y = "N uptake (kg N/ha)") +
   scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
                               "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
-                              "Fertilizer\nPhosphorus"))+
+                              "TSP\nFertilizer"))+
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
         legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -352,7 +354,7 @@ write.csv(ModRemNup_cld, file="Rows_Nuptake.csv")
 ggsave(RowsNupPlot, file="Rows_Nuptake.jpg", width = 8, height = 8, dpi = 150)
 
 
-#####   N RECOVERY   ##########
+## N recovery   ----
 RowNrec_Mean <- summary_by(Nrecovery~Treatment+Block, data=Rows, FUN=mean) 
 RowNrec_Mean <- as.numeric(RowNrec_Mean$Nrecovery)
 RowNrec_skew <- skewness(RowNrec_Mean,na.rm=TRUE)
@@ -430,7 +432,7 @@ write.csv(ModRemNrec_cld, file="Rows_Nrecovery.csv")
     scale_y_continuous(limits=c(-1.5, 8.5))+
     labs(x = "Treatment", y = "% Nitrogen recovery") +
     scale_x_discrete(labels = c("Control2", "Canola\nMeal", "Manure", "Willow", "Meat and Bone\nMeal - Coarse",
-                                "Meat and Bone\nMeal - Fine", "Fertilizer\nPhosphorus"))+
+                                "Meat and Bone\nMeal - Fine", "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
         legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -444,7 +446,7 @@ ggsave(RowsNrecPlot, file="Rows_Nrecovery.jpg", width = 8, height = 8, dpi = 150
 
 
 
-#####   P UPTAKE   ##########
+## P uptake   ----
 RowPup_Mean <- summary_by(Puptake~Treatment+Block, data=Rows, FUN=mean) 
 RowPup_Mean <- as.numeric(RowPup_Mean$Puptake)
 RowPup_skew <- skewness(RowPup_Mean,na.rm=TRUE)
@@ -522,7 +524,7 @@ write.csv(ModRemPup_cld, file="Rows_Puptake.csv")
   labs(x = "Treatment", y = "P uptake (kg N/ha)") +
   scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
                               "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
-                              "Fertilizer\nPhosphorus"))+
+                              "TSP\nFertilizer"))+
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
         legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -537,7 +539,7 @@ ggsave(RowsPupPlot, file="Rows_Puptake.jpg", width = 8, height = 8, dpi = 150)
 
 
 
-#####   P RECOVERY   ##########
+## N recovery   ----
 RowPrec_Mean <- summary_by(Precovery~Treatment+Block, data=Rows, FUN=mean) 
 RowPrec_Mean <- as.numeric(RowPrec_Mean$Precovery)
 RowPrec_skew <- skewness(RowPrec_Mean,na.rm=TRUE)
@@ -614,7 +616,7 @@ write.csv(ModRemPrec_cld, file="Rows_Precovery.csv")
     scale_y_continuous(limits=c(-2,3))+
     labs(x = "Treatment", y = "% Phosphorus recovery") +
     scale_x_discrete(labels = c("Canola\nMeal", "Manure", "Willow", "Meat and Bone\nMeal - Coarse",
-                                "Meat and Bone\nMeal - Fine", "Fertilizer\nPhosphorus"))+
+                                "Meat and Bone\nMeal - Fine", "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
           axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -628,7 +630,8 @@ ggsave(RowsPrecPlot, file="Rows_Precovery.jpg", width = 8, height = 8, dpi = 150
 
 
 
-#####   NO3   ##########
+# SOIL ANALYSIS ----
+## Soil NO3 ----
 RowNO3_Mean <- summary_by(NO3~Treatment+Block, data=Rows, FUN=mean) 
 RowNO3_Mean <- as.numeric(RowNO3_Mean$NO3)
 RowNO3_skew <- skewness(RowNO3_Mean,na.rm=TRUE)
@@ -669,7 +672,7 @@ write.csv(ModRemNO3_cld, file="Rows_NO3.csv")
 
 
 
-#####   PO4   ##########
+## Soil PO4 ----
 RowPO4_Mean <- summary_by(PO4~Treatment+Block, data=Rows, FUN=mean) 
 RowPO4_Mean <- as.numeric(RowPO4_Mean$PO4)
 RowPO4_skew <- skewness(RowPO4_Mean,na.rm=TRUE)
@@ -710,7 +713,7 @@ write.csv(ModRemPO4_cld, file="Rows_PO4.csv")
 
 
 
-#####   RESIN P   ##########
+## Soil Resin P ----
 RowResP_Mean <- summary_by(ResinP~Treatment+Block, data=Rows, FUN=mean) 
 RowResP_Mean <- as.numeric(RowResP_Mean$ResinP)
 RowResP_skew <- skewness(RowResP_Mean,na.rm=TRUE)
@@ -754,7 +757,7 @@ write.csv(ModREMResP1_cld, file="Rows_resinP.csv")
 
 
 
-#####   WATER SOLUBLE P   ##########
+## Soil Water Soluble P ----
 RowWSP_Mean <- summary_by(WatSolP~Treatment+Block, data=Rows, FUN=mean) 
 RowWSP_Mean <- as.numeric(RowWSP_Mean$WatSolP)
 RowWSP_skew <- skewness(RowWSP_Mean,na.rm=TRUE)
@@ -796,7 +799,7 @@ write.csv(ModRemWSP_cld, file="Rows_WatSolP.csv")
 
 
 
-#####   PH   ##########
+## Soil pH ----
 RowpH_Mean <- summary_by(pH~Treatment+Block, data=Rows, FUN=mean) 
 RowpH_Mean <- as.numeric(RowpH_Mean$pH)
 RowpH_skew <- skewness(RowpH_Mean,na.rm=TRUE)
@@ -837,7 +840,7 @@ write.csv(ModRempH1_cld, file="Rows_pH.csv")
 
 
 
-#####   ELECTRICAL CONDUCTIVITY   ##########
+## Soil EC ----
 RowEC_Mean <- summary_by(EC~Treatment+Block, data=Rows, FUN=mean) 
 RowEC_Mean <- as.numeric(RowEC_Mean$EC)
 RowEC_skew <- skewness(RowEC_Mean,na.rm=TRUE)
@@ -887,7 +890,7 @@ write.csv(ModRemEC1_cld, file="Rows_EC.csv")
 
 
 
-#####   ORGANIC CARBON   ##########
+## Soil Organic Carbon ----
 RowOC_Mean <- summary_by(OC~Treatment, data=Rows, FUN=mean) 
 View(RowOC_Mean)
 RowOC_Mean <- as.numeric(RowOC_Mean$OC)
@@ -982,8 +985,8 @@ write.xlsx(ModRemOC1_cld, file="Rows_OC.xlsx")
 
 
 
-####  Covariance heat maps  ####
-#####   Yield  #####
+# COVARIANCE HEAT MAPS ----
+## Yield ----
 RowsCovVar <- c("Biomass", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
 RowsCovYield <- subset(Rows, select=c("Treatment", RowsCovVar), 
                       na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1012,12 +1015,12 @@ YieldCovRows_df <- lapply(seq_along(YieldCov_Rows), function(i) {
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovRows_dfAll <- do.call(rbind, YieldCovRows_df)
 YieldCovRows_dfAll$Var1 <- factor(YieldCovRows_dfAll$Var1, levels=RowsCovVar, labels=c("Biomass"="Yield", "NO3"="NO3", 
-                  "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                  "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="OC"))
 YieldCovRows_dfAll$variable <- factor(YieldCovRows_dfAll$variable, levels=RowsCovVar, labels=
                   c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P",
-                    "pH"="pH", "EC"="EC", "OC"="% SOC"))
+                    "pH"="pH", "EC"="EC", "OC"="OC"))
 YieldCovRows_dfAll$treatment <- factor(YieldCovRows_dfAll$treatment, 
-           levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+           levels=RowsTrt_order,
            labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                     "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovRows_RmTrt <- c("Control 1", "Control 2")
@@ -1027,27 +1030,21 @@ write.csv(YieldCovRows_dfAll, file="Rows_YieldCov.csv")
 (YieldCovRowsHeat <- ggplot(YieldCovRows_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
-    facet_wrap(~ treatment, nrow=2, scales="fixed") +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
     scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
-    theme(legend.title=element_text(size=20, face="bold"),
-          legend.key.size=unit(15,"mm"),
-          legend.text=element_text(size=20), 
-          strip.text=element_text(size=26, face="bold"),
-          strip.placement="outside",
-          strip.background=element_blank(),
-          strip.text.y=element_text(angle=0, vjust=0.5),
-          strip.text.x=element_text(vjust=1),
-          axis.line=element_blank(),
+    labs(x="", y="")+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+          strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(), panel.spacing.x=unit(1, "cm"),
           axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
-          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
-          panel.spacing.x=unit(1, "cm"))+
-    labs(x="", y=""))
-ggsave(YieldCovRowsHeat, file="Rows_YieldCovHeat.jpg", width=24, height=14, dpi=150)
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold")))
+ggsave(YieldCovRowsHeat, file="Rows_YieldCovHeat.jpg", height=18, width=18, dpi=150)
 
 
 
-#####   Uptake  #####
+## Uptake ----
 UptakeCovVar <- c("Puptake", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
 RowsCovUptake <- subset(Rows, select=c("Treatment", UptakeCovVar), 
                         na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1078,12 +1075,12 @@ UptakeCovRows_df <- lapply(seq_along(UptakeCov_Rows), function(i) {
 UptakeCovRows_dfAll <- do.call(rbind, UptakeCovRows_df)
 UptakeCovRows_dfAll$Var1 <- factor(UptakeCovRows_dfAll$Var1, levels=UptakeCovVar, labels=c("Biomass"="Yield", 
                   "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
-                  "OC"="% SOC"))
+                  "OC"="OC"))
 UptakeCovRows_dfAll$variable <- factor(UptakeCovRows_dfAll$variable, levels=UptakeCovVar, labels= c("Biomass"="Yield", 
                   "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC", 
-                  "OC"="% SOC"))
+                  "OC"="OC"))
 UptakeCovRows_dfAll$treatment <- factor(UptakeCovRows_dfAll$treatment, 
-            levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+            levels=RowsTrt_order,
             labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                      "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovRows_RmTrt <- c("Control 1", "Control 2")
@@ -1096,22 +1093,16 @@ write.csv(UptakeCovRows_dfAll, file="Rows_UptakeCov.csv")
     facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
     scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
-    theme(legend.title=element_text(size=20, face="bold"),
-          legend.key.size=unit(15,"mm"),
-          legend.text=element_text(size=20), 
-          strip.text=element_text(size=26, face="bold"),
-          strip.placement="outside",
-          strip.background=element_blank(),
-          strip.text.y=element_text(angle=0, vjust=0.5),
-          strip.text.x=element_text(vjust=1),
-          axis.line=element_blank(),
+    labs(x="", y="")+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+          strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(), panel.spacing.x=unit(1, "cm"),
           axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
-          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
-          panel.spacing.x=unit(1, "cm"))+
-    labs(x="", y=""))
-ggsave(UptakeCovRowsHeat, file="Rows_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold")))
+ggsave(UptakeCovRowsHeat, file="Rows_UptakeCovHeat.jpg", width=18, height=18, dpi=150)
 
-#####   P Recovery  #####
+## P Recovery ----
 RecoveryCovVar <- c("Precovery", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
 RowsCovRecovery <- subset(Rows, select=c("Treatment", RecoveryCovVar), 
                         na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1144,13 +1135,13 @@ RecoveryCovRows_df <- lapply(seq_along(RecoveryCov_Rows), function(i) {
 RecoveryCovRows_dfAll <- do.call(rbind, RecoveryCovRows_df)
 RecoveryCovRows_dfAll$Var1 <- factor(RecoveryCovRows_dfAll$Var1, levels=RecoveryCovVar, 
                                      labels= c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P", 
-                                               "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                                               "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="OC"))
 RecoveryCovRows_dfAll$variable <- factor(RecoveryCovRows_dfAll$variable, levels=RecoveryCovVar, 
                                          labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
                                                   "WatSolP"="Soluble P", "ResinP"="Resin P","pH"="pH", "EC"="EC",
-                                                  "OC"="% SOC"))
+                                                  "OC"="OC"))
 RecoveryCovRows_dfAll$treatment <- factor(RecoveryCovRows_dfAll$treatment, 
-                 levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                 levels=RowsTrt_sub,
                  labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                           "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovRows_RmTrt <- c("Control 1", "Control 2")
@@ -1163,23 +1154,17 @@ write.csv(RecoveryCovRows_dfAll, file="Rows_RecoveryCov.csv")
     facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
     scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
-    theme(legend.title=element_text(size=20, face="bold"),
-          legend.key.size=unit(15,"mm"),
-          legend.text=element_text(size=20), 
-          strip.text=element_text(size=26, face="bold"),
-          strip.placement="outside",
-          strip.background=element_blank(),
-          strip.text.y=element_text(angle=0, vjust=0.5),
-          strip.text.x=element_text(vjust=1),
-          axis.line=element_blank(),
+    labs(x="", y="")+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+          strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(), panel.spacing.x=unit(1, "cm"),
           axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
-          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
-          panel.spacing.x=unit(1, "cm"))+
-    labs(x="", y=""))
-ggsave(RecoveryCovRowsHeat, file="Rows_RecoveryCovHeat.jpg", width=20, height=20, dpi=150)
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold")))
+ggsave(RecoveryCovRowsHeat, file="Rows_RecoveryCovHeat.jpg", width=18, height=18, dpi=150)
 
 
-####   Yield to N & P Recovery  ####
+# YIELD TO N & P RECOVERY ----
 Rows$Treatment <- as.factor(Rows$Treatment)
 Rows$Biomass <- as.numeric(Rows$Biomass)
 Rows$Nrecovery <- as.numeric(Rows$Nrecovery)
@@ -1187,14 +1172,12 @@ Rows$Precovery <- as.numeric(Rows$Precovery)
 RowsContourSub <- subset(Rows, Treatment != "Control1" & Treatment != "Control2", select = c(Block, Treatment, 
                         Biomass, Nrecovery, Precovery))
 View(RowsContourSub)
-RowsContourSub$Treatment <- factor(RowsContourSub$Treatment, levels=c("CanolaMeal", "Manure", "Willow", 
-                                    "MBMACoarse", "MBMAFine", "Phosphorus"),
+RowsContourSub$Treatment <- factor(RowsContourSub$Treatment, levels=RowsTrt_sub,
                labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", 
                         "TSP Fertilizer"))
 View(RowsContourSub)
 RowsContourExcl <- na.exclude(RowsContourSub)
 View(RowsContourExcl)
-
 RowsContourMod <- glmmTMB(Biomass ~ Nrecovery + Precovery + Treatment + (1|Block), data = RowsContourExcl, 
                            na.action=na.exclude)
 summary(RowsContourMod)
@@ -1217,18 +1200,18 @@ View(RowsContour_grid)
     facet_wrap(~Treatment, nrow = 5) +
     scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
     labs(x = "% N Recovery", y = "% P Recovery", fill = "Yield\n(kg/ha)") +
-    theme(legend.title=element_text(size=25, face="bold"), legend.key.size=unit(15, "mm"),
-          legend.text=element_text(size=20),
+    theme(legend.title=element_text(size=28, face="bold"), legend.key.size=unit(15, "mm"),
+          legend.text=element_text(size=25),
           strip.text=element_text(size=30, face="bold"), strip.placement="outside",
           strip.background=element_blank(), strip.text.x=element_text(vjust=1),
-          axis.text=element_text(size=30), axis.title=element_text(size=35, face="bold"),
+          axis.text=element_text(size=25), axis.title=element_text(size=35, face="bold"),
           panel.spacing=unit(0.5, "cm")))
-ggsave(RowsContours, file="Rows_YieldContour.jpg", width=15, height=18, dpi=150)
+ggsave(RowsContours, file="Rows_YieldContour.jpg", width=18, height=20, dpi=150)
 
 
 
 
-#### Correlation & eigenvalues  ####
+# PCA & EIGENVALUES  ####
 RowsEigenMatrix <- Rows[complete.cases(Rows), c("Nuptake", "Puptake", "NO3", "PO4", "WatSolP", "ResinP", 
                                                 "pH", "EC", "OC"),]
 RowsEigenCor <- cor(RowsEigenMatrix)
@@ -1240,7 +1223,7 @@ round(RowsEigenPrin$loadings[, 1:2], 3)
 
 
 
-####  Correlate char P to residual soil P  ####
+# CORRELATE CHAR P TO SOIL P ----
 #set up new dataframe with repeated values for treatment & char %. Does not correlate
 RowsCharPdf <- data.frame(Treatment=Rows$Treatment,
                           PO4=Rows$PO4,
@@ -1277,12 +1260,12 @@ print(RowsCharHeatMat)
 RowsCharCor3 <- RowsCharPdf %>%
   group_by(Treatment) %>%
   summarize(Correlation = cor(CharPerc, PO4, use = "complete.obs"), .groups = "drop")
-RowsCharCor3$Treatment <- factor(RowsCharCor3$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+RowsCharCor3$Treatment <- factor(RowsCharCor3$Treatment, levels=RowsTrt_sub,
                                labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
                                         "TSP\nFertilizer"))
 print(RowsCharCor3)
 
-# visualize correlation using heatmap
+# visualize correlation using ggplot
 (RowsCharHeatPlot <- ggplot(RowsCharCor3, aes(x=Treatment, y=0.5, fill=Correlation)) +
     geom_point(data=RowsCharCor3, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
     scale_size(range = c(30,45)) +
@@ -1305,25 +1288,7 @@ print(RowsCharCor3)
     labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4]))))
 
 ## heatmap didn't work - needs more than one row        
-  #heatmap(RowsCharHeatMat, col=viridis(n = 100, option = "D"), cex.main = 1.5, cex.axis = 0.8, cex.lab = 0.8,
-  # key.title = "Correlation", key.xlab = "", key.ylab = "", trace = "none", margin = c(6, 10)))
-
-# correlation matrix by treatment
-## doesn't work with plot
-  #print(RowsCharCor3 <- by(RowsCharPdf2, RowsCharPdf2$Treatment, function(x) cor(x$CharPerc, x$PO4, 
-    #                         use = "pairwise.complete.obs")))
-  # Correlation matrix - no treatment names, code not completed
-  #RowsCharCor4 <- cor(RowsCharPdf2[, c("CharPerc", "PO4")])
-  #print(RowsCharCor2)
-  # visualize correlation
-  #jpeg("Rows_CharCorPlot.jpg", width = 8, height = 5, units = "in", res = 300)
-  #corrplot(RowsCharCor4, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
-  #         col=viridis(n = 100, option = "D"))
-  #axis_labels <- levels(RowsCharPdf2$Treatment)
-  #axis(1, at = 1:length(axis_labels), labels = axis_labels, las = 2)
-  #axis(2, at = 1:length(axis_labels), labels = axis_labels, las = 2)
-  #dev.off()
-
+ 
 ## correlate P recovery to to %P in char
 RowsRecPdf <- data.frame(Treatment=Rows$Treatment,
                           Precovery=Rows$Precovery,
@@ -1334,7 +1299,7 @@ print(RowsRecPdf)
 RowsRecCor <- RowsRecPdf %>%
   group_by(Treatment) %>%
   summarize(Correlation = cor(Precovery, CharPerc, use = "complete.obs"), .groups = "drop")
-RowsRecCor$Treatment <- factor(RowsRecCor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+RowsRecCor$Treatment <- factor(RowsRecCor$Treatment, levels=RowsTrt_sub,
                                labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
                                         "TSP\nFertilizer"))
 print(RowsRecCor)
@@ -1370,8 +1335,7 @@ print(RowsPO4Pdf)
 RowsPO4Cor <- RowsPO4Pdf %>%
   group_by(Treatment) %>%
   summarize(Correlation = cor(Precovery, PO4, use = "complete.obs"), .groups = "drop")
-RowsPO4Cor$Treatment <- factor(RowsPO4Cor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse",
-                                                              "MBMAFine", "Phosphorus"),
+RowsPO4Cor$Treatment <- factor(RowsPO4Cor$Treatment, levels=RowsTrt_sub,
                                  labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse",
                                           "Meat and\nBonemeal-\nFine", "TSP\nFertilizer"))
 print(RowsPO4Cor)
@@ -1404,9 +1368,9 @@ print(RowsPO4Cor)
 ggsave(RowsCharRecPO4_plot, file="Rows_CharPO4Prec_combined.jpg", width=15, height=9, dpi=150)
 
 
-####  Extract ANOVA tables  ####
+# EXTRACT ANOVA TABLES ----
 ModRBio5 <- lme(Biomass ~ Treatment, random=~1|Block, data=Rows)
-RYieldAN <- anova(ModRBio5)
+RYieldAN <- Anova(ModRBio5, type="III")
 RYieldAN$RowNames <- row.names(RYieldAN)
 rownames(RYieldAN) <- NULL
 
@@ -1461,13 +1425,12 @@ RecAN$RowNames <- row.names(RecAN)
 rownames(RecAN) <- NULL
 
 ModROC5 <- lme(OC ~ Treatment, random=~1|Block, data=Rows, na.action=na.exclude)
-RocAN <- anova(ModROC5)
+RocAN <- Anova(ModROC5, type="III")
 RocAN$RowNames <- row.names(RocAN)
 rownames(RocAN) <- NULL
 
 
-RowsANOVAtables <- list(RYieldAN, RNupAN, RNrecAN, RPupAN, RPrecAN, RNO3AN, RPO4AN, RResPAN, RWSPAN,
-                         RpHAN, RecAN, RocAN)
+RowsANOVAtables <- list(RYieldAN, RNupAN, RNrecAN, RPupAN, RPrecAN, RNO3AN, RPO4AN, RResPAN, RWSPAN, RpHAN, RecAN, RocAN)
 names(RowsANOVAtables) <- c("Yield", "Nuptake", "Nrecovery", "Puptake","Precovery", "NO3", "PO4", 
                              "ResinP", "WaterSolP", "pH", "EC", "OC")
 write_xlsx(RowsANOVAtables, path = "RowsANOVAtables.xlsx")

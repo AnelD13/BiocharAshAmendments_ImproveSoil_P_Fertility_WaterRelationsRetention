@@ -103,7 +103,7 @@
     } # use later during skewness and kurtosis determination
 
     
-##  Check for outliers   ----
+## Check for outliers   ----
   #Straw
     ggplot(Fieldraw, aes(x=Treatment, y=FStraw, fill=Treatment)) +
       geom_boxplot() +
@@ -335,7 +335,7 @@
 
 
 # PLANT ANALYSIS ----  
-##   Straw   ----
+## Straw   ----
   FieldStraw_Mean <- summary_by(FStraw~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE))
   FieldStraw_Mean <- as.numeric(FieldStraw_Mean$FStraw, na.rm=TRUE)
   FieldStraw_skew <- skewness(FieldStraw_Mean, na.rm=TRUE)
@@ -397,7 +397,7 @@
 
 
 
-##   Grain   ----
+## Grain   ----
   FieldGrain_Mean <- summary_by(FGrain~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE))
   FieldGrain_Mean <- as.numeric(FieldGrain_Mean$FGrain)
   FieldGrain_skew <- skewness(FieldGrain_Mean, na.rm=TRUE)
@@ -462,7 +462,7 @@
   write_xlsx(ModFGrainem_cld, path="Field_Grain.xlsx")
 
 
-##   Biomass   ----
+## Biomass   ----
   FieldYield_Mean <- summary_by(Yield~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE))
   FieldYield_Mean <- as.numeric(FieldYield_Mean$Yield)
   FieldYield_skew <- skewness(FieldYield_Mean, na.rm=TRUE)
@@ -608,7 +608,7 @@
     ggsave(FieldYield2, file="Field_Yield2.jpg", width = 10, height = 8, dpi = 150)
 
 
-##   N uptake   ----
+## N uptake   ----
   FieldNup_Mean <- summary_by(Nuptake~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldNup_Mean <- as.numeric(FieldNup_Mean$Nuptake)
   FieldNup_skew <- skewness(FieldNup_Mean,na.rm=TRUE)
@@ -693,7 +693,7 @@
   ggsave(FieldNup_plot, file="Field_Nuptake.jpg", width=8, height=8, dpi=150)
 
 
-##   N recovery   ----
+## N recovery   ----
   FieldNrec_Mean <- summary_by(Nrecovery~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldNrec_Mean <- as.numeric(FieldNrec_Mean$Nrecovery)
   FieldNrec_skew <- skewness(FieldNrec_Mean,na.rm=TRUE)
@@ -727,26 +727,30 @@
   summary(ModFieldNrec1)
   performance::r2(ModFieldNrec1) # NA for full model - singularity with random effects
   # ModFieldNrec2 - has only 3 degrees of freedom
-  ModFieldNrec2 <- lme(Nuptake~Treatment,random=~1|Block, data=FNrec_out)
+  ModFieldNrec2 <- lme(Nrecovery~Treatment, random=~1|Block, data=FNrec_out)
   anova(ModFieldNrec2)  #  significant differences
   summary(ModFieldNrec2)
   rsq.lmm(ModFieldNrec2) #0.179
+  # ModFieldNRec3 - singularity issues
+  ModFieldNRec3 <- lmer(Nrecovery~Treatment+(1|Block),data=FNrec_out)
+  Anova(ModFieldNRec3, type="III") # no significant differences
+  summary(ModFieldNRec3)
+  rsq(ModFieldNRec3) # 0.177
 # Comparing models
   # Rsq = 
   # AIC & BIC
-  FNrec_modlist <- list(ModFieldNrec1, ModFieldNrec2)
+  FNrec_modlist <- list(ModFieldNrec1, ModFieldNrec2, ModFieldNRec3)
   AIC_values <- sapply(FNrec_modlist, AIC)
   BIC_values <- sapply(FNrec_modlist, BIC)
-  N_AB <- data.frame(Model=c("ModFieldNrec1", "ModFieldNrec2"), AIC_values, BIC_values)
-  print(N_AB)
+  (N_AB <- data.frame(Model=c("ModFieldNrec1", "ModFieldNrec2", "ModFieldNRec3"), AIC_values, BIC_values))
     # Model AIC_values BIC_values
     #1 ModFieldNrec1  165.2383   172.2084 - best AIC/BIC model but with singularity issues it is not the best choice
-    #2 ModFieldNrec2  142.2151   147.1715
+    #2 ModFieldNrec2  138.6754   143.6318 - only 3 df
+    #3 ModFieldNRec3  138.6754   145.6456 -  15df, chosen as best model
 #emmeans 
-  (ModFieldNrecem <- emmeans(ModFieldNrec2,~Treatment, alpha=0.1)) # can also do model,~Soil or other
+  (ModFieldNrecem <- emmeans(ModFieldNRec3,~Treatment, alpha=0.1, type="response", infer=TRUE)) # can also do model,~Soil or other
   #ModFieldNrecem_contrast <- contrast(ModFieldNrecem, method = "tukey") # obtain t & p values, removes upper & lower conf int data
-  (ModFieldNrecem_cld <- cld(ModFieldNrecem, Letters=letters, type="response", reversed=TRUE))
-  View(ModFieldNrecem_cld)
+  (ModFieldNrecem_cld <- cld(ModFieldNrecem, Letters=letters, reversed=TRUE))
   write_xlsx(ModFieldNrecem_cld, path="Field_Nrecovery.xlsx")
 # Visualizations
     (FielNrecPlot <- ggplot(ModFieldNrecem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
@@ -772,7 +776,7 @@
 
 
 
-##   P uptake  ----
+## P uptake  ----
   FieldPup_Mean <- summary_by(Puptake~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldPup_Mean <- as.numeric(FieldPup_Mean$Puptake)
   FieldPup_skew <- skewness(FieldPup_Mean,na.rm=TRUE)
@@ -854,7 +858,7 @@
 
 
 
-##  P recovery   ----
+## P recovery   ----
   FieldPrec_Mean <- summary_by(Precovery~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
   FieldPrec_Mean <- as.numeric(FieldPrec_Mean$Precovery)
   FieldPrec_skew <- skewness(FieldPrec_Mean,na.rm=TRUE)
@@ -922,7 +926,7 @@
 # SOIL ANALYSIS ----
   ### Soils at 3 different depths will be analysed for differences as well as auto-correlated
   SoilResidue_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP","TSP\nFertilizer")
-##   Soil NO3   ----
+## Soil NO3   ----
   # Calculating skewness and kurtosis
   NO3var_names <- c("NO3_10", "NO3_20", "NO3_30") # Specify the variable names to calculate stats for
   (NO3_stats_all <- Field_stats(Field, NO3var_names))  # Call the function
@@ -1008,7 +1012,7 @@
   ggsave(FieldNO3Plot, file="Field_soilNO3.jpg", height=8, width = 11, dpi=150)
 
 
-##  Soil PO4   ----
+## Soil PO4   ----
   # Calculating skewness and kurtosis
   PO4_VarNames <- c("PO4_10", "PO4_20", "PO4_30") # Specify the variable names to calculate stats for
   (PO4_stats_all <- Field_stats(Field, PO4_VarNames))
@@ -1125,7 +1129,7 @@
       summarise(acf = acf(PO4))
     print(PO4acf)
 
-###  Cross-correlation  ----
+### Cross-correlation  ----
     # This method correlates the relationship between each depth and the next
     # need to subtract and add very small values to create variation in dataset
     PO4_sub_var <- PO4_long_sub %>%
@@ -1165,7 +1169,7 @@
       ggtitle("Cross-correlation of PO4 across Depths by Treatment")
     
     
-##  Water soluble P   ----
+## Soil Water soluble P   ----
     # Skewness and kurtosis
     WSP_VarNames <- c("WatSolP_10", "WatSolP_20", "WatSolP_30") # Specify the variable names to calculate stats for
     (WSP_stats_all <- Field_stats(Field, WSP_VarNames))
@@ -1264,7 +1268,7 @@
 
 
 
-##  Soil resin P   ----
+## Soil resin P   ----
   # Skewness and kurtosis
     ResP_VarNames <- c("ResinP_10", "ResinP_20", "ResinP_30") 
     (ResP_stats_all <- Field_stats(Field, ResP_VarNames))
@@ -1361,7 +1365,7 @@
 
 
 
-##  pH   ----
+## Soil pH ----
   # Skewness and kurtosis
     pH_VarNames <- c("pH_10", "pH_20", "pH_30") 
     (pH_stats_all <- Field_stats(Field, pH_VarNames))
@@ -1445,7 +1449,7 @@
 
 
 
-##   Electrical conductivity   ----
+## Soil EC ----
     # Skewness and kurtosis
       EC_VarNames <- c("EC_10", "EC_20", "EC_30") 
       (EC_stats_all <- Field_stats(Field, EC_VarNames))
@@ -1543,7 +1547,7 @@
 
 
 
-##  Organic carbon   ----
+## Soil Organic carbon ----
   # Skewness and kurtosis
     OC_VarNames <- c("OC_10", "OC_20", "OC_30")
     (OC_stats_all <- Field_stats(Field, OC_VarNames))
@@ -1642,13 +1646,13 @@
      (FresidPlot <- plot_grid(FieldPO4Plot, FieldWSPPlot, FieldResPPlot, FieldOCPlot, FieldpHPlot, FieldECPlot, nrow=3, ncol=2,
                labels = c("A", "B", "C", "D", "E", "F"), label_size = 35, label_x = c(0.11,0.1,0.13,0.12,0.12,0.14)))
      (FresidPlot_label <- ggdraw()+draw_plot(FresidPlot)+ draw_label("Treatment", y=0.02, size=30, fontface="bold"))
-     ggsave("Combined residual soil.jpg", height=24, width=20, dpi=150)
+     ggsave("Combined residual soil.jpg", height=20, width=18, dpi=150)
      
      
 
 # SNOWMELT ----
 Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP","TSP\nFertilizer")
-##  NO3 load    ----
+## NO3 load ----
     print(LNO3_stats <- Field_stats(Field, "LNO3"))
           #skewness kurtosis
           #1 0.6142101 2.395002
@@ -1722,7 +1726,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
 
 
 
-##  NH4 load  ----
+## NH4 load ----
   print(LNH4_stats <- Field_stats(Field, "LNH4"))
         #skewness kurtosis
         #1 2.057661 6.962457
@@ -1801,7 +1805,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   emmip(ModFieldLNH4c, ~Treatment)
   write_xlsx(ModFieldemLNH4_cld, path="Field_snowNH4.xlsx")
 
-##  Resin NO3 load ----
+## Resin NO3 load ----
   print(ResNO3_stats <- Field_stats(Field, "ResinNO3"))
           #skewness kurtosis
           #1 1.943068  7.00508
@@ -1884,7 +1888,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
     ggsave("Field_snowNitrogen.jpg", height=7, width=14, dpi=150)
     
 
-##  PO4 load ----
+## PO4 load ----
     print(LPO4_stats <- Field_stats(Field, "LPO4"))
           #skewness kurtosis
           #1 3.058225 12.68079
@@ -1988,7 +1992,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
     ggsave(LPO4statsplot, file="Field_snowPO4_curiosity plot.jpg", width=12, height=8, dpi=150)
     
     
-##  Resin PO4 load ----
+## Resin PO4 load ----
   print(ResPO4_stats <- Field_stats(Field, "ResinPO4"))
           #skewness kurtosis
           #1 1.797786 6.074146
@@ -2076,7 +2080,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
               panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
     
   
-##  Plotting Snowmelt load ----
+## Plotting Snowmelt load ----
 #create and combine data frames for the emmeans functions
   emPO4 <- as.data.frame(ModFieldLPO4em_cld)
   emResP <- as.data.frame(ModFieldemResPO4_cld)
@@ -2114,7 +2118,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
 
 
 # COVARIANCE HEAT MAPS ----
-##   Yield  ----
+## Yield  ----
   FieldCovVar <- c("Yield", "NO3_10", "PO4_10", "WatSolP_10", "ResinP_10", "pH_10", "EC_10", "OC_10")
   FieldCovYield <- subset(Field, select=c("Treatment", FieldCovVar), 
                          na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -2144,42 +2148,36 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   YieldCovField_dfAll <- do.call(rbind, YieldCovField_df)
   YieldCovField_dfAll$Var1 <- factor(YieldCovField_dfAll$Var1, levels=FieldCovVar, 
                                      labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P",
-                                              "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                                              "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="OC"))
   YieldCovField_dfAll$variable <- factor(YieldCovField_dfAll$variable, levels=FieldCovVar, 
                                          labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
                                                   "WatSolP"="Soluble P", "ResinP"="Resin P", "pH"="pH", 
-                                                  "EC"="EC", "OC"="% SOC"))
+                                                  "EC"="EC", "OC"="OC"))
   YieldCovField_dfAll$treatment <- factor(YieldCovField_dfAll$treatment,
                                           levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
                                                    "Biochar10thaTSP", "Phosphorus"),
                                           labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
-                                                   "Biochar 10t/ha", "Biochar 10t/ha & TSP", "Phosphorus Fertilizer"))
+                                                   "Biochar 10t/ha", "Biochar 10t/ha & TSP", "TSP Fertilizer"))
   write_xlsx(YieldCovField_dfAll, path="Field_YieldCov.xlsx")
 # ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
   (YieldCovFieldHeat <- ggplot(YieldCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
       geom_tile() +
-      scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.4, 3.3), breaks=seq(-2.4, 3.3, by=1)) +
+      scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.9, 3.8), breaks=seq(-2.9, 3.8, by=1)) +
       facet_wrap(~ treatment, nrow=3, scales="fixed") +
       geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
       scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
-      theme(legend.title=element_text(size=20, face="bold"),
-            legend.key.size=unit(15,"mm"),
-            legend.text=element_text(size=20), 
-            strip.text=element_text(size=26, face="bold"),
-            strip.placement="outside",
-            strip.background=element_blank(),
-            strip.text.y=element_text(angle=0, vjust=0.5),
-            strip.text.x=element_text(vjust=1),
-            axis.line=element_blank(),
+      labs(x="", y="")+
+      theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+            strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+            strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
+            axis.line=element_blank(), panel.spacing.x=unit(1, "cm"),
             axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
-            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
-            panel.spacing.x=unit(1, "cm"))+
-      labs(x="", y=""))
+            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold")))
   ggsave(YieldCovFieldHeat, file="Field_YieldCovHeat.jpg", width=20, height=20, dpi=150)
 
 
 
-##   Uptake  ----
+## Uptake  ----
   FieldUptakeCovVar <- c("Puptake",  "NO3_10", "PO4_10", "WatSolP_10", "ResinP_10", "pH_10", "EC_10", "OC_10")
   FieldCovUptake <- subset(Field, select=c("Treatment", FieldUptakeCovVar), 
                           na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -2210,40 +2208,34 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   UptakeCovField_dfAll <- do.call(rbind, UptakeCovField_df)
   UptakeCovField_dfAll$Var1 <- factor(UptakeCovField_dfAll$Var1, levels=FieldUptakeCovVar, 
                                      labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P",
-                                              "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                                              "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="OC"))
   UptakeCovField_dfAll$variable <- factor(UptakeCovField_dfAll$variable, levels=FieldUptakeCovVar, 
                                          labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
                                                   "WatSolP"="Soluble P", "ResinP"="Resin P", "pH"="pH", 
-                                                  "EC"="EC", "OC"="% SOC"))
+                                                  "EC"="EC", "OC"="OC"))
   UptakeCovField_dfAll$treatment <- factor(UptakeCovField_dfAll$treatment,
                                           levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
                                                    "Biochar10thaTSP", "Phosphorus"),
                                           labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
-                                                   "Biochar 10t/ha", "Biochar 10t/ha & TSP", "Phosphorus Fertilizer"))
+                                                   "Biochar 10t/ha", "Biochar 10t/ha & TSP", "TSP Fertilizer"))
   write_xlsx(UptakeCovField_dfAll, path="Field_UptakeCov.xlsx")
 # Generate the heatmap for each treatment and facet wrap them
   (UptakeCovFieldHeat <- ggplot(UptakeCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
       geom_tile() +
-      scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.7, 3.3), breaks=seq(-1.7, 3.3, by=1)) +
+      scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-2.2, 3.8), breaks=seq(-2.2, 3.8, by=1)) +
       facet_wrap(~ treatment, nrow=3, scales="fixed") +
       geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
       scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
-      theme(legend.title=element_text(size=20, face="bold"),
-            legend.key.size=unit(15,"mm"),
-            legend.text=element_text(size=20), 
-            strip.text=element_text(size=26, face="bold"),
-            strip.placement="outside",
-            strip.background=element_blank(),
-            strip.text.y=element_text(angle=0, vjust=0.5),
-            strip.text.x=element_text(vjust=1),
-            axis.line=element_blank(),
+      labs(x="", y="")+
+      theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+            strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+            strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
+            axis.line=element_blank(), panel.spacing.x=unit(1, "cm"),
             axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
-            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
-            panel.spacing.x=unit(1, "cm"))+
-      labs(x="", y=""))
+            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold")))
   ggsave(UptakeCovFieldHeat, file="Field_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
 
-##   P Recovery  ----
+## P Recovery  ----
   FieldRecoveryCovVar <- c("Precovery",  "NO3_10", "PO4_10", "WatSolP_10", "ResinP_10", "pH_10", "EC_10", "OC_10")
   FieldCovRecovery <- subset(Field, select=c("Treatment", FieldRecoveryCovVar), 
                             na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -2276,38 +2268,32 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   RecoveryCovField_dfAll <- do.call(rbind, RecoveryCovField_df)
   RecoveryCovField_dfAll$Var1 <- factor(RecoveryCovField_dfAll$Var1, levels=FieldRecoveryCovVar, 
                                         labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P",
-                                                 "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                                                 "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="OC"))
   RecoveryCovField_dfAll$variable <- factor(RecoveryCovField_dfAll$variable, levels=FieldRecoveryCovVar, 
                                             labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", 
                                                      "WatSolP"="Soluble P",
-                                                     "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
+                                                     "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="OC"))
   RecoveryCovField_dfAll$treatment <- factor(RecoveryCovField_dfAll$treatment,
                                              levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
                                                       "Biochar10thaTSP", "Phosphorus"),
                                              labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
                                                       "Biochar 10t/ha", "Biochar 10t/ha & TSP", 
-                                                      "Phosphorus Fertilizer"))
+                                                      "TSP Fertilizer"))
   write_xlsx(RecoveryCovField_dfAll, path="Field_RecoveryCov.xlsx")
 # Generate the heatmap for each treatment and facet wrap them
   (RecoveryCovFieldHeat <- ggplot(RecoveryCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
       geom_tile() +
-      scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.6, 3.3), breaks=seq(-1.6, 3.3, by=1)) +
+      scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.6, 3.8), breaks=seq(-1.6, 3.8, by=1)) +
       facet_wrap(~ treatment, nrow=3, scales="fixed") +
       geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
       scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
-      theme(legend.title=element_text(size=20, face="bold"),
-            legend.key.size=unit(15,"mm"),
-            legend.text=element_text(size=20), 
-            strip.text=element_text(size=26, face="bold"),
-            strip.placement="outside",
-            strip.background=element_blank(),
-            strip.text.y=element_text(angle=0, vjust=0.5),
-            strip.text.x=element_text(vjust=1),
-            axis.line=element_blank(),
+      labs(x="", y="")+
+      theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+            strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+            strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
+            axis.line=element_blank(), panel.spacing.x=unit(1, "cm"),
             axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
-            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
-            panel.spacing.x=unit(1, "cm"))+
-      labs(x="", y=""))
+            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold")))
   ggsave(RecoveryCovFieldHeat, file="Field_RecoveryCovHeat.jpg", width=20, height=15, dpi=150)
 
 
@@ -2324,7 +2310,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
                                                "Biochar10thaTSP", "Phosphorus"),
                                       labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
                                                "Biochar 10t/ha", "Biochar 10t/ha & TSP", 
-                                               "Phosphorus Fertilizer"))
+                                               "TSP Fertilizer"))
   View(FieldContourSub)
   FieldContourExcl <- na.exclude(FieldContourSub)
   View(FieldContourExcl)
@@ -2430,12 +2416,12 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   rownames(FYieldAN) <- NULL
   
   ModFieldNup3 <- glmmTMB(log(Nuptake)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
-  (FNupAN <- glmmTMB:::Anova.glmmTMB(ModFieldNup3, type="III"))
+  FNupAN <- glmmTMB:::Anova.glmmTMB(ModFieldNup3, type="III")
   FNupAN$RowNames <- row.names(FNupAN)
   rownames(FNupAN) <- NULL
   
-  ModFieldNrec2 <- lme(Nuptake~Treatment,random=~1|Block, data=FNrec_out)
-  FNrecAN <- anova(ModFieldNrec2) 
+  ModFieldNRec3 <- lmer(Nrecovery~Treatment+(1|Block),data=FNrec_out)
+  FNrecAN <- Anova(ModFieldNRec3, type="III")
   FNrecAN$RowNames <- row.names(FNrecAN)
   rownames(FNrecAN) <- NULL
   
@@ -2465,7 +2451,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   rownames(FWSPAN) <- NULL
   
   ModFieldResP1 <- lmer(sqrt(ResP)~Treatment*Depth + (1|Block), data=ResP_long_sub)
-  FResPAN <- Anova(ModFieldResP1, alpha=0.1) 
+  FResPAN <- anova(ModFieldResP1, alpha=0.1, type="III")
   FResPAN$RowNames <- row.names(FResPAN)
   rownames(FResPAN) <- NULL
   
@@ -2480,7 +2466,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   rownames(FecAN) <- NULL
   
   ModFieldOC1 <- lmer(OC~Treatment*Depth + (1|Block), data=OC_long_sub)
-  FocAN <- Anova(ModFieldOC1, alpha=0.1) 
+  FocAN <- Anova(ModFieldOC1, alpha=0.1, type="III") 
   FocAN$RowNames <- row.names(FocAN)
   rownames(FocAN) <- NULL
   
@@ -2527,3 +2513,5 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   names(FieldANOVAtables) <- c("Straw", "Grain", "Yield", "Nuptake", "Nrecovery", "Puptake", "Precovery", "SoilNO3", "SoilPO4", "ResinP", 
                                "WaterSolP", "pH", "EC", "OC", "SnowNO3", "SnowNH4", "SnowPO4", "ResinPO4", "ResinNO3", "NUE", "PUE")
   write_xlsx(FieldANOVAtables, path="FieldANOVAtables.xlsx")
+
+  

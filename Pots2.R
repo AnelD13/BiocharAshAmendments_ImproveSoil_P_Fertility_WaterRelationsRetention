@@ -1,10 +1,9 @@
-## Field data for Pots2 study
-#Loading data in to R
+# Loading data in to R & Summaries ----
 Pots2<-read.csv("Pots2.csv", fileEncoding="UTF-8-BOM")
 View(Pots2)
 Pots2Raw<-read.csv("Pots2raw.csv", fileEncoding="UTF-8-BOM")
 
-#Loading libraries
+## Loading libraries ----
 library(lme4)
 library(nlme)
 library(lmerTest)
@@ -42,15 +41,15 @@ library(writexl)
 library(openxlsx)
 
 
-##### Summary and ordering of data   ####
+## Summary and ordering of data   ----
 #Check for missing values in a specific field
 missing <- colSums(is.na(Pots2[,]))
 print(missing)
 
 #Change columns in a dataframe to factors/categorical values, str displays 
 Pots2$Block <- factor(Pots2$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
-Pots2$Treatment <- factor(Pots2$Treatment,levels = c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
-                                                     "MBMACoarse", "MBMAFine", "Phosphorus"))
+Pots2Trt_order <- c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus")
+Pots2$Treatment <- factor(Pots2$Treatment, levels = Pots2Trt_order)
 Pots2$Grain <- as.numeric(as.character(Pots2$Grain))
 Pots2$Straw <- as.numeric(as.character(Pots2$Straw))
 summary(Pots2)
@@ -75,7 +74,7 @@ Grain_summary <- Pots2 %>%
 View(Grain_summary)
 
 
-#####   Check for outliers   ####
+##  Check for outliers   ----
 #Grain
 ggplot(Pots2Raw, aes(x = Treatment, y = Grain, fill=Treatment)) +
   geom_boxplot() +
@@ -180,7 +179,9 @@ ggplot(Pots2Raw, aes(x = Treatment, y = LPO4, fill=Treatment)) +
 ggsave("OutliersWheat_LPO4.jpg", width = 10, height = 10, dpi = 150)
 
 
-#####   GRAIN   #####
+
+# PLANT ANALYSIS ----  
+## Grain ----
 ModP2Grain_Mean <- summary_by(Grain~Treatment+Block, data=Pots2, FUN=mean) 
 ModP2Grain_Mean <- as.numeric(ModP2Grain_Mean$Grain)
 ModP2Grain_skew <- skewness(ModP2Grain_Mean)
@@ -250,7 +251,7 @@ write.csv(ModP2Gem_cld, file="Pots2_Grain.csv")
 
 
 
-#####   STRAW   #############
+## Straw ----
 ModP2Straw_Mean <- summary_by(Straw~Treatment+Block, data=Pots2, FUN=mean) # calculate means of Straw
 ModP2Straw_Mean <- as.numeric(ModP2Straw_Mean$Straw)
 ModP2Straw_skew <- skewness(ModP2Straw_Mean)
@@ -307,7 +308,7 @@ write.csv(ModP2emS1_cld, file="Pots2_Straw.csv")
 
 
 
-#####   BIOMASS   #####
+## Biomass ----
   PotBio_Mean <- summary_by(Biomass~Treatment+Block, data=Pots2, FUN=mean)
   PotBio_Mean <- as.numeric(PotBio_Mean$Biomass)
   PotBio_skew <- skewness(PotBio_Mean,na.rm=TRUE)
@@ -423,9 +424,8 @@ write.csv(ModP2emS1_cld, file="Pots2_Straw.csv")
   print(BiomassEm)
   write.xlsx(BiomassEm, file="Pots2_BiomassMeans.xlsx")
   ## Visualization
-  ### Set geom_text colours & case
-  BiomassColour <- c("Grain" = "white", "Straw" = "black")
-  ModP2emBio_cld$.group <- toupper(ModP2emBio_cld$.group)
+  BiomassColour <- c("Grain" = "white", "Straw" = "black")  # Set geom_text colours
+  ModP2emBio_cld$.group <- toupper(ModP2emBio_cld$.group)  # Set geom_text case
   (Pots2BioStack1 <- ggplot(BiomassEm, aes(Treatment, y=emmean, fill=origin)) +
       geom_bar(stat="identity", position = "stack", width=0.65) +
       geom_errorbar(aes(ymin=l_conf, ymax=u_conf), width = .15, stat="identity")+
@@ -433,30 +433,28 @@ write.csv(ModP2emS1_cld, file="Pots2_Straw.csv")
                 position = position_stack(vjust = 0.5), size = 7, fontface="bold") +
       geom_text(data = ModP2emBio_cld, aes(x=Treatment, y = emmean+1, label = trimws(.group)),
                 fontface="bold", color="black", size = 7, inherit.aes = FALSE) +
-      labs(x = "Treatment", y = "Biomass") +
+      labs(x = "Treatments", y = "Biomass (g)") +
       scale_fill_manual(values = c("grey45", "grey89"), labels = c("Grain", "Straw"))+
       scale_color_manual(values = BiomassColour, guide="none") +
       scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
-                                  "Meat & Bone\nMeal- Fine", "Fertilizer\nPhosphorus"))+
+                                  "Meat & Bone\nMeal- Fine", "TSP\nfertilizer"))+
       theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
             legend.title = element_blank(), legend.text=element_text(size=18, face="bold"),
             axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
             axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
-            axis.title.x=element_blank(), 
-            axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+            axis.title=element_text(size=26, face="bold", margin=margin(r=15)),
             panel.background = element_blank(),
             panel.border=element_blank(), panel.grid.major=element_blank(),
             panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-  ggsave(Pots2BioStack1, file="Pots2_biomass_stack1.jpg", width = 10, height = 8, dpi = 150)
+  ggsave(Pots2BioStack1, file="Pots2_biomass_stack_CLD.jpg", width = 10, height = 8, dpi = 150)
 
 
-# stacked barplot option 2
+# stacked barplot option 2 - not used as it uses the ordinary means
 ## call dataframe
 BiomassEm_Manual <- subset(Pots2, select=c("Treatment", "Grain", "Straw"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
-BiomassEm_Manual$Treatment <- factor(BiomassEm_Manual$Treatment, levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
-                                                                          "MBMACoarse", "MBMAFine", "Phosphorus"),
+BiomassEm_Manual$Treatment <- factor(BiomassEm_Manual$Treatment, levels=Pots2Trt_order,
                                      labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
-                                              "Meat & Bone\nMeal- Fine", "Fertilizer\nPhosphorus"))
+                                              "Meat & Bone\nMeal- Fine", "TSP\nfertilizer"))
 print(BiomassEm_Manual)
 # use ggbarplot
 (Pots2BioStack <- BiomassEm_Manual|>
@@ -466,7 +464,7 @@ print(BiomassEm_Manual)
     labs(x = "Treatment", y = "Total grain and straw yield (g)", fill = "") +
     scale_fill_manual(values = c("grey30", "grey89")) +
     scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
-                                "Meat & Bone\nMeal- Fine", "Fertilizer\nPhosphorus"))+
+                                "Meat & Bone\nMeal- Fine", "TSP\nfertilizer"))+
     theme(legend.key.size=unit(10,"mm"), 
           legend.title = element_text(size = 20, face = "bold"),
           legend.text=element_text(size=18),
@@ -491,7 +489,7 @@ ggsave(Pots2BioStack, file="Pots2_biomass_stack.jpg", width = 10, height = 8, dp
                        labels = c("Grain", "Straw"))+
     scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
                                 "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
-                                "Fertilizer\nPhosphorus"))+
+                                "TSP\nFertilizer"))+
     scale_y_continuous(limits = c(0, 10))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
@@ -506,7 +504,7 @@ ggsave(Pots2BioPlot, file="Pots2_biomass.jpg", width = 10, height = 8, dpi = 150
 
 
 
-#####   N UPTAKE  #####
+## N uptake----
 Pots2Nup_Mean <- summary_by(Nuptake~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2Nup_Mean <- as.numeric(Pots2Nup_Mean$Nuptake)
 Pots2Nup_skew <- skewness(Pots2Nup_Mean,na.rm=TRUE)
@@ -606,7 +604,7 @@ write.xlsx(ModP2emNup_cld, file="Pots2_Nuptake.xlsx")
   labs(x = "Treatment", y = "Wheat N uptake (ug/g soil)") +
   scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
                               "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
-                              "Fertilizer\nPhosphorus"))+
+                              "TSP\nfertilizer"))+
   scale_y_continuous(limits = c(0, 210))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
@@ -621,7 +619,7 @@ ggsave(Pots2NuptakePlot, file="Pots2_Nuptake.jpg", width = 8, height = 6, dpi = 
 
 
 
-#####   P UPTAKE   #####
+## P uptake ----
 Pots2Pup_Mean <- summary_by(Puptake~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2Pup_Mean <- as.numeric(Pots2Pup_Mean$Puptake)
 Pots2Pup_skew <- skewness(Pots2Pup_Mean,na.rm=TRUE)
@@ -720,7 +718,7 @@ write.csv(ModP2emPup_cld, file="Pots2_Puptake.csv")
     labs(x = "Treatment", y = "Wheat P uptake (ug/g soil)") +
     scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
                               "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
-                              "Fertilizer\nPhosphorus"))+
+                              "TSP\nfertilizer"))+
     scale_y_continuous(limits = c(0, 30))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
@@ -734,7 +732,9 @@ write.csv(ModP2emPup_cld, file="Pots2_Puptake.csv")
 ggsave(Pots2PuptakePlot, file="Pots2_Puptake.jpg", width = 8, height = 6, dpi = 150)
 
 
-#####   SOIL NO3   #####
+
+# SOIL ----
+## Soil NO3 ----
 Pots2SNO3_Mean <- summary_by(SNO3~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2SNO3_Mean <- as.numeric(Pots2SNO3_Mean$SNO3)
 Pots2SNO3_skew <- skewness(Pots2SNO3_Mean,na.rm=TRUE)
@@ -788,7 +788,7 @@ View(ModP2emSNO3_cld)
 write.csv(ModP2emSNO3_cld, file="Pots2_SoilNO3.csv")
 
 
-#####   SOIL NH4   #####
+## Soil NH4 ----
 Pots2SNH4_Mean <- summary_by(SNH4~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2SNH4_Mean <- as.numeric(Pots2SNH4_Mean$SNH4)
 Pots2SNH4_skew <- skewness(Pots2SNH4_Mean,na.rm=TRUE)
@@ -842,7 +842,7 @@ write.csv(ModP2emSNH4_cld, file="Pots2_SoilNH4.csv")
 
 
 
-#####   SOIL PO4   #####
+## Soil PO4 ----
 Pots2SPO4_Mean <- summary_by(SPO4~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2SPO4_Mean <- as.numeric(Pots2SPO4_Mean$SPO4)
 Pots2SPO4_skew <- skewness(Pots2SPO4_Mean,na.rm=TRUE)
@@ -887,7 +887,7 @@ write.csv(ModP2emSPO4_cld, file="Pots2_SoilPO4.csv")
 
 
 
-#####   SOIL RESIN P   #####
+## Soil Resin P ----
 Pots2ResP_Mean <- summary_by(ResinP~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2ResP_Mean <- as.numeric(Pots2ResP_Mean$ResinP)
 Pots2ResP_skew <- skewness(Pots2ResP_Mean,na.rm=TRUE)
@@ -931,7 +931,7 @@ write.csv(ModP2emResP1_cld, file="Pots2_resinP.csv")
 
 
 
-#####   WATER SOLUBLE P   #####
+## Soil Water Soluble P ----
 Pots2WSP_Mean <- summary_by(WatSolP~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2WSP_Mean <- as.numeric(Pots2WSP_Mean$WatSolP)
 Pots2WSP_skew <- skewness(Pots2WSP_Mean,na.rm=TRUE)
@@ -975,7 +975,7 @@ View(ModP2emWSP_cld)
 write.csv(ModP2emWSP_cld, file="Pots2_WatSolP.csv")
 
 
-#####   TOTAL P   #####
+## Soil Total P ----
 Pots2TotalP_Mean <- summary_by(TotalP~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2TotalP_Mean <- as.numeric(Pots2TotalP_Mean$TotalP)
 Pots2TotalP_skew <- skewness(Pots2TotalP_Mean,na.rm=TRUE)
@@ -1028,7 +1028,7 @@ View(ModP2emTotalP_cld)
 write.csv(ModP2emTotalP_cld, file="Pots2_TotalP.csv")
 
 
-#####   pH   #####
+## Soil pH ----
 Pots2pH_Mean <- summary_by(pH~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2pH_Mean <- as.numeric(Pots2pH_Mean$pH)
 Pots2pH_skew <- skewness(Pots2pH_Mean,na.rm=TRUE)
@@ -1089,7 +1089,7 @@ write.csv(ModP2empH1_cld, file="Pots2_pH.csv")
 
 
 
-#####   ELECTRICAL CONDUCTIVITY   #####
+## Soil EC ----
 Pots2EC_Mean <- summary_by(EC~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2EC_Mean <- as.numeric(Pots2EC_Mean$EC)
 Pots2EC_skew <- skewness(Pots2EC_Mean,na.rm=TRUE)
@@ -1177,7 +1177,7 @@ write_xlsx(ModP2emEC1_cld, path="Pots2_EC.xlsx")
 
 
 
-#####   ORGANIC CARBON   #####
+## Soil Organic carbon ----
 Pots2OC_Mean <- summary_by(OC~Treatment+Block, data=Pots2, FUN=mean)
 Pots2OC_Mean <- as.numeric(Pots2OC_Mean$OC)
 Pots2OC_skew <- skewness(Pots2OC_Mean,na.rm=TRUE)
@@ -1245,12 +1245,12 @@ write_xlsx(ModP2emOC1_cld, path = "Pots2_OC.xlsx")
 
 
 
+
 # LEACHATE ----
-Leach_labels <- factor(unique(Pots2$Treatment), levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
-                                                        "MBMACoarse", "MBMAFine", "Phosphorus"),
+Leach_labels <- factor(unique(Pots2$Treatment), levels=Pots2Trt_order,
                        labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
-                                "Meat & Bone\nMeal- Fine", "Fertilizer\nPhosphorus"))
-##   LPO4   ----
+                                "Meat & Bone\nMeal- Fine", "TSP\nfertilizer"))
+## Leachate PO4 ----
 Pots2LPO4_Mean <- summary_by(LPO4~Treatment*Block, data=Pots2, FUN=mean) 
 Pots2LPO4_Mean <- as.numeric(Pots2LPO4_Mean$LPO4)
 Pots2LPO4_skew <- skewness(Pots2LPO4_Mean,na.rm=TRUE)
@@ -1333,7 +1333,7 @@ write.csv(ModP2emLPO4_cld, file="Pots2_LPO4.csv")
 
 
 
-#####   LEACHATE NO3   #####
+## Leachate NO3 ----
 Pots2LNO3_Mean <- summary_by(LNO3~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2LNO3_Mean <- as.numeric(Pots2LNO3_Mean$LNO3)
 Pots2LNO3_skew <- skewness(Pots2LNO3_Mean,na.rm=TRUE)
@@ -1403,7 +1403,7 @@ rsq(ModP2LNO35) # 317
 
 #emmeans on glmm as it's the most suitable, no singularity, decent df
 ModP2emLNO3 <- emmeans(ModP2LNO32,~Treatment, type="response", infer=TRUE, alpha=0.01) # check at 10% level and still no sig dif
-ModP2emLNO3_cld <- cld(ModP2emLNO3, Letters = trimws(letters), reversed = TRUE) 
+(ModP2emLNO3_cld <- cld(ModP2emLNO3, Letters = trimws(letters), reversed = TRUE))
 ModP2emLNO3_cld <- ModP2emLNO3_cld %>% dplyr::rename(emmean="response")
 View(ModP2emLNO3_cld)
 write.csv(ModP2emLNO3_cld, file="Pots2_LNO3.csv")
@@ -1417,7 +1417,7 @@ write.csv(ModP2emLNO3_cld, file="Pots2_LNO3.csv")
           panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 
-#####   LEACHATE NH4   #####
+## Leachate NH4 ----
 Pots2LNH4_Mean <- summary_by(LNH4~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2LNH4_Mean <- as.numeric(Pots2LNH4_Mean$LNH4)
 Pots2LNH4_skew <- skewness(Pots2LNH4_Mean,na.rm=TRUE)
@@ -1490,89 +1490,27 @@ write.csv(ModP2emLNH4_cld, file="Pots2_LNH4.csv")
           panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 
-## Combineleachate plots ----
+## Combine Leachate Plots ----
 (Leach_plot <- plot_grid(Pots2PO4LeachPlot, Pots2NO3LeachPlot, Pots2NH4LeachPlot, labels = c('A', 'B', 'C'), label_size = 20, ncol=3, 
                          label_x = c(0.18,0.15,0.18)))
 (LeachPlot_label <- ggdraw()+draw_plot(Leach_plot)+ draw_label("Treatment", y=0.03, size=18, fontface="bold"))
 ggsave("Pots2_Leachate.jpg", height=7, width=14, dpi=150)
 
-####  CORRELATION OF P FRACTIONS  ####
-    ## comparison of the P fractions overall is obvious, need to separate by treatment
-  #Pots2PCorMatrix <- Pots2[complete.cases(Pots2), c("SPO4", "ResinP", "WatSolP", "TotalP", "Puptake", "LPO4")]
-    # full matrix
-  #Pots2PCor <- cor(Pots2PCorMatrix)
-  #View(Pots2PCor)
-    #select only LPO4 in the row
-  #Pots2PCorSub<-cor(Pots2PCor[, 5:6], Pots2PCor[, 1:5], method = "spearman", use = "pairwise.complete.obs")
-  #colnames(Pots2PCorSub)[1:5] <- c("Soil PO4", "Soil Resin P", "Soil Soluble P", "Soil Total P", "Crop P uptake")
-  #rownames(Pots2PCorSub)[1:2] <- c("Crop P uptake", "Leachate PO4")
-  #Pots2PCorSub[1,5] <- NA
-  #View(Pots2PCorSub)
-    # heatmap & correllelogram requires at least 2 columns and two rows
-  #Correlellogram
-    #jpeg("Pots2_Pcorplot.jpg", width = 8, height = 5, units = "in", res = 300)
-    #corrplot(Pots2PCorSub, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
-     #        col=viridis(n = 100, option = "D"))
-    #dev.off()
-
-## Plotting only Leachate PO4 against soil P - decided not to use this as the results are obvious
-    # Pots2PCorMatrix2 <- Pots2[complete.cases(Pots2), c("SPO4", "ResinP", "WatSolP", "TotalP", "LPO4")]
-    # # full matrix
-    # Pots2PCor2 <- cor(Pots2PCorMatrix2)
-    # View(Pots2PCor2)
-    # #select only LPO4 in the row
-    # Pots2PCorSub2<-cor(x=Pots2PCor2[5,], y=Pots2PCor2[,1:4], method = "spearman", use = "pairwise.complete.obs")
-    # colnames(Pots2PCorSub2)[1:4] <- c("Soil PO4", "Soil Resin P", "Soil Soluble P", "Soil Total P")
-    # rownames(Pots2PCorSub2)[1] <- c("Leachate\nPO4")
-    # print(Pots2PCorSub2)
-    #Correlellogram - cannot be properly manipulated
-      #jpeg("Pots2_Pcorplot_LPO4.jpg", width = 8, height = 5, units = "in", res = 150)
-      #corrplot(Pots2PCorSub2, method = "circle", addCoef.col="black", tl.col = "black", mar = c(0,0.2,0,0.2), na.label = " ",
-      #       col=viridis(n = 100, option = "D"), tl.srt = 45)
-      #title(main = "Correlation of leachte P to residual soil P fractions", cex.main = 1.5, line=-1)
-      #scale_fill_gradientn(colors=COL2('BrBG'), breaks = seq(-1, 1, by = 0.5))
-      #dev.off()
-    # ggplot to manipulate the plot
-    # Pots2PCorDF <- data.frame(Var1 = colnames(Pots2PCorSub2), Var2 = rownames(Pots2PCorSub2), Correlation = as.numeric(Pots2PCorSub2))
-    # print(Pots2PCorDF)
-    # (Pots2_Pcorplot_LPO4 <- ggplot(Pots2PCorDF, aes(x = Var1, y = Var2, fill = Correlation)) +
-    #     geom_point(data=Pots2PCorDF, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
-    #     scale_size(range = c(30,45)) +
-    #     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
-    #     geom_text(aes(label=sprintf("%.3f", Correlation)), size=7)+
-    #     theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
-    #           legend.text=element_text(size=12),
-    #           legend.title=element_text(size=16, face="bold"),
-    #           legend.key.siz=unit(15,"mm"),
-    #           axis.title.y=element_text(size=14, colour="black", face="bold"),
-    #           axis.title.x=element_text(size=14, colour="black", face="bold"),
-    #           axis.text.y=element_blank(),
-    #           axis.text.x=element_blank(), #no labels
-    #           axis.ticks.y=element_blank(),
-    #           axis.ticks.x=element_blank(),
-    #           panel.background=element_blank(),  # remove gray background
-    #           panel.spacing.x=unit(1, "cm"),
-    #           plot.margin=margin(5, 5, 5, 5))+
-    #     guides(size = "none")+
-    #     labs(x="", y="", title=expression("Percentage P Recovery - Soil residual PO"[4])))
-    # plot(Pots2_Pcorplot_LPO4)
-    # ggsave(Pots2_Pcorplot_LPO4, file="Pots2_Pcorplot_LPO4a.jpg", width=8, height=5, dpi=100)
-  
-## plot soil PO4 against leachte Po4 per treatment
-Pots2PCorPdf <- data.frame(Treatment=Pots2$Treatment,
+## Correlation of Leachate P Fractions ----
+Pots2PCorPdf <- data.frame(Treatment=Pots2$Treatment, # plot soil PO4 against leachte Po4 per treatment
                            SPO4=Pots2$SPO4,
                            LPO4=Pots2$LPO4)
 print(Pots2PCorPdf)
 Pots2PCor3 <- Pots2PCorPdf %>%
   group_by(Treatment) %>%
-  summarize(Correlation = cor(LPO4, SPO4, use = "complete.obs"), .groups = "drop")
-Pots2PCor3$Treatment <- factor(Pots2PCor3$Treatment, levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
-                                                              "MBMACoarse", "MBMAFine", "Phosphorus"),
-                                 labels=c("Control 1", "Control 2", "Canola\nMeal", "Manure", "Willow", 
-                                          "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
-                                          "TSP\nFertilizer"))
+  dplyr::summarize(Correlation = cor(LPO4, SPO4, use = "complete.obs")) %>%
+  ungroup()
+Pots2PCor3$Treatment <- factor(Pots2PCor3$Treatment, levels=Pots2Trt_order,
+                               labels=c("Control 1", "Control 2", "Canola\nMeal", "Manure", "Willow", 
+                                        "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                        "TSP\nFertilizer"))
 print(Pots2PCor3)
-# visualize correlation using ggplot - try 2
+# visualize correlation using ggplot
 (Pots2_Pcorplot2 <- ggplot(Pots2PCor3, aes(x=Treatment, y=0.5, fill=Correlation)) +
     geom_point(data=Pots2PCor3, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
     scale_size(range = c(15,45)) +
@@ -1580,58 +1518,20 @@ print(Pots2PCor3)
     geom_text(aes(label=sprintf("%.2f",Correlation), color = ifelse(Correlation < 0, "white", "black")), size = 6)+
     scale_color_manual(values = c("black", "white"))+
     theme(plot.title=element_text(hjust=0.5, face="bold", size=22, vjust = -0.5),
-          legend.text=element_text(size=12),
-          legend.title=element_text(size=16, face="bold"),
-          legend.key.siz=unit(15,"mm"),
-          axis.title.y=element_text(size=14, colour="black", face="bold"),
-          axis.title.x=element_text(size=14, colour="black", face="bold"),
-          axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=19, colour="black"),
-          axis.ticks.y=element_blank(),
-          axis.ticks.x=element_blank(),
-          panel.background=element_blank(),  # remove gray background
-          panel.spacing.x=unit(1, "cm"),
+          legend.text=element_text(size=12), legend.title=element_text(size=16, face="bold"), legend.key.siz=unit(15,"mm"),
+          axis.title=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_blank(), axis.ticks=element_blank(),
+          axis.text.x=element_text(angle=45, size=19, colour="black", face="bold"),
+          panel.background=element_blank(), panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(5, 5, 5, 5))+
     guides(size = "none", color="none")+
     labs(x="", y="", title= bquote(bold("Leachate PO"[4] ~ "-" ~ "Soil residual PO"[4]))))
 ggsave(Pots2_Pcorplot2, file="Pots2_Pcorplot_LPO4.jpg", width=14, height=5, dpi=100)
 
-# Plotting Leachate NO3, PO4 and NH4 load
-#create and combine data frames for the three emmeans functions
-P2emNO3 <- as.data.frame(ModP2emLNO3_cld)
-P2emNH4 <- as.data.frame(ModP2emLNH4_cld)
-P2emPO4 <- as.data.frame(ModP2emLPO4_cld)
-P2em_labels <- list("EM1" = "NO3", "EM2" = "NH4", "EM3" = "PO4")
-P2em_all <- bind_Pots2(list(EM1 = P2emNO3, EM2 = P2emNH4, EM3 = P2emPO4), .id = "EM") 
-P2em_all$EM <- factor(P2em_all$EM, levels = names(em_labels), labels = unlist(em_labels))
-P2em_all <- P2em_all %>% rename(emmean = "response")
-View(P2em_all)
-# define function to calculate position adjustment for secondary axis
-(LeachatePlot <- ggplot(P2em_all, aes(x=Treatment, y=emmean, pattern=EM)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white",
-                   pattern_density=0.005, pattern_spacing=0.01)+
-    geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) + 
-    scale_pattern_manual(values = c("NO3" = "stripe", "NH4" = "crosshatch", "PO4" = "wave"))+
-    facet_wrap(~ EM, scales = "free_y", ) +
-    labs(y="Nutrient load in leachte (ug/g)") +
-    scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "MBMA Coarse",
-                               "MBMA Fine", "TSP"))+
-    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
-          legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
-          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
-          axis.text.y = element_text(size = 18, face = "bold", colour = "black"),
-          axis.title.x=element_blank(), 
-          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
-          panel.background = element_blank(),
-          panel.border=element_blank(), panel.grid.major=element_blank(),
-          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(LeachatePlot, file="Pots2_Leachate.jpg", width = 8, height = 8, dpi = 150)
 
 
-
-
-####  Covariance heat maps  ####
-#####   Yield  #####
+# COVARIANCE HEAT MAPS ----
+## Yield ----
 Pots2CovVar <- c("Biomass", "SNO3", "SNH4", "SPO4", "ResinP", "WatSolP", "TotalP", "pH", "EC", "OC")
 Pots2CovYield <- subset(Pots2, select=c("Treatment", Pots2CovVar), 
                        na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1660,16 +1560,16 @@ YieldCovPots2_df <- lapply(seq_along(YieldCov_Pots2), function(i) {
 })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovPots2_dfAll <- do.call(rbind, YieldCovPots2_df)
+
+### SUBSCRIPT ----
 YieldCovPots2_dfAll$Var1 <- factor(YieldCovPots2_dfAll$Var1, levels=Pots2CovVar, labels=c("Biomass"="Yield", 
                                    "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", 
                                    "WatSolP"="Soluble P", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
-                                   "OC"="% SOC"))
+                                   "OC"="OC"))
 YieldCovPots2_dfAll$variable <- factor(YieldCovPots2_dfAll$variable, levels=Pots2CovVar, labels=c("Biomass"="Yield", 
                                    "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", "WatSolP"="Soluble P",
-                                   "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
-YieldCovPots2_dfAll$treatment <- factor(YieldCovPots2_dfAll$treatment, 
-                     levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", 
-                              "Phosphorus"),
+                                   "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="OC"))
+YieldCovPots2_dfAll$treatment <- factor(YieldCovPots2_dfAll$treatment, levels=Pots2Trt_order,
                      labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                               "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovPots2_RmTrt <- c("Control 1", "Control 2")
@@ -1681,15 +1581,10 @@ write.csv(YieldCovPots2_dfAll, file="Pots2_YieldCov.csv")
     scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-1.9, 5), breaks=seq(-1.9, 5, by=1)) +
     facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
-    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
-    theme(legend.title=element_text(size=20, face="bold"),
-          legend.key.size=unit(15,"mm"),
-          legend.text=element_text(size=20), 
-          strip.text=element_text(size=26, face="bold"),
-          strip.placement="outside",
-          strip.background=element_blank(),
-          strip.text.y=element_text(angle=0, vjust=0.5),
-          strip.text.x=element_text(vjust=1),
+    scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+          strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
           axis.line=element_blank(),
           axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
           axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
@@ -1699,7 +1594,7 @@ ggsave(YieldCovPots2Heat, file="Pots2_YieldCovHeat.jpg", width=20, height=20, dp
 
 
 
-#####   Uptake  #####
+## Uptake ----
 UptakeCovVar <- c("Puptake", "SNO3", "SNH4", "SPO4", "ResinP", "WatSolP", "TotalP", "pH", "EC", "OC")
 Pots2CovUptake <- subset(Pots2, select=c("Treatment", UptakeCovVar), 
                         na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1731,14 +1626,12 @@ UptakeCovPots2_dfAll <- do.call(rbind, UptakeCovPots2_df)
 UptakeCovPots2_dfAll$Var1 <- factor(UptakeCovPots2_dfAll$Var1, levels=UptakeCovVar, labels=c("Biomass"="Yield", 
                                     "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", 
                                     "WatSolP"="Soluble P", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
-                                    "OC"="% SOC"))
+                                    "OC"="OC"))
 UptakeCovPots2_dfAll$variable <- factor(UptakeCovPots2_dfAll$variable, levels=UptakeCovVar, 
                                         labels= c("Biomass"="Yield", "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", 
                                                   "ResinP"="Resin P", "WatSolP"="Soluble P", 
-                                                  "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
-UptakeCovPots2_dfAll$treatment <- factor(UptakeCovPots2_dfAll$treatment, 
-                         levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", 
-                                  "MBMAFine", "Phosphorus"),
+                                                  "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="OC"))
+UptakeCovPots2_dfAll$treatment <- factor(UptakeCovPots2_dfAll$treatment, levels=Pots2Trt_order,
                          labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", 
                                   "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 YieldCovPots2_RmTrt <- c("Control 1", "Control 2")
@@ -1750,15 +1643,10 @@ write.csv(UptakeCovPots2_dfAll, file="Pots2_UptakeCov.csv")
     scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-2, 5), breaks=seq(-2, 5, by=1)) +
     facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
-    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
-    theme(legend.title=element_text(size=20, face="bold"),
-          legend.key.size=unit(15,"mm"),
-          legend.text=element_text(size=20), 
-          strip.text=element_text(size=26, face="bold"),
-          strip.placement="outside",
-          strip.background=element_blank(),
-          strip.text.y=element_text(angle=0, vjust=0.5),
-          strip.text.x=element_text(vjust=1),
+    scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"), legend.text=element_text(size=20), 
+          strip.text=element_text(size=26, face="bold"), strip.placement="outside", strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5), strip.text.x=element_text(vjust=1),
           axis.line=element_blank(),
           axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
           axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
@@ -1767,7 +1655,8 @@ write.csv(UptakeCovPots2_dfAll, file="Pots2_UptakeCov.csv")
 ggsave(UptakeCovPots2Heat, file="Pots2_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
 
 
-####   Yield to N & P Uptake  ####
+
+# YIELD TO N & P UPTAKE ----
 # use uptake for Pots 2 as recovery can't be calculated due to soil coming from the field & added urea
 Pots2$Treatment <- as.factor(Pots2$Treatment)
 Pots2$Biomass <- as.numeric(Pots2$Biomass)
@@ -1775,8 +1664,7 @@ Pots2$Nuptake <- as.numeric(Pots2$Nuptake)
 Pots2$Puptake <- as.numeric(Pots2$Puptake)
 Pots2ContourSub <- subset(Pots2, select = c(Block, Treatment, Biomass, Nuptake, Puptake))
 View(Pots2ContourSub)
-Pots2ContourSub$Treatment <- factor(Pots2ContourSub$Treatment, levels=c("Control1", "Control2", "CanolaMeal", 
-                                    "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+Pots2ContourSub$Treatment <- factor(Pots2ContourSub$Treatment, levels=Pots2Trt_order,
                    labels=c("Control 1", "Control 2","Canola Meal", "Manure", "Willow", 
                             "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", "TSP Fertilizer"))
 View(Pots2ContourSub)
@@ -1815,7 +1703,8 @@ ggsave(Pots2Contours, file="Pots2_YieldContour.jpg", width=18, height=21, dpi=15
 
 
 
-#### Correlation & eigenvalues  ####
+
+# PCA & EIGENVALUES ----
 Pots2EigenMatrix <- Pots2[complete.cases(Pots2), c("Nuptake", "Puptake", "SNO3", "SNH4", "SPO4", "ResinP", 
                                                    "WatSolP","TotalP", "pH", "EC", "OC"),]
 Pots2EigenCor <- cor(Pots2EigenMatrix)
@@ -1825,7 +1714,8 @@ summary(Pots2EigenPrin, digits=3)
 round(Pots2EigenPrin$loadings[, 1:2], 3)
 
 
-####  Correlate char P to residual soil P  ####
+
+# CORRELATE CHAR P TO SOIL P ----
 # set up new data frame 
 Pots2CharPdf <- data.frame(Treatment=Pots2$Treatment,
                           SPO4=Pots2$SPO4,
@@ -1835,32 +1725,27 @@ Pots2CharPdf <- subset(Pots2CharPdf, !Treatment %in% Pots2CharExcl)
 print(Pots2CharPdf)
 Pots2CharCor <- Pots2CharPdf %>%
   group_by(Treatment) %>%
-  summarize(Correlation = cor(CharPerc, SPO4, use = "complete.obs"), .groups = "drop")
+  dplyr::summarize(Correlation = cor(CharPerc, SPO4, use = "complete.obs"))%>%
+  ungroup()
 Pots2CharCor$Treatment <- factor(Pots2CharCor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                                  labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
                                           "TSP\nFertilizer"))
 print(Pots2CharCor)
-# visualize correlation using heatmap
+# visualize correlation
 (Pots2CharHeatPlot <- ggplot(Pots2CharCor, aes(x=Treatment, y=0.5, fill=Correlation)) +
-  geom_point(data=Pots2CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
-  scale_size(range = c(30,45)) +
-  scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
-  geom_text(aes(label=sprintf("%.3f",Correlation)), size=7)+
-  theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
-        legend.text=element_text(size=12),
-        legend.title=element_text(size=16, face="bold"),
-        legend.key.siz=unit(15,"mm"),
-        axis.title.y=element_text(size=14, colour="black", face="bold"),
-        axis.title.x=element_text(size=14, colour="black", face="bold"),
-        axis.text.y=element_blank(),
-        axis.text.x=element_blank(), #no labels
-        axis.ticks.y=element_blank(),
-        axis.ticks.x=element_blank(),
-        panel.background=element_blank(),  # remove gray background
-        panel.spacing.x=unit(1, "cm"),
+    geom_point(data=Pots2CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(30,45)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=sprintf("%.3f",Correlation)), size=7)+
+    labs(x="", y="", title=expression(bold("Percentage P in char - Soil residual PO"[4])))+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+        legend.text=element_text(size=16), legend.title=element_text(size=18, face="bold"), legend.key.siz=unit(15,"mm"),
+        axis.title=element_text(size=14, colour="black", face="bold"),
+        axis.text=element_blank(), # no labels on x axis
+        axis.ticks=element_blank(),
+        panel.background=element_blank(), panel.spacing.x=unit(1, "cm"),
         plot.margin=margin(5, 5, 5, 5))+
-        guides(size = "none")+
-  labs(x="", y="", title=expression(bold("Percentage P in char - Soil residual PO"[4]))))
+        guides(size = "none"))
 
 
 ## correlate P uptake to to %P in char
@@ -1872,32 +1757,26 @@ Pots2RecPdf <- subset(Pots2RecPdf, !Treatment %in% Pots2CharExcl)
 print(Pots2RecPdf)
 Pots2RecCor <- Pots2RecPdf %>%
   group_by(Treatment) %>%
-  summarize(Correlation = cor(Puptake, CharPerc, use = "complete.obs"), .groups = "drop")
+  dplyr::summarize(Correlation = cor(Puptake, CharPerc, use = "complete.obs"))%>%
+  ungroup()
 Pots2RecCor$Treatment <- factor(Pots2RecCor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                                labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
                                         "TSP\nFertilizer"))
 print(Pots2RecCor)
-# visualize correlation using heatmap
+# visualize correlation
 (Pots2RecHeatPlot <- ggplot(Pots2RecCor, aes(x=Treatment, y=0.5, fill=Correlation)) +
     geom_point(data=Pots2RecCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
     scale_size(range = c(30,45)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.3f",Correlation)), size=7)+
+    labs(x="", y="", title="P Uptake - Percentage P in char")+
     theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
-          legend.text=element_text(size=12),
-          legend.title=element_text(size=16, face="bold"),
-          legend.key.siz=unit(15,"mm"),
-          axis.title.y=element_text(size=14, colour="black", face="bold"),
-          axis.title.x=element_text(size=14, colour="black", face="bold"),
-          axis.text.y=element_blank(),
-          axis.text.x=element_blank(), #no labels
-          axis.ticks.y=element_blank(),
-          axis.ticks.x=element_blank(),
-          panel.background=element_blank(),  # remove gray background
-          panel.spacing.x=unit(1, "cm"),
+          legend.text=element_text(size=16), legend.title=element_text(size=18, face="bold"), legend.key.siz=unit(15,"mm"),
+          axis.title=element_text(size=14, colour="black", face="bold"),
+          axis.text=element_blank(), axis.ticks=element_blank(),
+          panel.background=element_blank(), panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(5, 5, 5, 5))+
-    guides(size = "none")+
-    labs(x="", y="", title="P Uptake - Percentage P in char"))
+    guides(size = "none"))
 
 ## correlate P uptake to residual PO4
 Pots2PO4Pdf <- data.frame(Treatment=Pots2$Treatment,
@@ -1908,33 +1787,28 @@ Pots2PO4Pdf <- subset(Pots2PO4Pdf, !Treatment %in% Pots2CharExcl)
 print(Pots2PO4Pdf)
 Pots2PO4Cor <- Pots2PO4Pdf %>%
   group_by(Treatment) %>%
-  summarize(Correlation = cor(Puptake, SPO4, use = "complete.obs"), .groups = "drop")
+  dplyr::summarize(Correlation = cor(Puptake, SPO4, use = "complete.obs"))%>%
+  ungroup()
 Pots2PO4Cor$Treatment <- factor(Pots2PO4Cor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                                labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
                                         "TSP\nFertilizer"))
 print(Pots2PO4Cor)
-# visualize correlation using heatmap
+# visualize correlation
 (Pots2PO4HeatPlot <- ggplot(Pots2PO4Cor, aes(x=Treatment, y=0.5, fill=Correlation)) +
     geom_point(data=Pots2PO4Cor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
     scale_size(range = c(30,45)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.3f", Correlation)), size=7)+
     scale_x_discrete(position="bottom")+ #used for labels on the bottom
+    labs(x="", y="", title=expression(bold("P Uptake - Soil residual PO"[4])))+
     theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
-          legend.text=element_text(size=12),
-          legend.title=element_text(size=16, face="bold"),
+          legend.text=element_text(size=16), legend.title=element_text(size=18, face="bold"),
           legend.key.siz=unit(15,"mm"),
-          axis.title.y=element_blank(),
-          axis.title.x=element_blank(),
-          axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=19, colour="black", hjust=1), #keep only in the last one
-          axis.ticks.y=element_blank(),
-          axis.ticks.x=element_blank(),
-          panel.background=element_blank(),  # remove gray background
-          panel.spacing.x=unit(1, "cm"),
-          plot.margin=margin(5, 5, 5, 5))+
-    guides(size = "none")+
-    labs(x="", y="", title=expression(bold("P Uptake - Soil residual PO"[4]))))
+          axis.title=element_blank(), axis.text.y=element_blank(),
+          axis.text.x=element_text(angle=45, size=22, colour="black", hjust=1.1, face="bold"), #keep only in the last one
+          axis.ticks=element_blank(), panel.background=element_blank(),
+          panel.spacing.x=unit(1, "cm"), plot.margin=margin(-5, 5, -5, 5))+
+    guides(size = "none"))
 
 ## combined plot - combined legend and ggarrange uses ggpubr package, set legend in individual plots
 (Pots2CharRecPO4_plot <-ggarrange(Pots2CharHeatPlot, Pots2RecHeatPlot, Pots2PO4HeatPlot, nrow=3, common.legend=TRUE, legend="right", 
@@ -1943,7 +1817,8 @@ ggsave(Pots2CharRecPO4_plot, file="Pots2_CharPO4Prec_combined.jpg", width=15, he
 
 
 
-####  Extract ANOVA tables  ####
+
+# EXTRACT ANOVA TABLES ----
 ModP2Bio3<- glmmTMB(Biomass~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
 P2YieldAN <- glmmTMB:::Anova.glmmTMB(ModP2Bio3, type="III")
 P2YieldAN$RowNames <- row.names(P2YieldAN)
@@ -1955,7 +1830,7 @@ P2NupAN$RowNames <- row.names(P2NupAN)
 rownames(P2NupAN) <- NULL
 
 ModP2Pup4 <- lmer(Puptake~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
-P2PupAN <- anova(ModP2Pup4) 
+P2PupAN <- Anova(ModP2Pup4, type="III")
 P2PupAN$RowNames <- row.names(P2PupAN)
 rownames(P2PupAN) <- NULL
 
