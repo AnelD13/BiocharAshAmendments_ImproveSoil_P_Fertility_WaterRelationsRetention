@@ -9,6 +9,7 @@ library(nlme)
 library(lmerTest)
 library(doBy)
 library(ggplot2)
+library(ggtext)
 library(plotrix)
 library(car)
 library(afex)
@@ -29,6 +30,7 @@ library(mum)
 library(writexl)
 library(glmmTMB)
 library(corrplot)
+library(RColorBrewer)
 
 ##### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -1017,23 +1019,27 @@ YieldCovRows_dfAll$treatment <- factor(YieldCovRows_dfAll$treatment,
            levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
            labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                     "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+YieldCovRows_RmTrt <- c("Control 1", "Control 2")
+YieldCovRows_dfAll <- YieldCovRows_dfAll[!YieldCovRows_dfAll$treatment %in% YieldCovRows_RmTrt, ]
 write.csv(YieldCovRows_dfAll, file="Rows_YieldCov.csv")
 # ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
 (YieldCovRowsHeat <- ggplot(YieldCovRows_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
     facet_wrap(~ treatment, nrow=3, scales="fixed") +
-    geom_text(aes(label=round(Covariance, 3)))+
-    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+    geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+    theme(legend.title=element_text(size=20, face="bold"),
+          legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
-          strip.text=element_text(size=20, face="bold"),
+          strip.text=element_text(size=26, face="bold"),
           strip.placement="outside",
           strip.background=element_blank(),
           strip.text.y=element_text(angle=0, vjust=0.5),
           strip.text.x=element_text(vjust=1),
           axis.line=element_blank(),
-          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-          axis.text.y.left=element_text(size=15),
+          axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(1, "cm"))+
     labs(x="", y=""))
 ggsave(YieldCovRowsHeat, file="Rows_YieldCovHeat.jpg", width=20, height=20, dpi=150)
@@ -1079,23 +1085,27 @@ UptakeCovRows_dfAll$treatment <- factor(UptakeCovRows_dfAll$treatment,
             levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
             labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                      "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+YieldCovRows_RmTrt <- c("Control 1", "Control 2")
+UptakeCovRows_dfAll <- UptakeCovRows_dfAll[!UptakeCovRows_dfAll$treatment %in% YieldCovRows_RmTrt, ]
 write.csv(UptakeCovRows_dfAll, file="Rows_UptakeCov.csv")
 # Generate the heatmap for each treatment and facet wrap them
 (UptakeCovRowsHeat <- ggplot(UptakeCovRows_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
-    facet_wrap(~ treatment, nrow=3, ncol=3, scales="fixed") +
-    geom_text(aes(label=round(Covariance, 3)))+
-    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
+    geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+    theme(legend.title=element_text(size=20, face="bold"),
+          legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
-          strip.text=element_text(size=20, face="bold"),
+          strip.text=element_text(size=26, face="bold"),
           strip.placement="outside",
           strip.background=element_blank(),
           strip.text.y=element_text(angle=0, vjust=0.5),
           strip.text.x=element_text(vjust=1),
           axis.line=element_blank(),
-          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-          axis.text.y.left=element_text(size=15),
+          axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(1, "cm"))+
     labs(x="", y=""))
 ggsave(UptakeCovRowsHeat, file="Rows_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
@@ -1142,26 +1152,30 @@ RecoveryCovRows_dfAll$treatment <- factor(RecoveryCovRows_dfAll$treatment,
                  levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
                  labels=c("Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                           "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+YieldCovRows_RmTrt <- c("Control 1", "Control 2")
+RecoveryCovRows_dfAll <- RecoveryCovRows_dfAll[!RecoveryCovRows_dfAll$treatment %in% YieldCovRows_RmTrt, ]
 write.csv(RecoveryCovRows_dfAll, file="Rows_RecoveryCov.csv")
 # Generate the heatmap for each treatment and facet wrap them
 (RecoveryCovRowsHeat <- ggplot(RecoveryCovRows_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-2.8, 4.3), breaks=seq(-2.8, 4.3, by=1)) +
-    facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
-    geom_text(aes(label=round(Covariance, 3)))+
-    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
+    geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+    theme(legend.title=element_text(size=20, face="bold"),
+          legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
-          strip.text=element_text(size=20, face="bold"),
+          strip.text=element_text(size=26, face="bold"),
           strip.placement="outside",
           strip.background=element_blank(),
           strip.text.y=element_text(angle=0, vjust=0.5),
           strip.text.x=element_text(vjust=1),
           axis.line=element_blank(),
-          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-          axis.text.y.left=element_text(size=15),
+          axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(1, "cm"))+
     labs(x="", y=""))
-ggsave(RecoveryCovRowsHeat, file="Rows_RecoveryCovHeat.jpg", width=20, height=15, dpi=150)
+ggsave(RecoveryCovRowsHeat, file="Rows_RecoveryCovHeat.jpg", width=20, height=20, dpi=150)
 
 
 ####   Yield to N & P Recovery  ####
@@ -1232,13 +1246,11 @@ round(RowsEigenPrin$loadings[, 1:2], 3)
 
 ####  Correlate char P to residual soil P  ####
 #set up new dataframe with repeated values for treatment & char %. Does not correlate
-RowsCharPdf <- data.frame(
-  Treatment=c(rep("Canola Meal", 4), rep("Manure", 4), rep("Willow", 4), rep("Meat and Bone Meal Coarse", 4),
-              rep("Meat and Bone Meal Fine", 4), rep("Phosphorus Fertilizer", 4)),
-  CharPerc=c(rep(3.04, 4), rep(0.23, 4), rep(0.17, 4), rep(12.7, 4), rep(17.7, 4), rep(19.4, 4)),
-  PO4=c(17.67, 15.66, 18.79, 7.72, 10.94, 20.49, 16.09, 15.64, 14.14, 11.43, 9.3, 14.1, 
-        13.29, 16.34, 18.56, 16.06, 12.18, 11.75, 10.91, 19.44, 12.66, 27.5, 6.36, 12.3)
-)
+RowsCharPdf <- data.frame(Treatment=Rows$Treatment,
+                          PO4=Rows$PO4,
+                          CharPerc=Rows$CharPerc)
+RowsCharExcl <- c("Control1", "Control2")
+RowsCharPdf <- subset(RowsCharPdf, !Treatment %in% RowsCharExcl)
 print(RowsCharPdf)
 RowsCharCor <- cor(RowsCharPdf$CharPerc, RowsCharPdf$PO4) #overall correlation yields single value
 print(RowsCharCor)
@@ -1247,83 +1259,152 @@ print(RowsCharCor)
 ## Means does not work as correlation needs multiple observations per treatment
 ## tried using unique identifiers and results are the same as using means, effectively having one observation per trt
 ### Unique identifier for each obs in a trt: Observation = rep(1:4, times = 6)  
-##ended up making very small changes to the char P % 
+##ended up making very small changes to the char P % in the database file
 RowsPO4Mean <- aggregate(PO4 ~ Treatment, data = Rows, FUN = mean, na.rm = TRUE)
 print(RowsPO4Mean)
-View(RowsPO4Mean)
-RowsCharPdf2 <- data.frame(
-  Treatment = rep(c("Canola Meal", "Manure", "Willow", "Meat and Bone\nMeal Coarse", "Meat and Bone\nMeal Fine",
-                    "Phosphorus\nFertilizer"), each = 4),
-  CharPerc = c(3.04, 3.05,3.03,3.04, 0.23, 0.231, 0.229, 0.23, 
-               0.17, 0.18, 0.16, 0.17, 12.7, 12.71, 12.69, 12.7, 
-               17.7, 17.71, 17.69, 17.7, 19.39, 19.38, 19.42, 19.41),
-  PO4=c(17.67, 15.66, 18.79, 7.72, 10.94, 20.49, 16.09, 15.64, 14.14, 11.43, 9.3, 14.1, 
-        13.29, 16.34, 18.56, 16.06, 12.18, 11.75, 10.91, 19.44, 12.66, 27.5, 6.36, 12.3)
-)
-print(RowsCharPdf2)
 # get a single correlation value for each PO4/CharPerc combination per treatment 
 ## works well enough but can be simplified
-RowsCharCor2 <- numeric(length(unique(RowsCharPdf2$Treatment)))
+RowsCharCor2 <- numeric(length(unique(RowsCharPdf$Treatment)))
 for (i in 1:length(RowsCharCor2)) { # Loop over each treatment
-  treatment <- unique(RowsCharPdf2$Treatment)[i]
-  subset_df <- RowsCharPdf2[RowsCharPdf2$Treatment == treatment, ]
+  treatment <- unique(RowsCharPdf$Treatment)[i]
+  subset_df <- RowsCharPdf[RowsCharPdf$Treatment == treatment, ]
   RowsCharCor2[i] <- cor(subset_df$CharPerc, subset_df$PO4)
 }
 # set up the correlation values in a matrix adding treatment names back in
-RowsCharMatrix <- data.frame(Treatment = unique(RowsCharPdf2$Treatment), Correlation = RowsCharCor2)
+RowsCharMatrix <- data.frame(Treatment = unique(RowsCharPdf$Treatment), Correlation = RowsCharCor2)
 print(RowsCharMatrix) 
 # change to single row format
 RowsCharHeatMat <- matrix(RowsCharMatrix$Correlation, nrow = 1, dimnames = list(NULL, RowsCharMatrix$Treatment))
 print(RowsCharHeatMat)
 
 ## simplest way to set up correlation matrix
-RowsCharCor3 <- RowsCharPdf2 %>%
+RowsCharCor3 <- RowsCharPdf %>%
   group_by(Treatment) %>%
   summarize(Correlation = cor(CharPerc, PO4, use = "complete.obs"), .groups = "drop")
+RowsCharCor3$Treatment <- factor(RowsCharCor3$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                               labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                        "Phosphorus\nFertilizer"))
+print(RowsCharCor3)
 
 # visualize correlation using heatmap
-(RowsCharHeatPlot <- ggplot(RowsCharCor3, aes(x=Treatment, y=1, fill=Correlation)) +
+(RowsCharHeatPlot <- ggplot(RowsCharCor3, aes(x=Treatment, y=0.5, fill=Correlation)) +
     geom_point(data=RowsCharCor3, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
-    scale_size(range = c(20, 35)) +
+    scale_size(range = c(30,45)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
-    geom_text(aes(label=round(Correlation, 3)))+
-    scale_x_discrete(position="top")+
-    theme(legend.title=element_text(size=10, face="bold"),
-          legend.text=element_text(size=8), 
+    geom_text(aes(label=sprintf("%.2f", Correlation)), size=7)+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+          legend.text=element_text(size=12),
+          legend.title=element_text(size=16, face="bold"),
+          legend.key.siz=unit(15,"mm"),
           axis.title.y=element_text(size=14, colour="black", face="bold"),
           axis.title.x=element_text(size=14, colour="black", face="bold"),
           axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=11, colour="black", hjust=-0.1),
+          axis.text.x=element_blank(), #no labels
           axis.ticks.y=element_blank(),
           axis.ticks.x=element_blank(),
           panel.background=element_blank(),  # remove gray background
           panel.spacing.x=unit(1, "cm"),
-          plot.margin=margin(10, 10, 10, 10))+
+          plot.margin=margin(5, 5, 5, 5))+
     guides(size = "none")+
-    labs(x="Percentage P in treatment", y="Soil residual PO4"))
-ggsave(RowsCharHeatPlot, file="Rows_CharHeat.jpg", width=10, height=3, dpi=150)
+    labs(x="", y="", title="% P Recovery - Soil residual PO4"))
 
 ## heatmap didn't work - needs more than one row        
-#heatmap(RowsCharHeatMat, col=viridis(n = 100, option = "D"), cex.main = 1.5, cex.axis = 0.8, cex.lab = 0.8,
-# key.title = "Correlation", key.xlab = "", key.ylab = "", trace = "none", margin = c(6, 10)))
+  #heatmap(RowsCharHeatMat, col=viridis(n = 100, option = "D"), cex.main = 1.5, cex.axis = 0.8, cex.lab = 0.8,
+  # key.title = "Correlation", key.xlab = "", key.ylab = "", trace = "none", margin = c(6, 10)))
 
 # correlation matrix by treatment
 ## doesn't work with plot
-#print(RowsCharCor3 <- by(RowsCharPdf2, RowsCharPdf2$Treatment, function(x) cor(x$CharPerc, x$PO4, 
-  #                         use = "pairwise.complete.obs")))
-# Correlation matrix - no treatment names, code not completed
-#RowsCharCor4 <- cor(RowsCharPdf2[, c("CharPerc", "PO4")])
-#print(RowsCharCor2)
-# visualize correlation
-#jpeg("Rows_CharCorPlot.jpg", width = 8, height = 5, units = "in", res = 300)
-#corrplot(RowsCharCor4, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
-#         col=viridis(n = 100, option = "D"))
-#axis_labels <- levels(RowsCharPdf2$Treatment)
-#axis(1, at = 1:length(axis_labels), labels = axis_labels, las = 2)
-#axis(2, at = 1:length(axis_labels), labels = axis_labels, las = 2)
-#dev.off()
+  #print(RowsCharCor3 <- by(RowsCharPdf2, RowsCharPdf2$Treatment, function(x) cor(x$CharPerc, x$PO4, 
+    #                         use = "pairwise.complete.obs")))
+  # Correlation matrix - no treatment names, code not completed
+  #RowsCharCor4 <- cor(RowsCharPdf2[, c("CharPerc", "PO4")])
+  #print(RowsCharCor2)
+  # visualize correlation
+  #jpeg("Rows_CharCorPlot.jpg", width = 8, height = 5, units = "in", res = 300)
+  #corrplot(RowsCharCor4, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
+  #         col=viridis(n = 100, option = "D"))
+  #axis_labels <- levels(RowsCharPdf2$Treatment)
+  #axis(1, at = 1:length(axis_labels), labels = axis_labels, las = 2)
+  #axis(2, at = 1:length(axis_labels), labels = axis_labels, las = 2)
+  #dev.off()
 
+## correlate P recovery to to %P in char
+RowsRecPdf <- data.frame(Treatment=Rows$Treatment,
+                          Precovery=Rows$Precovery,
+                          CharPerc=Rows$CharPerc)
+RowsCharExcl <- c("Control1", "Control2")
+RowsRecPdf <- subset(RowsRecPdf, !Treatment %in% RowsCharExcl)
+print(RowsRecPdf)
+RowsRecCor <- RowsRecPdf %>%
+  group_by(Treatment) %>%
+  summarize(Correlation = cor(Precovery, CharPerc, use = "complete.obs"), .groups = "drop")
+RowsRecCor$Treatment <- factor(RowsRecCor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                               labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                        "Phosphorus\nFertilizer"))
+print(RowsRecCor)
+  # visualize correlation using heatmap
+(RowsRecHeatPlot <- ggplot(RowsRecCor, aes(x=Treatment, y=0.5, fill=Correlation)) +
+    geom_point(data=RowsRecCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(30,45)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=sprintf("%.2f",Correlation)), size=7)+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+          legend.text=element_text(size=12),
+          legend.title=element_text(size=16, face="bold"),
+          legend.key.siz=unit(15,"mm"),
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_blank(),
+          axis.text.x=element_blank(), #no labels
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(5, 5, 5, 5))+
+    guides(size = "none")+
+    labs(x="", y="", title="% P in treatment - % P Recovery"))
 
+## correlate P recovery to residual PO4
+RowsPO4Pdf <- data.frame(Treatment=Rows$Treatment,
+                          PO4=Rows$PO4,
+                          Precovery=Rows$Precovery)
+RowsCharExcl <- c("Control1", "Control2")
+RowsPO4Pdf <- subset(RowsPO4Pdf, !Treatment %in% RowsCharExcl)
+print(RowsPO4Pdf)
+RowsPO4Cor <- RowsPO4Pdf %>%
+  group_by(Treatment) %>%
+  summarize(Correlation = cor(Precovery, PO4, use = "complete.obs"), .groups = "drop")
+RowsPO4Cor$Treatment <- factor(RowsPO4Cor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                                 labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                          "Phosphorus\nFertilizer"))
+print(RowsPO4Cor)
+  # visualize correlation using heatmap
+(RowsPO4HeatPlot <- ggplot(RowsPO4Cor, aes(x=Treatment, y=0.5, fill=Correlation)) +
+    geom_point(data=RowsPO4Cor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(30,45)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=sprintf("%.2f", Correlation)), size=7)+
+    scale_x_discrete(position="bottom")+ #used for labels on the bottom
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+          legend.text=element_text(size=12),
+          legend.title=element_text(size=16, face="bold"),
+          legend.key.siz=unit(15,"mm"),
+          axis.title.y=element_blank(),
+          axis.title.x=element_blank(),
+          axis.text.y=element_blank(),
+          axis.text.x=element_text(angle=45, size=19, colour="black", hjust=1), #keep only in the last one
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(5, 5, 5, 5))+
+    guides(size = "none")+
+    labs(x="", y="", title="% P Recovery - Soil residual PO4"))
+
+## combined plot - combined legend and ggarrange uses ggpubr package, set legend in individual plots
+(RowsCharRecPO4_plot <-ggarrange(RowsCharHeatPlot, RowsRecHeatPlot, RowsPO4HeatPlot, nrow=3, common.legend=TRUE, legend="right", 
+                                 heights=c(0.8, 0.8, 1.1)))
+ggsave(RowsCharRecPO4_plot, file="Rows_CharPO4Prec_combined.jpg", width=15, height=9, dpi=150)
 
 
 ####  Extract ANOVA tables  ####

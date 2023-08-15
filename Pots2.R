@@ -35,6 +35,7 @@ library(corrplot)
 library(writexl)
 library(glmmTMB)
 library(viridis)
+library(RColorBrewer)
 library(corrplot)
 
 
@@ -397,43 +398,47 @@ ModP2emBio_cld <- cld(ModP2emBio, Letters = trimws(letters), reversed = TRUE)
 View(ModP2emBio_cld)
 write.csv(ModP2emBio_cld, file="Pots2_Biomass.csv")
 
-#creating stacked plot of grain and straw with individual error bars
+#create combined grain & straw data frame
 ModP2Gem_cld$origin <- "Grain"
 ModP2emS1_cld$origin <- "Straw"
 BiomassEm <- rbind(ModP2emS1_cld,ModP2Gem_cld)
 BiomassEm <- as.data.frame(BiomassEm)
-BiomassEm <- select(BiomassEm, Treatment, emmean, SE, .group, origin)
+BiomassEm <- BiomassEm[, c("Treatment", "emmean", "SE", ".group", "origin")]
 BiomassEm$.group <- str_trim(BiomassEm$.group)
+write.csv(BiomassEm, file="BiomassEm.csv")
 View(BiomassEm)
 #reshape dataframe to longer format
 BiomassEm_long <- BiomassEm|> pivot_longer(cols = c("emmean", "SE"), names_to = "name", values_to = "value")|>
   mutate(name = forcats::fct_rev(name))
+print(BiomassEm_long)
 View(BiomassEm_long)
-# Plot option 1 (GGplot)
-BiomassEm_long|>
-  group_by(Treatment, origin, name) |>
-  summarise(mean = mean(value), SE = sd(value) / sqrt(length(value))) |>
-  mutate(cum_mean = cumsum(mean), cum_SE = cumsum(SE))|>
-  ggplot(aes(Treatment, y=mean, fill = origin)) +
-  geom_bar(stat="identity", position = "stack") +
-  geom_errorbar(aes(ymin = ymin_cum, ymax = ymax_cum), width = .25)+
-  labs(title = "Biomass by Treatment and Origin", x = "Treatment", y = "Biomass") +
-  scale_fill_manual(values = c("#E69F00", "#56B4E9")) +
-  theme_bw()
-# Plot option 2 (ggbarplot)
-ggbarplot(data = BiomassEm_long, x = "Treatment", y = "value", fill = "origin", add="mean_se")+
-  geom_errorbar(aes(ymin = value, ymax = value), width = .25) +
-  labs(x = "Treatment", y = "Total grain and straw yield (g)", fill = "") +
-  scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", "Meat and\nBone Meal -\nCoarse",
-                              "Meat and\nBone Meal -\nFine", "Fertilizer\nPhosphorus"))+
-  theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x = element_text(size = 14, face="bold"), axis.title.y = element_text(size = 14, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
 
-# Plot option 3 - side by side
+#Create stacked barplot
+## call dataframe
+BiomassEm_Manual <- subset(Pots2, select=c("Treatment", "Straw", "Grain"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+print(BiomassEm_Manual)
+# use ggbarplot
+(Pots2BioStack <- BiomassEm_Manual|>
+    pivot_longer(-Treatment) |>
+    mutate(name = forcats::fct_rev(name))|>
+    ggbarplot(x = "Treatment", y = "value", fill = "name", add = "mean_se")+
+    labs(x = "Treatment", y = "Total grain and straw yield (g)", fill = "") +
+    scale_fill_manual(values = c("grey89", "grey30")) +
+    scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
+                                "Meat & Bone\nMeal- Fine", "Fertilizer\nPhosphorus"))+
+    theme(legend.key.size=unit(10,"mm"), 
+          legend.title = element_text(size = 20, face = "bold"),
+          legend.text=element_text(size=18),
+        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+        axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+        axis.title.x=element_blank(), 
+        axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Pots2BioStack, file="Pots2_biomass_stack.jpg", width = 10, height = 8, dpi = 150)
+
+#creating side by side plot of grain and straw 
 (Pots2BioPlot <- ggplot(BiomassEm, aes(x=Treatment, y=emmean, pattern=origin)) +
     geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
@@ -547,7 +552,7 @@ print(Pots2AICBio)
 
 #emmeans on glmm - on suitable model
 ModP2emNup <- emmeans(ModP2Nup3,~Treatment, alpha = 0.1, type="response")
-ModP2emNup_cld <- cld(ModP2emNup, Letters = trimws(letters), reverd=TRUE) 
+ModP2emNup_cld <- cld(ModP2emNup, Letters = trimws(letters), reversed=TRUE) 
 View(ModP2emNup_cld)
 write.csv(ModP2emNup_cld, file="Pots2_Nuptake.csv")
 
@@ -571,7 +576,7 @@ write.csv(ModP2emNup_cld, file="Pots2_Nuptake.csv")
           panel.background = element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(Pots2NuptakePlot, file="Pots2_Nuptake.jpg", width = 8, height = 8, dpi = 150)
+ggsave(Pots2NuptakePlot, file="Pots2_Nuptake.jpg", width = 8, height = 6, dpi = 150)
 
 
 
@@ -685,7 +690,7 @@ write.csv(ModP2emPup_cld, file="Pots2_Puptake.csv")
           panel.background = element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(Pots2PuptakePlot, file="Pots2_Puptake.jpg", width = 8, height = 8, dpi = 150)
+ggsave(Pots2PuptakePlot, file="Pots2_Puptake.jpg", width = 8, height = 6, dpi = 150)
 
 
 #####   SOIL NO3   #####
@@ -1415,6 +1420,7 @@ write.csv(ModP2emLNH4_cld, file="Pots2_LNH4.csv")
 
 
 ####  CORRELATION OF P FRACTIONS  ####
+    ## comparison of the P fractions overall is obvious, need tosperate by treatment
 Pots2PCorMatrix <- Pots2[complete.cases(Pots2), c("SPO4", "ResinP", "WatSolP", "TotalP", "Puptake", "LPO4")]
 # full matrix
 Pots2PCor <- cor(Pots2PCorMatrix)
@@ -1425,19 +1431,14 @@ colnames(Pots2PCorSub)[1:5] <- c("Soil PO4", "Soil Resin P", "Soil SRP", "Soil T
 rownames(Pots2PCorSub)[1:2] <- c("Crop P uptake", "Leachate PO4")
 Pots2PCorSub[1,5] <- NA
 View(Pots2PCorSub)
-
 # heatmap & correllelogram requires at least 2 columns and two rows
 #Correlellogram
 jpeg("Pots2_Pcorplot.jpg", width = 8, height = 5, units = "in", res = 300)
 corrplot(Pots2PCorSub, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
          col=viridis(n = 100, option = "D"))
 dev.off()
-#heatmap
-#heatmap(Pots2PCorSub, Rowv = NA, Colv = NA, col = colorRampPalette(c("blue", "white", "red"))(100), scale = "none",
-#        main = "Correlation Heatmap", xlab = "Variables", ylab = "Leachate PO4")
 
-
-## Plotting only Leachate PO4 against soil P
+## Plotting only Leachate PO4 against soil P - still not useful
 Pots2PCorMatrix2 <- Pots2[complete.cases(Pots2), c("SPO4", "ResinP", "WatSolP", "TotalP", "LPO4")]
 # full matrix
 Pots2PCor2 <- cor(Pots2PCorMatrix2)
@@ -1445,18 +1446,79 @@ View(Pots2PCor2)
 #select only LPO4 in the row
 Pots2PCorSub2<-cor(x=Pots2PCor2[5,], y=Pots2PCor2[,1:4], method = "spearman", use = "pairwise.complete.obs")
 colnames(Pots2PCorSub2)[1:4] <- c("Soil PO4", "Soil Resin P", "Soil SRP", "Soil Total P")
-rownames(Pots2PCorSub2)[1] <- c("Leachate PO4")
-View(Pots2PCorSub)
-
-# heatmap & correllelogram requires at least 2 columns and two rows
-#Correlellogram
-jpeg("Pots2_Pcorplot_LPO4.jpg", width = 8, height = 5, units = "in", res = 300)
-corrplot(Pots2PCorSub2, method = "circle", addCoef.col="black", tl.col = "black", mar = c(1,1,1,1), na.label = " ",
-         col=viridis(n = 100, option = "D"))
+rownames(Pots2PCorSub2)[1] <- c("Leachate\nPO4")
+print(Pots2PCorSub2)
+#Correlellogram - cannot be properly manipulated
+jpeg("Pots2_Pcorplot_LPO4.jpg", width = 8, height = 5, units = "in", res = 150)
+corrplot(Pots2PCorSub2, method = "circle", addCoef.col="black", tl.col = "black", mar = c(0,0.2,0,0.2), na.label = " ",
+         col=viridis(n = 100, option = "D"), tl.srt = 45)
+title(main = "Correlation of leachte P to residual soil P fractions", cex.main = 1.5, line=-1)
+#, scale_fill_gradientn(colors=COL2('BrBG'), breaks = seq(-1, 1, by = 0.5))
 dev.off()
+# ggplot to manipulate the plot
+Pots2PCorDF <- data.frame(Var1=rownames(Pots2PCorSub2), Var2 = "Leachate PO4", Corerelation=unname(Pots2PCorSub2))
+pots2pcorDF_long <- data.frame(Var1 = Pots2PCorDF$Var1, Var2 = Pots2PCorDF$Var2, Correlation = Pots2PCorDF$Correlation)
+print(pots2pcorDF_long)
+(Pots2_Pcorplot_LPO4 <- ggplot(pots2pcorDF_long, aes(x = Variable, y = `Leachate PO4`, fill = `Leachate PO4`)) +
+    geom_point(data=pots2pcorDF_long, aes(size=abs(`Leachate PO4`)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(30,45)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=sprintf("%.3f", `Leachate PO4`)), size=7)+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+          legend.text=element_text(size=12),
+          legend.title=element_text(size=16, face="bold"),
+          legend.key.siz=unit(15,"mm"),
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_blank(),
+          axis.text.x=element_blank(), #no labels
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(5, 5, 5, 5))+
+    guides(size = "none")+
+    labs(x="", y="", title="% P Recovery - Soil residual PO4"))
+plot(Pots2_Pcorplot_LPO4)
+ggsave(Pots2_Pcorplot_LPO4, file="Pots2_Pcorplot_LPO4a.jpg", width=8, height=5, dpi=100)
 
-
-
+## plot soil PO4 against leachte Po4 per treatment
+Pots2PCorPdf <- data.frame(Treatment=Pots2$Treatment,
+                           SPO4=Pots2$SPO4,
+                           LPO4=Pots2$LPO4)
+print(Pots2PCorPdf)
+Pots2PCor3 <- Pots2PCorPdf %>%
+  group_by(Treatment) %>%
+  summarize(Correlation = cor(LPO4, SPO4, use = "complete.obs"), .groups = "drop")
+Pots2PCor3$Treatment <- factor(Pots2PCor3$Treatment, levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
+                                                              "MBMACoarse", "MBMAFine", "Phosphorus"),
+                                 labels=c("Control 1", "Control 2", "Canola\nMeal", "Manure", "Willow", 
+                                          "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                          "Phosphorus\nFertilizer"))
+print(Pots2PCor3)
+# visualize correlation using heatmap
+(Pots2_Pcorplot2 <- ggplot(Pots2PCor3, aes(x=Treatment, y=0.5, fill=Correlation)) +
+    geom_point(data=Pots2PCor3, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(15,45)) +
+    scale_fill_gradientn(colors=viridis(n = 100, option = "D"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=sprintf("%.2f",Correlation), color = ifelse(Correlation < 0, "white", "black")), size = 6)+
+    scale_color_manual(values = c("black", "white"))+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22, vjust = -0.5),
+          legend.text=element_text(size=12),
+          legend.title=element_text(size=16, face="bold"),
+          legend.key.siz=unit(15,"mm"),
+          axis.title.y=element_text(size=14, colour="black", face="bold"),
+          axis.title.x=element_text(size=14, colour="black", face="bold"),
+          axis.text.y=element_blank(),
+          axis.text.x=element_text(angle=45, size=19, colour="black"),
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(5, 5, 5, 5))+
+    guides(size = "none", color="none")+
+    labs(x="", y="", title="Leachate PO4 - Soil residual PO4"))
+ggsave(Pots2_Pcorplot2, file="Pots2_Pcorplot_LPO4.jpg", width=14, height=5, dpi=100)
 
 # Plotting Leachate NO3, PO4 and NH4 load
 #create and combine data frames for the three emmeans functions
@@ -1534,23 +1596,27 @@ YieldCovPots2_dfAll$treatment <- factor(YieldCovPots2_dfAll$treatment,
                               "Phosphorus"),
                      labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
                               "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+YieldCovPots2_RmTrt <- c("Control 1", "Control 2")
+YieldCovPots2_dfAll <- YieldCovPots2_dfAll[!YieldCovPots2_dfAll$treatment %in% YieldCovPots2_RmTrt, ]
 write.csv(YieldCovPots2_dfAll, file="Pots2_YieldCov.csv")
 # ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
 (YieldCovPots2Heat <- ggplot(YieldCovPots2_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-1.9, 5), breaks=seq(-1.9, 5, by=1)) +
     facet_wrap(~ treatment, nrow=3, scales="fixed") +
-    geom_text(aes(label=round(Covariance, 3)))+
-    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+    geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+    theme(legend.title=element_text(size=20, face="bold"),
+          legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
-          strip.text=element_text(size=20, face="bold"),
+          strip.text=element_text(size=26, face="bold"),
           strip.placement="outside",
           strip.background=element_blank(),
           strip.text.y=element_text(angle=0, vjust=0.5),
           strip.text.x=element_text(vjust=1),
           axis.line=element_blank(),
-          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-          axis.text.y.left=element_text(size=15),
+          axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(1, "cm"))+
     labs(x="", y=""))
 ggsave(YieldCovPots2Heat, file="Pots2_YieldCovHeat.jpg", width=20, height=20, dpi=150)
@@ -1599,23 +1665,27 @@ UptakeCovPots2_dfAll$treatment <- factor(UptakeCovPots2_dfAll$treatment,
                                   "MBMAFine", "Phosphorus"),
                          labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", 
                                   "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+YieldCovPots2_RmTrt <- c("Control 1", "Control 2")
+UptakeCovPots2_dfAll <- UptakeCovPots2_dfAll[!UptakeCovPots2_dfAll$treatment %in% YieldCovPots2_RmTrt, ]
 write.csv(UptakeCovPots2_dfAll, file="Pots2_UptakeCov.csv")
 # Generate the heatmap for each treatment and facet wrap them
 (UptakeCovPots2Heat <- ggplot(UptakeCovPots2_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-2, 5), breaks=seq(-2, 5, by=1)) +
-    facet_wrap(~ treatment, nrow=3, ncol=3, scales="fixed") +
-    geom_text(aes(label=round(Covariance, 3)))+
-    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
+    geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+    scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+    theme(legend.title=element_text(size=20, face="bold"),
+          legend.key.size=unit(15,"mm"),
           legend.text=element_text(size=20), 
-          strip.text=element_text(size=20, face="bold"),
+          strip.text=element_text(size=26, face="bold"),
           strip.placement="outside",
           strip.background=element_blank(),
           strip.text.y=element_text(angle=0, vjust=0.5),
           strip.text.x=element_text(vjust=1),
           axis.line=element_blank(),
-          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-          axis.text.y.left=element_text(size=15),
+          axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+          axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(1, "cm"))+
     labs(x="", y=""))
 ggsave(UptakeCovPots2Heat, file="Pots2_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
@@ -1687,40 +1757,120 @@ round(Pots2EigenPrin$loadings[, 1:2], 3)
 
 ####  Correlate char P to residual soil P  ####
 # set up new data frame 
-Pots2CharPdf <- data.frame(
-  Treatment = rep(c("Canola Meal", "Manure", "Willow", "Meat and Bone\nMeal Coarse", "Meat and Bone\nMeal Fine",
-                    "Phosphorus\nFertilizer"), each = 4),
-  CharPerc = c(3.04, 3.05,3.03,3.04, 0.23, 0.231, 0.229, 0.23, 
-               0.17, 0.18, 0.16, 0.17, 12.7, 12.71, 12.69, 12.7, 
-               17.7, 17.71, 17.69, 17.7, 19.39, 19.38, 19.42, 19.41),
-  PO4=c(6.53, NA, 4.75, 6.7, 12.68, 17.23, 11, 5.87, 11.81, 6.79, 7.73, 4.42, 9.13, 14.54, 17.04, 10.84, 
-        6.36, 7.31, 14.59, 4.49, 14.03, 8.53, 12.69, 18.76))
+Pots2CharPdf <- data.frame(Treatment=Pots2$Treatment,
+                          SPO4=Pots2$SPO4,
+                          CharPerc=Pots2$CharPerc)
+Pots2CharExcl <- c("Control1", "Control2")
+Pots2CharPdf <- subset(Pots2CharPdf, !Treatment %in% Pots2CharExcl)
 print(Pots2CharPdf)
-# get a single correlation value for each PO4/CharPerc combination per treatment 
 Pots2CharCor <- Pots2CharPdf %>%
   group_by(Treatment) %>%
-  summarize(Correlation = cor(CharPerc, PO4, use = "complete.obs"), .groups = "drop")
+  summarize(Correlation = cor(CharPerc, SPO4, use = "complete.obs"), .groups = "drop")
+Pots2CharCor$Treatment <- factor(Pots2CharCor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                                 labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                          "Phosphorus\nFertilizer"))
+print(Pots2CharCor)
 # visualize correlation using heatmap
-(Pots2CharHeatPlot <- ggplot(Pots2CharCor, aes(x=Treatment, y=1, fill=Correlation)) +
-    geom_point(data=Pots2CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
-    scale_size(range = c(20, 35)) +
+(Pots2CharHeatPlot <- ggplot(Pots2CharCor, aes(x=Treatment, y=0.5, fill=Correlation)) +
+  geom_point(data=Pots2CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+  scale_size(range = c(30,45)) +
+  scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+  geom_text(aes(label=sprintf("%.3f",Correlation)), size=7)+
+  theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+        legend.text=element_text(size=12),
+        legend.title=element_text(size=16, face="bold"),
+        legend.key.siz=unit(15,"mm"),
+        axis.title.y=element_text(size=14, colour="black", face="bold"),
+        axis.title.x=element_text(size=14, colour="black", face="bold"),
+        axis.text.y=element_blank(),
+        axis.text.x=element_blank(), #no labels
+        axis.ticks.y=element_blank(),
+        axis.ticks.x=element_blank(),
+        panel.background=element_blank(),  # remove gray background
+        panel.spacing.x=unit(1, "cm"),
+        plot.margin=margin(5, 5, 5, 5))+
+        guides(size = "none")+
+  labs(x="", y="", title="% p in char - Soil residual PO4 "))
+
+
+## correlate P uptake to to %P in char
+Pots2RecPdf <- data.frame(Treatment=Pots2$Treatment,
+                         Puptake=Pots2$Puptake,
+                         CharPerc=Pots2$CharPerc)
+Pots2CharExcl <- c("Control1", "Control2")
+Pots2RecPdf <- subset(Pots2RecPdf, !Treatment %in% Pots2CharExcl)
+print(Pots2RecPdf)
+Pots2RecCor <- Pots2RecPdf %>%
+  group_by(Treatment) %>%
+  summarize(Correlation = cor(Puptake, CharPerc, use = "complete.obs"), .groups = "drop")
+Pots2RecCor$Treatment <- factor(Pots2RecCor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                               labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                        "Phosphorus\nFertilizer"))
+print(Pots2RecCor)
+# visualize correlation using heatmap
+(Pots2RecHeatPlot <- ggplot(Pots2RecCor, aes(x=Treatment, y=0.5, fill=Correlation)) +
+    geom_point(data=Pots2RecCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(30,45)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
-    geom_text(aes(label=round(Correlation, 3)))+
-    scale_x_discrete(position="top")+
-    theme(legend.title=element_text(size=10, face="bold"),
-          legend.text=element_text(size=8), 
+    geom_text(aes(label=sprintf("%.3f",Correlation)), size=7)+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+          legend.text=element_text(size=12),
+          legend.title=element_text(size=16, face="bold"),
+          legend.key.siz=unit(15,"mm"),
           axis.title.y=element_text(size=14, colour="black", face="bold"),
           axis.title.x=element_text(size=14, colour="black", face="bold"),
           axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=11, colour="black", hjust=-0.1),
+          axis.text.x=element_blank(), #no labels
           axis.ticks.y=element_blank(),
           axis.ticks.x=element_blank(),
           panel.background=element_blank(),  # remove gray background
           panel.spacing.x=unit(1, "cm"),
-          plot.margin=margin(10, 10, 10, 10))+
+          plot.margin=margin(5, 5, 5, 5))+
     guides(size = "none")+
-    labs(x="Percentage P in treatment", y="Soil residual PO4"))
-ggsave(Pots2CharHeatPlot, file="Pots2_CharHeat.jpg", width=10, height=3, dpi=150)
+    labs(x="", y="", title="P Uptake - % P in char"))
+
+## correlate P uptake to residual PO4
+Pots2PO4Pdf <- data.frame(Treatment=Pots2$Treatment,
+                         SPO4=Pots2$SPO4,
+                         Puptake=Pots2$Puptake)
+Pots2CharExcl <- c("Control1", "Control2")
+Pots2PO4Pdf <- subset(Pots2PO4Pdf, !Treatment %in% Pots2CharExcl)
+print(Pots2PO4Pdf)
+Pots2PO4Cor <- Pots2PO4Pdf %>%
+  group_by(Treatment) %>%
+  summarize(Correlation = cor(Puptake, SPO4, use = "complete.obs"), .groups = "drop")
+Pots2PO4Cor$Treatment <- factor(Pots2PO4Cor$Treatment, levels=c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                               labels=c("Canola\nMeal", "Manure", "Willow", "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
+                                        "Phosphorus\nFertilizer"))
+print(Pots2PO4Cor)
+# visualize correlation using heatmap
+(Pots2PO4HeatPlot <- ggplot(Pots2PO4Cor, aes(x=Treatment, y=0.5, fill=Correlation)) +
+    geom_point(data=Pots2PO4Cor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
+    scale_size(range = c(30,45)) +
+    scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
+    geom_text(aes(label=sprintf("%.3f", Correlation)), size=7)+
+    scale_x_discrete(position="bottom")+ #used for labels on the bottom
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+          legend.text=element_text(size=12),
+          legend.title=element_text(size=16, face="bold"),
+          legend.key.siz=unit(15,"mm"),
+          axis.title.y=element_blank(),
+          axis.title.x=element_blank(),
+          axis.text.y=element_blank(),
+          axis.text.x=element_text(angle=45, size=19, colour="black", hjust=1), #keep only in the last one
+          axis.ticks.y=element_blank(),
+          axis.ticks.x=element_blank(),
+          panel.background=element_blank(),  # remove gray background
+          panel.spacing.x=unit(1, "cm"),
+          plot.margin=margin(5, 5, 5, 5))+
+    guides(size = "none")+
+    labs(x="", y="", title="P Uptake - Soil residual PO4"))
+
+## combined plot - combined legend and ggarrange uses ggpubr package, set legend in individual plots
+(Pots2CharRecPO4_plot <-ggarrange(Pots2CharHeatPlot, Pots2RecHeatPlot, Pots2PO4HeatPlot, nrow=3, common.legend=TRUE, legend="right", 
+                                 heights=c(0.8, 0.8, 1.1)))
+ggsave(Pots2CharRecPO4_plot, file="Pots2_CharPO4Prec_combined.jpg", width=15, height=9, dpi=150)
+
 
 
 ####  Extract ANOVA tables  ####
