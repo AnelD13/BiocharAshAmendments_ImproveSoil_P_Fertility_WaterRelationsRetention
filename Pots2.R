@@ -644,29 +644,29 @@ Pots2ResP_Mean <- summary_by(ResinP~Treatment+Block, data=Pots2, FUN=mean)
 Pots2ResP_Mean <- as.numeric(Pots2ResP_Mean$ResinP)
 Pots2ResP_skew <- skewness(Pots2ResP_Mean,na.rm=TRUE)
 Pots2ResP_kur <- kurtosis(Pots2ResP_Mean,na.rm=TRUE)
-cat("Skewness:", Pots2ResP_skew, "\n") # 1.404125 
-cat("Kurtosis:", Pots2ResP_kur, "\n") # 2.710147  
-shapiro.test(Pots2$ResinP) # p=0.001659
+cat("Skewness:", Pots2ResP_skew, "\n") # 1.6256
+cat("Kurtosis:", Pots2ResP_kur, "\n") # 3.175637  
+shapiro.test(Pots2$ResinP) # p=0.0005627
 hist(Pots2$ResinP) #  left skew
 leveneTest(ResinP~Treatment, data=Pots2)  # P=0.0674
 shapiro.test(log(Pots2$ResinP))  #p=0.2711
-leveneTest(log(ResinP)~Treatment, data=Pots2)  # p=0.0627
+leveneTest(log(ResinP)~Treatment, data=Pots2)  # p=0.02545
 #ModP2esP1
 ModP2esP1 <- aov(log(ResinP)~Treatment+Block, data=Pots2)
-anova(ModP2esP1)
+anova(ModP2esP1) # no significance
 summary(ModP2esP1)
 hist(resid(ModP2esP1))
-shapiro.test(resid(ModP2esP1))  # p=0.4569
-plot(fitted(ModP2esP1),resid(ModP2esP1),pch=16) 
+shapiro.test(resid(ModP2esP1))  # p=0.5466
+plot(fitted(ModP2esP1),resid(ModP2esP1),pch=16)  # random
 qqnorm(resid(ModP2esP1))
-qqline(resid(ModP2esP1))
+qqline(resid(ModP2esP1)) 
 ModP2esP1_tidy <- tidy(ModP2esP1)
 ModP2esP1sum_sq_reg <- ModP2esP1_tidy$sumsq[1] 
 ModP2esP1sum_sq_resid <- ModP2esP1_tidy$sumsq[2]
-ModP2esP1sum_sq_reg / (ModP2esP1sum_sq_reg + ModP2esP1sum_sq_resid) #0.539
+ModP2esP1sum_sq_reg / (ModP2esP1sum_sq_reg + ModP2esP1sum_sq_resid) #0.548
 #emmeans 
 ModP2emResP1 <- emmeans(ModP2esP1,~Treatment, type="response")
-ModP2emResP1_cld <- cld(ModP2emNup, Letters = letters) 
+ModP2emResP1_cld <- cld(ModP2emNup, Letters = letters, reversed = TRUE) 
 View(ModP2emResP1_cld)
 write.csv(ModP2emResP1_cld, file="Pots2_resinP.csv")
 
@@ -1004,7 +1004,7 @@ P2emNO3 <- as.data.frame(ModP2emLNO3_cld)
 P2emNH4 <- as.data.frame(ModP2emLNH4_cld)
 P2emPO4 <- as.data.frame(ModP2emLPO4_cld)
 P2em_labels <- list("EM1" = "NO3", "EM2" = "NH4", "EM3" = "PO4")
-P2em_all <- bind_rows(list(EM1 = P2emNO3, EM2 = P2emNH4, EM3 = P2emPO4), .id = "EM") 
+P2em_all <- bind_Pots2(list(EM1 = P2emNO3, EM2 = P2emNH4, EM3 = P2emPO4), .id = "EM") 
 P2em_all$EM <- factor(P2em_all$EM, levels = names(em_labels), labels = unlist(em_labels))
 P2em_all <- P2em_all %>% rename(emmean = "response")
 View(P2em_all)
@@ -1028,7 +1028,186 @@ ggplot(P2em_all, aes(x=Treatment, y=emmean, pattern=EM)) +
         axis.line = element_line(colour = "black"))
 ggsave("Pots2_Leachate.jpg", width = 12, height = 8, dpi = 150)
 
-# 
 
 
 
+####  Covariance heat maps  ####
+#####   Yield  #####
+Pots2CovVar <- c("Biomass", "SNO3", "SNH4", "SPO4", "ResinP", "WatSolP", "TotalP", "pH", "EC", "OC")
+Pots2CovYield <- subset(Pots2, select=c("Treatment", Pots2CovVar), 
+                       na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+View(Pots2CovYield)
+Pots2CovScaleYield <- as.data.frame(scale(Pots2CovYield[,-1])) # remove treatment to be able to scale
+Pots2CovScaleYield$Treatment <- Pots2CovYield$Treatment # put treatment back
+Pots2CovYieldSplit <- split(Pots2CovScaleYield[, -ncol(Pots2CovScaleYield)], Pots2CovScaleYield$Treatment)
+YieldCov_Pots2 <- lapply(Pots2CovYieldSplit, function(x) cov(x, use="pairwise.complete.obs"))
+YieldCovPots2Wb <- createWorkbook() 
+for (i in seq_along(YieldCov_Pots2)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(YieldCov_Pots2)[i] # make sure that treatment names are used and not repeat first treatment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(YieldCovPots2Wb, sheet_name)
+  writeData(YieldCovPots2Wb, sheet=sheet_name, x=YieldCov_Pots2[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(YieldCovPots2Wb, "Pots2_Yield_CovMatrix.xlsx")
+# Convert each covariance matrix to a dataframe
+YieldCovPots2_df <- lapply(seq_along(YieldCov_Pots2), function(i) {
+  cov_mat1h <- as.matrix(YieldCov_Pots2[[i]])
+  cov_mat1h <- setNames(cov_mat1h, YieldCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(YieldCov_Pots2)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one and set the variable names as factors and in the correct order
+YieldCovPots2_dfAll <- do.call(rbind, YieldCovPots2_df)
+YieldCovPots2_dfAll$Var1 <- factor(YieldCovPots2_dfAll$Var1, levels=Pots2CovVar, labels=c("Biomass"="Yield", 
+                                   "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", 
+                                   "WatSolP"="Water Soluble P", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
+                                   "OC"="% SOC"))
+YieldCovPots2_dfAll$variable <- factor(YieldCovPots2_dfAll$variable, levels=Pots2CovVar, labels=c("Biomass"="Yield", 
+                                   "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", "WatSolP"="Water Soluble P",
+                                   "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+YieldCovPots2_dfAll$treatment <- factor(YieldCovPots2_dfAll$treatment, 
+                     levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", 
+                              "Phosphorus"),
+                     labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & BoneMeal - Coarse",
+                              "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+write.csv(YieldCovPots2_dfAll, file="Pots2_YieldCov.csv")
+# ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
+(YieldCovPots2Heat <- ggplot(YieldCovPots2_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+    geom_tile() +
+    scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-1.9, 5), breaks=seq(-1.9, 5, by=1)) +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
+    geom_text(aes(label=round(Covariance, 3)))+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+          legend.text=element_text(size=20), 
+          strip.text=element_text(size=20, face="bold"),
+          strip.placement="outside",
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5),
+          strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(),
+          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
+          axis.text.y.left=element_text(size=15),
+          panel.spacing.x=unit(1, "cm"))+
+    labs(x="", y=""))
+ggsave(YieldCovPots2Heat, file="Pots2_YieldCovHeat.jpg", width=20, height=20, dpi=150)
+
+
+
+#####   Uptake  #####
+UptakeCovVar <- c("Puptake", "SNO3", "SNH4", "SPO4", "ResinP", "WatSolP", "TotalP", "pH", "EC", "OC")
+Pots2CovUptake <- subset(Pots2, select=c("Treatment", UptakeCovVar), 
+                        na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+Pots2CovScaleUptake <- as.data.frame(scale(Pots2CovUptake[,-1]))
+Pots2CovScaleUptake$Treatment <- Pots2CovUptake$Treatment
+Pots2CovScaleUptakeSplit <- split(Pots2CovScaleUptake[, -ncol(Pots2CovScaleUptake)], Pots2CovScaleUptake$Treatment)
+## calculate the covariance matrix for each treatment excluding missing data
+UptakeCov_Pots2 <- lapply(Pots2CovScaleUptakeSplit, function(x) cov(x, use="pairwise.complete.obs"))
+UptakeCovPots2Wb <- createWorkbook() # create workbook to save in xlsx
+for (i in seq_along(UptakeCov_Pots2)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(UptakeCov_Pots2)[i] # make sure that treatment names are used and not repeat first treatment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(UptakeCovPots2Wb, sheet_name)
+  writeData(UptakeCovPots2Wb, sheet=sheet_name, x=UptakeCov_Pots2[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(UptakeCovPots2Wb, "Pots2_Uptake_CovMatrix.xlsx")
+# Convert each covariance matrix to a dataframe
+UptakeCovPots2_df <- lapply(seq_along(UptakeCov_Pots2), function(i) {
+  cov_mat1h <- as.matrix(UptakeCov_Pots2[[i]])
+  cov_mat1h <- setNames(cov_mat1h, UptakeCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(UptakeCov_Pots2)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one and set the variable names as factors and in the correct order
+UptakeCovPots2_dfAll <- do.call(rbind, UptakeCovPots2_df)
+UptakeCovPots2_dfAll$Var1 <- factor(UptakeCovPots2_dfAll$Var1, levels=UptakeCovVar, labels=c("Biomass"="Yield", 
+                                    "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", "ResinP"="Resin P", 
+                                    "WatSolP"="Water Soluble P", "TotalP"="Total P", "pH"="pH", "EC"="EC", 
+                                    "OC"="% SOC"))
+UptakeCovPots2_dfAll$variable <- factor(UptakeCovPots2_dfAll$variable, levels=UptakeCovVar, 
+                                        labels= c("Biomass"="Yield", "SNO3"="NO3", "SNH4"="NH4", "SPO4"="PO4", 
+                                                  "ResinP"="Resin P", "WatSolP"="Water Soluble P", 
+                                                  "TotalP"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+UptakeCovPots2_dfAll$treatment <- factor(UptakeCovPots2_dfAll$treatment, 
+                         levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", 
+                                  "MBMAFine", "Phosphorus"),
+                         labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", 
+                                  "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+write.csv(UptakeCovPots2_dfAll, file="Pots2_UptakeCov.csv")
+# Generate the heatmap for each treatment and facet wrap them
+(UptakeCovPots2Heat <- ggplot(UptakeCovPots2_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+    geom_tile() +
+    scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-2, 5), breaks=seq(-2, 5, by=1)) +
+    facet_wrap(~ treatment, nrow=3, ncol=3, scales="fixed") +
+    geom_text(aes(label=round(Covariance, 3)))+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+          legend.text=element_text(size=20), 
+          strip.text=element_text(size=20, face="bold"),
+          strip.placement="outside",
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5),
+          strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(),
+          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
+          axis.text.y.left=element_text(size=15),
+          panel.spacing.x=unit(1, "cm"))+
+    labs(x="", y=""))
+ggsave(UptakeCovPots2Heat, file="Pots2_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
+
+
+####   Yield to N & P Uptake  ####
+# use uptake for Pots 2 as recovery can't be calculated due to soil coming from the field & added urea
+Pots2$Treatment <- as.factor(Pots2$Treatment)
+Pots2$Biomass <- as.numeric(Pots2$Biomass)
+Pots2$Nrecovery <- as.numeric(Pots2$Nrecovery)
+Pots2$Precovery <- as.numeric(Pots2$Precovery)
+Pots2ContourSub <- subset(Pots2, select = c(Block, Treatment, Biomass, Nuptake, Puptake))
+View(Pots2ContourSub)
+Pots2ContourSub$Treatment <- factor(Pots2ContourSub$Treatment, levels=c("Control1", "Control2", "CanolaMeal", 
+                                    "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"),
+                   labels=c("Control 1", "Control 2","Canola Meal", "Manure", "Willow", 
+                            "Meat & BoneMeal - Coarse", "Meat & Bonemeal - Fine", "Phosphorus Fertilizer"))
+View(Pots2ContourSub)
+Pots2ContourExcl <- na.exclude(Pots2ContourSub)
+View(Pots2ContourExcl)
+
+Pots2ContourMod <- glmmTMB(Biomass ~ Nuptake + Puptake + Treatment + (1|Block), data = Pots2ContourExcl, 
+                          na.action=na.exclude)
+summary(Pots2ContourMod)
+Anova(Pots2ContourMod)
+#Set up N & P uptake grids per soil
+Pots2Nuptake_grid <- seq(min(Pots2ContourExcl$Nuptake, na.rm = TRUE), max(Pots2ContourExcl$Nuptake, na.rm = TRUE),
+                          length.out = 100)
+Pots2Puptake_grid <- seq(min(Pots2ContourExcl$Puptake, na.rm = TRUE), max(Pots2ContourExcl$Puptake, na.rm = TRUE),
+                          length.out = 100)
+# Set up expanded grids then assign yield - must include block as it was used in the model!!
+Pots2Contour_grid <- expand.grid(Block=unique(Pots2ContourExcl$Block), Treatment = unique(Pots2ContourExcl$Treatment), 
+                                Nuptake = Pots2Nuptake_grid, Puptake = Pots2Puptake_grid)
+Pots2Contour_grid$Yield <- predict(Pots2ContourMod, newdata = Pots2Contour_grid)
+Pots2Contour_grid <- Pots2Contour_grid[,-1] # remove block so it doesn't appear in the plot
+View(Pots2Contour_grid)
+# develop contour plot
+(Pots2Contours <- ggplot(Pots2Contour_grid, aes(x = Nuptake, y = Puptake, z = Yield)) +
+    geom_raster(aes(fill=Yield)) + #use rastar to get smooth lines
+    geom_contour(aes(z=Yield), color='gray30', binwidth = 0.5) + #contour line, adjust binwidth depending on yield
+    facet_wrap(~Treatment, nrow = 5) +
+    scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
+    labs(x = "% N Uptake", y = "% P Uptake", fill = "Yield (g)") +
+    theme(legend.title = element_text(size = 25, face = "bold"),
+          legend.key.size = unit(15, "mm"),
+          legend.text = element_text(size = 20),
+          strip.text = element_text(size = 25, face = "bold"),
+          strip.placement = "outside",
+          strip.background = element_blank(),
+          strip.text.x = element_text(vjust = 1),
+          axis.text.x=element_text(size=15),
+          axis.text.y=element_text(size=15),
+          axis.title.x=element_text(size=30, face="bold"),
+          axis.title.y=element_text(size=30, face="bold"),
+          panel.spacing = unit(0.5, "cm")))
+ggsave(Pots2Contours, file="Pots2_YieldContour.jpg", width=20, height=20, dpi=150)

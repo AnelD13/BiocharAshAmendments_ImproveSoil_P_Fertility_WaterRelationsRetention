@@ -2,14 +2,18 @@
 Pots1<-read.csv("Pots1.csv", fileEncoding="UTF-8-BOM")
 View(Pots1)
 plot(Pots1$Drywt)
+PotsRaw<-read.csv("Pots1raw.csv", fileEncoding="UTF-8-BOM")
 
 #Loading libraries
 library(lme4)
 library(nlme)
+library(glmm)
+library(glmmTMB)
 library(lmerTest)
 library(doBy)
 library(ggplot2)
 library(ggpattern)
+library(ggforce)
 library(plotrix)
 library(car)
 library(afex)
@@ -38,6 +42,8 @@ library(tidyHeatmap)
 library(reshape2)
 library(metaSEM)
 library(ggh4x)
+library(gridExtra)
+library(directlabels)
 
 #### Summary and ordering of data   ####
 #Check for missing values in a specific field
@@ -49,7 +55,7 @@ print(missing)
 #treatment order specifies the order in which treatments will appear 
 Trt_order <- c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha",
                "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha",
-               "CanolaHull10thaTSP", "CanolaMeal10thaTSP", "Manure10thaTSP", "Willow10thaTSP", 
+               "CanolaMeal10thaTSP", "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", 
                "TripleSuperPhosphate")
 Soil_order <- c("Haverhill", "Oxbow")
 Pots1$Treatment <- factor(Pots1$Treatment, levels=Trt_order)
@@ -59,109 +65,110 @@ str(Pots1) #displays the structure of the object
 View(Pots1) #view the object in a separate window (e.g. as a table)
 
 # Summary data (means, SD, etc.) for each treatment and variable
-Pots1Mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean)
+Pots1Mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean, na.rm=TRUE)
+Pots1Mean <- rename(Pots1Mean, Drywt=Drywt.mean, Nuptake=Nuptake.mean, Nrecovery=Nrecovery.mean, Puptake=Puptake.mean, 
+                    Precovery=Precovery.mean, NO3=NO3.mean, NH4=NH4.mean, PO4=PO4.mean, ResinP=ResinP.mean, 
+                    WaterSolP=WaterSolP.mean, TotalP2=TotalP2.mean, pH=pH.mean, EC=EC.mean, OC=OC.mean)
+View(Pots1Mean)
 Pots1SD <- summary_by(.~Soil+Treatment, data=Pots1, FUN=sd)
 
-
-
 ####   Check for outliers   ####
-PotsRaw<-read.csv("Pots1raw.csv", fileEncoding="UTF-8-BOM")
 ##Drywt
 ggplot(PotsRaw, aes(x=Treatment, y=Drywt, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="Drywt")
-ggsave("OutliersDrywt.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersDrywt.jpg", width=30, height=30, dpi=150)
 ##Total N
 ggplot(PotsRaw, aes(x=Treatment, y=TotalN, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="Total N")
-ggsave("OutliersTotalN.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersTotalN.jpg", width=30, height=30, dpi=150)
 ##N Uptake
 ggplot(PotsRaw, aes(x=Treatment, y=Nuptake, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="N uptake")
-ggsave("OutliersNuptake.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersNuptake.jpg", width=30, height=30, dpi=150)
 ##N Recovery
 ggplot(PotsRaw, aes(x=Treatment, y=Nrecovery, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="N Recovery")
-ggsave("OutliersNrecovery.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersNrecovery.jpg", width=30, height=30, dpi=150)
 ##Total P1
 ggplot(PotsRaw, aes(x=Treatment, y=TotalP1, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="Total P Plants")
-ggsave("OutliersTotalPplants.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersTotalPplants.jpg", width=30, height=30, dpi=150)
 ##P Uptake
 ggplot(PotsRaw, aes(x=Treatment, y=Puptake, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="P uptake")
-ggsave("OutliersPuptake.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersPuptake.jpg", width=30, height=30, dpi=150)
 ##P Recovery
 ggplot(PotsRaw, aes(x=Treatment, y=Precovery, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="P recovery")
-ggsave("OutliersPrecovery.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersPrecovery.jpg", width=30, height=30, dpi=150)
 ##NO3	
 ggplot(PotsRaw, aes(x=Treatment, y=NO3, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="NO3")
-ggsave("OutliersNO3.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersNO3.jpg", width=30, height=30, dpi=150)
 ##NH4	
 ggplot(PotsRaw, aes(x=Treatment, y=NH4, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="NH4")
-ggsave("OutliersNH4.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersNH4.jpg", width=30, height=30, dpi=150)
 ##PO4	
 ggplot(PotsRaw, aes(x=Treatment, y=PO4, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="PO4")
-ggsave("OutliersPO4.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersPO4.jpg", width=30, height=30, dpi=150)
 ## Resin P
 ggplot(PotsRaw, aes(x=Treatment, y=ResinP, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="ResinP")
-ggsave("OutliersResinP.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersResinP.jpg", width=30, height=30, dpi=150)
 ##WaterSolP	
 ggplot(PotsRaw, aes(x=Treatment, y=WaterSolP, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="Water Soluble P")
-ggsave("OutliersWaterSolP.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersWaterSolP.jpg", width=30, height=30, dpi=150)
 ##TotalP2	
 ggplot(PotsRaw, aes(x=Treatment, y=TotalP2, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="Total P Soil")
-ggsave("OutliersTotalPSoil.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersTotalPSoil.jpg", width=30, height=30, dpi=150)
 ##pH	
 ggplot(PotsRaw, aes(x=Treatment, y=pH, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="pH")
-ggsave("OutlierspH.jpg", width=30, height=30, dpi=600)
+ggsave("OutlierspH.jpg", width=30, height=30, dpi=150)
 ##EC	
 ggplot(PotsRaw, aes(x=Treatment, y=EC, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="Electrical Conductivity")
-ggsave("OutliersEC.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersEC.jpg", width=30, height=30, dpi=150)
 ##OC
 ggplot(PotsRaw, aes(x=Treatment, y=OC, fill=Soil)) +
   geom_boxplot(na.rm=TRUE) +
   facet_wrap(~ Soil+Treatment, scales="free") +
   labs(x="Treatment", y="Organic Carbon %")
-ggsave("OutliersOC.jpg", width=30, height=30, dpi=600)
+ggsave("OutliersOC.jpg", width=30, height=30, dpi=150)
 
 
 
@@ -210,7 +217,7 @@ Mod1cld <- cld(Mod1em, Letters=letters) #use Compact Letter Display (CLD) with a
 View(Mod1cld)
 #emmeans for each soil separately - # cld use directly in ggplot - make sure labels are correct in ggplot
 Mod1em_split <- emmeans(Mod1a,~Treatment|Soil, subset=(Pots1$Drywt))
-Mod1cld_split <- cld(Mod1em_split, Letters=letters, reversed=TRUE, by="Soil")
+Mod1cld_split <- cld(Mod1em_split, Letters=letters, reversed=TRUE, by="Soil") #reversed sorts letters in correct order
 View(Mod1cld_split)
 
 
@@ -244,7 +251,7 @@ Drywt_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","
                   "TripleSuperPhosphate")
 Drywt_subVar <- Mod1cld_split %>%
   filter(Treatment %in% Drywt_trtVar)
-ggplot(Drywt_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
+(Drywt50kg <- ggplot(Drywt_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -263,15 +270,15 @@ ggplot(Drywt_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
         axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-  ggsave("Pots1_Biomass_50kgPha.jpg", width=12, height=8, dpi=600)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(Drywt50kg, file="Pots1_Biomass_50kgPha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
 Drywt_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                    "Willow10tha", "Willow10thaTSP")
 Drywt_subCon <- Mod1cld_split %>%
   filter(Treatment %in% Drywt_charCon)
-ggplot(Drywt_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Drywt10tha <- ggplot(Drywt_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -290,8 +297,8 @@ ggplot(Drywt_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
         axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-  ggsave("Pots1_Biomass_10tha.jpg", width=12, height=8, dpi=600)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(Drywt10tha, file="Pots1_Biomass_10tha.jpg", width=12, height=8, dpi=150)
 
 
 
@@ -443,7 +450,7 @@ print(N_AB)
 #Mod3b chosen as best fit
 #emmeans 
 Mod3em <- emmeans(Mod3e,~Treatment|Soil, data=Pots1)
-Mod3cld <- cld(Mod3em, Letters=letters, by="Soil", type="response") 
+Mod3cld <- cld(Mod3em, Letters=letters, reversed = TRUE, by="Soil", type="response") 
 Mod3cld <- Mod3cld %>% rename(emmean="response")
 View(Mod3cld)
 
@@ -452,7 +459,7 @@ Nuptake_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha"
                   "TripleSuperPhosphate")
 Nuptake_subVar <- Mod3cld %>%
   filter(Treatment %in% Nuptake_trtVar)
-ggplot(Nuptake_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
+(Nup50kg <- ggplot(Nuptake_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -469,15 +476,15 @@ ggplot(Nuptake_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=20, face="bold", colour="black"),
         axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Nuptake_50kgPha.jpg", width=18, height=18, dpi=500)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Nup50kg, file="Pots1_Nuptake_50kgPha.jpg", width=18, height=18, dpi=500)
 #Plotting constant biochar rates with var P rates
 Nuptake_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                    "Willow10tha", "Willow10thaTSP")
 Nuptake_subCon <- Mod3cld %>%
   filter(Treatment %in% Nuptake_charCon)
-ggplot(Nuptake_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Nup10tha <- ggplot(Nuptake_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -494,8 +501,8 @@ ggplot(Nuptake_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=20, face="bold", colour="black"),
         axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Nuptake_10tha.jpg", width=21, height=21, dpi=500)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Nup10tha, file="Pots1_Nuptake_10tha.jpg", width=21, height=21, dpi=500)
 
 
 
@@ -615,7 +622,7 @@ print(NrecAB)
 
 #run emmeans on Mod4 - showed significant differences
 Mod4em <- emmeans(Mod4c,~Treatment|Soil, subset=(Nrec$Nrecovery))
-Mod4em_cld <- cld(Mod4em, Letters=letters, by="Soil")
+Mod4em_cld <- cld(Mod4em, Letters=letters, reversed = TRUE, by="Soil")
 View(Mod4em_cld)
 
 ## Visualizations
@@ -625,7 +632,7 @@ par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
 Nrec_trtVar <- c("Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
 Nrec_subVar <- Mod4em_cld %>%
   filter(Treatment %in% Nrec_trtVar)
-ggplot(Nrec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Nrec50kg <- ggplot(Nrec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -641,15 +648,15 @@ ggplot(Nrec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
         axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-  ggsave("Pots1_Nrec_50kg_ha.jpg", width=20, height=20, dpi=600)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(Nrec50kg, file="Pots1_Nrec_50kg_ha.jpg", width=20, height=20, dpi=100)
 #Plotting constant biochar rates with var P rates
 Nrec_charCon <- c("Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                    "Willow10tha", "Willow10thaTSP")
 Nrec_subCon <- Mod4em_cld %>%
   filter(Treatment %in% Nrec_charCon)
-ggplot(Nrec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Nrec10tha <- ggplot(Nrec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -666,8 +673,8 @@ ggplot(Nrec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
         axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Nrec_10t_ha.jpg", width=20, height=20, dpi=500)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Nrec10tha, file="Pots1_Nrec_10t_ha.jpg", width=20, height=20, dpi=100)
 
 
 
@@ -725,7 +732,7 @@ print(PupAB)
 
 #Mod5a chosen as rsq is higher (0.99)
 Mod5em <- emmeans(Mod5a,~Treatment|Soil)
-Mod5em_cld <- cld(Mod5em, Letters=letters, by="Soil", type="response")
+Mod5em_cld <- cld(Mod5em, Letters=letters, reversed = TRUE, by="Soil", type="response")
 View(Mod5em_cld)
 
 
@@ -750,7 +757,7 @@ ggplot(Pup_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
         axis.title.x=element_text(size=20, face="bold"), axis.title.y=element_text(size=20, face="bold")) +
   theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Puptake_50kg_ha.jpg", width=14, height=12, dpi=500)
+ggsave("Pots1_Puptake_50kg_ha.jpg", width=14, height=12, dpi=150)
 #Plotting constant biochar rates with var P rates
 Pup_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                   "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
@@ -774,7 +781,7 @@ ggplot(Pup_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
         axis.title.x=element_text(size=20, face="bold"), axis.title.y=element_text(size=20, face="bold")) +
   theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
         panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Puptake_10t_ha.jpg", width=14, height=12, dpi=500)
+ggsave("Pots1_Puptake_10t_ha.jpg", width=14, height=12, dpi=150)
 
 
 
@@ -850,7 +857,7 @@ print(PrecAB)
 
 #run emmeans on Mod6b - this model chosen as the second lowest AIC/BIC and highest Rsq with improved variances
 Mod6bEm<- emmeans(Mod6b,~Treatment|Soil, subset=(Prec$Precovery), type="response")
-Mod6bEm_cld <- cld(Mod6bEm, Letters=letters, alpha=0.1, by="Soil") 
+Mod6bEm_cld <- cld(Mod6bEm, Letters=letters, reversed = TRUE, alpha=0.1, by="Soil") 
 View(Mod6bEm_cld)
 # Run emmeans on Mod6 - no significant differences detected between treatments
 #Mod6em <- emmeans(Mod6a,~Treatment*Soil, subset=(Pots1$Precovery))
@@ -863,7 +870,7 @@ par(mar=c(4,4,4,4)+0.4) #c(bottom, left, top, right) + 0.1 lines
 Prec_trtVar <- c("CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
 Prec_subVar <- Mod6bEm_cld %>%
   filter(Treatment %in% Prec_trtVar)
-ggplot(Prec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Prec50kg <- ggplot(Prec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -882,15 +889,15 @@ ggplot(Prec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
         axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Prec_50kg_ha.jpg", width=12, height=8, dpi=500)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Prec50kg, file="Pots1_Prec_50kg_ha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
 par(mar=c(5,6,6,2)+0.4) #c(bottom, left, top, right) + 0.1 lines
 Prec_charCon <- c("CanolaMeal10tha", "CanolaHull10tha", "Manure10tha",  "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP",
                   "Manure10thaTSP", "Willow10thaTSP","TripleSuperPhosphate")
 Prec_subCon <- Mod6bEm_cld %>%
   filter(Treatment %in% Prec_charCon)
-ggplot(Prec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+(Prec10tha <- ggplot(Prec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
   scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
@@ -909,8 +916,8 @@ ggplot(Prec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
   theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
         axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
   theme(panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
-ggsave("Pots1_Prec_10t_ha.jpg", width=12, height=8, dpi=500)
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Prec10tha, file="Pots1_Prec_10t_ha.jpg", width=12, height=8, dpi=150)
 
 
 
@@ -966,7 +973,7 @@ print(NO3AB)
 
 #run emmeans on Mod7 - highest Rsq 
 Mod7em<- emmeans(Mod7,~Treatment|Soil, subset=(Pots1$NO3), type="response")
-Mod7em_cld <- cld(Mod7em, Letters=letters, by="Soil") 
+Mod7em_cld <- cld(Mod7em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod7em_cld)
 write.csv(Mod7em_cld, file="Pots1_NO3.csv")
 
@@ -1027,7 +1034,7 @@ print(NO3AB)
 
 #run emmeans on Mod8 - highest Rsq 
 Mod8em<- emmeans(Mod8,~Treatment|Soil, subset=(Pots1$NH4), type="response")
-Mod8em_cld <- cld(Mod8em, Letters=letters, by="Soil") 
+Mod8em_cld <- cld(Mod8em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod8em_cld)
 write.csv(Mod8em_cld, file="Pots1_NH4.csv")
 
@@ -1150,7 +1157,7 @@ print(PO4AB)
 
 #Run emmeans
 Mod9em <- emmeans(Mod9c,~Treatment|Soil, subset=(Pots1$PO4>0), type="response")
-Mod9cld <- cld(Mod9em, Letters=letters, by="Soil")
+Mod9cld <- cld(Mod9em, Letters=letters, reversed = TRUE, by="Soil")
 View(Mod9cld)
 write.csv(Mod9cld, file="Pots1_PO4.csv")
 
@@ -1209,7 +1216,7 @@ print(NO3AB)
 
 #run emmeans on Mod10 - highest Rsq 
 Mod10em<- emmeans(Mod10,~Treatment|Soil, subset=(Pots1$ResinP), type="response")
-Mod10em_cld <- cld(Mod10em, Letters=letters, by="Soil") 
+Mod10em_cld <- cld(Mod10em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod10em_cld)
 write.csv(Mod10em_cld, file="Pots1_ResinP.csv")
 
@@ -1269,7 +1276,7 @@ print(NO3AB)
 
 #run emmeans on Mod11 - highest Rsq 
 Mod11em<- emmeans(Mod11,~Treatment|Soil, subset=(Pots1$WaterSolP), type="response")
-Mod11em_cld <- cld(Mod11em, Letters=letters, by="Soil") 
+Mod11em_cld <- cld(Mod11em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod11em_cld)
 write.csv(Mod11em_cld, file="Pots1_WaterSolP.csv")
 
@@ -1329,7 +1336,7 @@ print(NO3AB)
 
 #run emmeans on Mod12b - highest Rsq & lowest AIC/BIc
 Mod12em<- emmeans(Mod12b,~Treatment|Soil, subset=(Pots1$TotalP2), type="response")
-Mod12em_cld <- cld(Mod12em, Letters=letters, by="Soil") 
+Mod12em_cld <- cld(Mod12em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod12em_cld)
 write.csv(Mod12em_cld, file="Pots1_TotalP2.csv")
 
@@ -1412,7 +1419,7 @@ print(NO3AB)
 
 #run emmeans on Mod13a - Models 13b&c have convergence and singularity issues
 Mod13em<- emmeans(Mod13a,~Treatment|Soil, subset=(Pots1$pH), type="response")
-Mod13em_cld <- cld(Mod13em, Letters=letters, by="Soil") 
+Mod13em_cld <- cld(Mod13em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod13em_cld)
 write.csv(Mod13em_cld, file="Pots1_pH.csv")
 
@@ -1476,7 +1483,7 @@ print(NO3AB)
 
 #run emmeans on Mod14 with highest rsq
 Mod14em<- emmeans(Mod14,~Treatment|Soil, subset=(Pots1$EC), type="response")
-Mod14em_cld <- cld(Mod14em, Letters=letters, by="Soil") 
+Mod14em_cld <- cld(Mod14em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod14em_cld)
 write.csv(Mod14em_cld, file="Pots1_EC.csv")
 
@@ -1579,7 +1586,7 @@ print(NO3AB)
 
 #run emmeans on Mod15d high rsq, with lowest combined AIC & BIC
 Mod15em<- emmeans(Mod15d,~Treatment|Soil, subset=(Pots1$OC), type="response")
-Mod15em_cld <- cld(Mod15em, Letters=letters, by="Soil") 
+Mod15em_cld <- cld(Mod15em, Letters=letters, reversed = TRUE, by="Soil") 
 View(Mod15em_cld)
 write.csv(Mod15em_cld, file="Pots1_OC.csv")
 
@@ -1635,63 +1642,29 @@ ggsave("Pots1_WatHolCapacity.jpg", width=12, height=8, dpi=500)
 
 
 
-####  PCA analysis  ####
-#create summarised data
-Heat_mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean, na.rm=TRUE)
-Heat_mean <- rename(Heat_mean, Drywt=Drywt.mean, Nuptake=Nuptake.mean, Nrecovery=Nrecovery.mean, Puptake=Puptake.mean, 
-                    Precovery=Precovery.mean, NO3=NO3.mean, NH4=NH4.mean, PO4=PO4.mean, ResinP=ResinP.mean, 
-                    WaterSolP=WaterSolP.mean, TotalP2=TotalP2.mean, pH=pH.mean, EC=EC.mean, OC=OC.mean)
-View(Heat_mean)
-#subset soil
-
-
-##### Yield  #####
-
-
-
-(Hav_heatmap <- heatmap(Hav_data, scale="column", col=cm.colors(256), 
-                        RowSideColors=Heat_haverhill$Treatment, margins=c(5,10)))
-
-#####  N recovery  #####
-
-
-
-#####   P Recovery  ######
-
-
-
-####  Co-variance  ####
-#####  Yield  #####
+####  Co-variance ####
+#####  Haverhill  #####
+######  Yield ######
 #Split and scale data
 YieldCovVar <- c("Drywt", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
-HavCovYield <- subset(Pots1, Soil == "Haverhill", select=c("Treatment", YieldCovVar), 
-                      na.action = function(x) x[, complete.cases(x)], na.rm = FALSE)
-HavCovScaleYield <- as.data.frame(scale(HavCovYield[,-1]))
-HavCovScaleYield$Treatment <- HavCovYield$Treatment
+HavCovYield <- subset(Pots1, Soil == "Haverhill", select=c("Treatment", YieldCovVar), # select per soil
+                      na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+HavCovScaleYield <- as.data.frame(scale(HavCovYield[,-1])) # scale & remove treatment name from data frame
+HavCovScaleYield$Treatment <- HavCovYield$Treatment # add treatment from oiginal subset to scales data frame
 HavCovScaleYieldSplit <- split(HavCovScaleYield[, -ncol(HavCovScaleYield)], HavCovScaleYield$Treatment)
-#HavCovScaleYieldSplit <- lapply(HavCovScaleYieldSplit, function(x) x[, -ncol(x)])
-OxCovYield <- subset(Pots1, Soil=="Oxbow", select=c("Treatment", YieldCovVar),  
-                     na.action = function(x) x[, complete.cases(x)], na.rm = FALSE)
-OxCovScaleYield <- as.data.frame(scale(OxCovYield[,-1]))
-OxCovScaleYield$Treatment <- OxCovYield$Treatment
-OxCovScaleYieldSplit <- split(OxCovScaleYield[, -ncol(OxCovScaleYield)], OxCovScaleYield$Treatment)
-OxCovScaleYieldSplit <- lapply(OxCovScaleYieldSplit, function(x) x[, -ncol(x)])
+#HavCovScaleYieldSplit <- lapply(HavCovScaleYieldSplit, function(x) x[, -ncol(x)]) - used to remove last column
 
-# calculate the covariance matrix for each treatment
-##Haverhill
+## calculate the covariance matrix for each treatment excluding missing data
 YieldCov_Hav <- lapply(HavCovScaleYieldSplit, function(x) cov(x, use="pairwise.complete.obs"))
-#YieldCov_Hav2 <- cov(HavCovScaleYield) - disn't work
+#YieldCov_Hav2 <- cov(HavCovScaleYield) - didn't work
 YieldCovHavWb <- createWorkbook() # create workbook to save in xlsx
 for (i in seq_along(YieldCov_Hav)) { # for loop to bring all matrices into separate worksheets
-  treatment_name <- names(YieldCov_Hav)[i] # make sure that treatment names are used and not repeat first teratment
+  treatment_name <- names(YieldCov_Hav)[i] # make sure that treatment names are used and not repeat first treatment
   sheet_name <- paste0(treatment_name)
   addWorksheet(YieldCovHavWb, sheet_name)
   writeData(YieldCovHavWb, sheet=sheet_name, x=YieldCov_Hav[[i]], startRow=1, startCol=1, rowNames=TRUE)
 }
-saveWorkbook(YieldCovHavWb, "Pots1_Yield_CovMatrix_Haverhill1.xlsx")
-##Oxbow
-YieldCov_Ox <- lapply(OxCovScaleYieldSplit, cov)
-
+saveWorkbook(YieldCovHavWb, "Pots1_Yield_CovMatrix_Haverhill.xlsx")
 # Convert each covariance matrix to a dataframe
 ## Option 1 - provides a list of matrices
 YieldCovHav_df1 <- lapply(YieldCov_Hav, as.data.frame) # converts everything into a combined dataframe
@@ -1704,7 +1677,7 @@ YieldCovHav_df2 <- lapply(seq_along(YieldCov_Hav), function(i) {
   YieldCovHav_df1$treatment <- names(YieldCov_Hav)[i] # add treatment column
   return(YieldCovHav_df1)
 })
-# Option 3
+# Option 3 - best option 
 YieldCovHav_df3 <- lapply(seq_along(YieldCov_Hav), function(i) {
   cov_mat1h <- as.matrix(YieldCov_Hav[[i]])
   cov_mat1h <- setNames(cov_mat1h, YieldCovVar)
@@ -1714,67 +1687,505 @@ YieldCovHav_df3 <- lapply(seq_along(YieldCov_Hav), function(i) {
   cov_df1h_long$treatment <- names(YieldCov_Hav)[i]
   return(cov_df1h_long)
 })
-# Combine all dataframes into one
+# Combine all dataframes into one and set the variable names as factors and in the correct order
 YieldCovHav_dfAll <- do.call(rbind, YieldCovHav_df3)
-YieldCovHav_dfAll$Var1 <- factor(YieldCovHav_dfAll$Var1, levels = YieldCovVar)
-YieldCovHav_dfAll$variable <- factor(YieldCovHav_dfAll$variable, levels = rev(YieldCovVar))
-write.csv(YieldCovHav_dfAll, file="YieldCovHav_dfAll.csv")
-
+YieldCovHav_dfAll$Var1 <- factor(YieldCovHav_dfAll$Var1, levels=YieldCovVar)
+YieldCovHav_dfAll$variable <- factor(YieldCovHav_dfAll$variable, levels=rev(YieldCovVar))
+YieldCovHav_dfAll$treatment <- factor(YieldCovHav_dfAll$treatment, 
+        levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
+                 "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
+                 "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate"),
+        labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", 
+                 "Manure 50kg P/ha", "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", 
+                 "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
+                 "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
+write.csv(YieldCovHav_dfAll, file="Pots1_Haverhill_YieldCov.csv")
 # Generate the heatmap for each treatment and facet wrap them
+# Do not use ggcorrplot- it is only applicable to correlation matrices
+# heatmap(YieldCovHav_df, Rowv=NA, Colv=NA, col=rev(heat.colors(256))) - did not work
+# ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
 (YieldCovHavHeat <- ggplot(YieldCovHav_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
   geom_tile() +
-  scale_fill_gradientn(colors=brewer.pal(9, "Purples"), limits=c(-1.5, 3.7), breaks=seq(-1.5, 3.7, by=0.5)) +
-  facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
-  geom_text(aes(label=round(Covariance, 3)))+
+  scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-1.5, 3.7), breaks=seq(-1.5, 3.7, by=0.5)) +
+    #specify colour palette and limits specifies the upper and lower cov values, breaks specify legend details
+  facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") + #works better than facet grid to show separate treatments
+  geom_text(aes(label=round(Covariance, 3)))+ # adds in covariance values within each block
   theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
         legend.text=element_text(size=20), 
-        strip.text=element_text(size=20, face="bold"),
-        strip.placement="outside",
-        strip.background=element_blank(),
+        strip.text=element_text(size=20, face="bold"), # strip=treatment labels at the top of each panel
+        strip.placement="outside", # if not specified, then the label is immediately adjacent
+        strip.background=element_blank(), # if not specified then it's grey
         strip.text.y=element_text(angle=0, vjust=0.5),
         strip.text.x=element_text(vjust=1),
-        axis.line=element_blank(),
-        axis.text.x.bottom=element_text(size=15, angle=45),
-        axis.text.y.left=element_text(size=15)) +
+        axis.line=element_blank(), # this is to remove x- and y-axes labels from the individual panels
+        axis.text.x.bottom=element_text(size=15, angle=45, hjust=1), #place horizontal labels only along the bottom
+        axis.text.y.left=element_text(size=15), #place vertical labels only along the left panel
+        panel.spacing.x=unit(1, "cm"))+ # places a wider space between panels
   labs(x="", y=""))
-ggsave(YieldCovHavHeat, file="Pots1_YieldCovHaveHeat.jpg", width=20, height=20, dpi=500)
+ggsave(YieldCovHavHeat, file="Pots1_YieldCovHavHeat.jpg", width=20, height=20, dpi=150)
 
-#snippet:
-theme(strip.text=element_text(size=20, face="bold"),
-      axis.text.x=element_blank(),
-      axis.text.y=element_blank(),
-      axis.title=element_blank(), # Remove the axis title
-      panel.spacing=unit(0, "lines"),
-      # Customize axis labels for left and bottom facets
-      strip.placement="outside",
-      strip.background=element_blank(),
-      strip.text.y=element_text(angle=0, vjust=0.5),
-      strip.text.x=element_text(vjust=1)) +
-  theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1),
-      axis.text.y=element_text(angle=45, vjust=1, hjust=1)) +
-  theme(axis.text.x=ifelse(seq_along(unique(YieldCovHav_dfAll$Var1)) == 1, 
-                             element_text(angle=45, vjust=1, hjust=1),
-                             element_blank())) +
-  theme(axis.text.y=ifelse(rep(seq_along(unique(YieldCovHav_dfAll$variable)), each=length(unique(YieldCovHav_dfAll$variable))) == 1,
-                             element_text(angle=45, vjust=1, hjust=1),
-                             element_blank())) +
-
-
-## Didn't work:
-#ggcorrplot(YieldCovHav_df, method="square", type="upper", tl.col="black", tl.srt=45, pch.cex=2) + 
-# facet_wrap(~ treatment, nrow=5, ncol=3, scales="free")
-# ggcorrplot is only applicable to correlation matrices
-#heatmap(YieldCovHav_df, Rowv=NA, Colv=NA, col=rev(heat.colors(256)))
-
-
-#Oxbow
+## Develop PCA for Haverhill Yield
+# this uses the setup from the 'Split and scale data' section above
+#HavYield_PCA <- princomp(YieldCov_Hav, cor=FALSE)
+#HavYield_PCA <- prcomp(HavCovScaleYieldSplit[,], center=TRUE, scale.=TRUE) - issues with data not in a matrix
+#HavYield_PCA <- lapply(YieldCovHav_dfAll, function(x) princomp(x))
+# Extract covariance matrices from each data frame in the list
+#HavYieldCov_matrices <- lapply(YieldCovHav_df3, function(df) {
+#  df_mat <- as.matrix(df[, 3])
+#  dimnames(df_mat) <- list(df$Var1, df$Var2)
+#  return(df_mat)
+#})
+# Perform PCA on each covariance matrix
+#HavYield_PCA_list <- lapply(HavYieldCov_matrices, prcomp, center=TRUE, scale.=TRUE)
+# Get summary information for each PCA
+#HavYield_PCA_Summary <- lapply(HavYield_PCA_list, summary)
+# Get the proportion of variance explained by each PC for each treatment
+#HavYield_PCA_output <- lapply(HavYield_PCA_list, function(pca) {
+#  var_prop <- pca$sdev^2 / sum(pca$sdev^2)
+#  return(var_prop)
+#})
+# Plot PCA scores separately for each treatment
+#ggplot(augment(pca), aes(PC1, PC2, color=Treatment)) +
+#  geom_point() +
+#  facet_wrap(~ Treatment) +
+#  labs(x=paste0("PC1 (", round(summary(pca)$importance[2, 1]*100, 2), "%)"),
+#       y=paste0("PC2 (", round(summary(pca)$importance[2, 2]*100, 2), "%)"),
+#       title="PCA scores for Haverhill soil")
 
 
 
-#####  N recovery  #####
+######  P uptake  ######
+UptakeCovVar <- c("Puptake", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+HavCovUptake <- subset(Pots1, Soil == "Haverhill", select=c("Treatment", UptakeCovVar), 
+                      na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+HavCovScaleUptake <- as.data.frame(scale(HavCovUptake[,-1]))
+HavCovScaleUptake$Treatment <- HavCovUptake$Treatment
+HavCovScaleUptakeSplit <- split(HavCovScaleUptake[, -ncol(HavCovScaleUptake)], HavCovScaleUptake$Treatment)
+## calculate the covariance matrix for each treatment excluding missing data
+UptakeCov_Hav <- lapply(HavCovScaleUptakeSplit, function(x) cov(x, use="pairwise.complete.obs"))
+UptakeCovHavWb <- createWorkbook() # create workbook to save in xlsx
+for (i in seq_along(UptakeCov_Hav)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(UptakeCov_Hav)[i] # make sure that treatment names are used and not repeat first treatment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(UptakeCovHavWb, sheet_name)
+  writeData(UptakeCovHavWb, sheet=sheet_name, x=UptakeCov_Hav[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(UptakeCovHavWb, "Pots1_Uptake_CovMatrix_Haverhill.xlsx")
+# Convert each covariance matrix to a dataframe
+UptakeCovHav_df <- lapply(seq_along(UptakeCov_Hav), function(i) {
+  cov_mat1h <- as.matrix(UptakeCov_Hav[[i]])
+  cov_mat1h <- setNames(cov_mat1h, UptakeCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(UptakeCov_Hav)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one and set the variable names as factors and in the correct order
+UptakeCovHav_dfAll <- do.call(rbind, UptakeCovHav_df)
+UptakeCovHav_dfAll$Var1 <- factor(UptakeCovHav_dfAll$Var1, levels=UptakeCovVar, labels=c("Puptake"="P Uptake", 
+          "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+          "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+UptakeCovHav_dfAll$variable <- factor(UptakeCovHav_dfAll$variable, levels=UptakeCovVar, labels=
+          c("Puptake"="P Uptake", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
+            "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+UptakeCovHav_dfAll$treatment <- factor(UptakeCovHav_dfAll$treatment, 
+       levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
+             "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
+             "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate"),
+       labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
+                  "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
+                  "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
+                  "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
+write.csv(UptakeCovHav_dfAll, file="Pots1_Haverhill_UptakeCov.csv")
+# Generate the heatmap for each treatment and facet wrap them
+(UptakeCovHavHeat <- ggplot(UptakeCovHav_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+    geom_tile() +
+    scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
+    facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
+    geom_text(aes(label=round(Covariance, 3))) +
+    geom_text(aes(label=round(Covariance, 3)))+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+          legend.text=element_text(size=20), 
+          strip.text=element_text(size=20, face="bold"),
+          strip.placement="outside",
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5),
+          strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(),
+          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
+          axis.text.y.left=element_text(size=15),
+          panel.spacing.x=unit(1, "cm"))+
+    labs(x="", y=""))
+ggsave(UptakeCovHavHeat, file="Pots1_UptakeCovHavHeat.jpg", width=20, height=20, dpi=150)
 
-CovVar <- c("Drywt", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+######   P Recovery  #######
+RecoveryCovVar <- c("Precovery", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+HavCovRecovery <- subset(Pots1, Soil == "Haverhill", select=c("Treatment", RecoveryCovVar), 
+                       na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+HavCovScaleRecovery <- as.data.frame(scale(HavCovRecovery[,-1]))
+HavCovScaleRecovery$Treatment <- HavCovRecovery$Treatment
+HavCovScaleRecoverySplit <- split(HavCovScaleRecovery[, -ncol(HavCovScaleRecovery)], HavCovScaleRecovery$Treatment)
+RemoveControls <- c("Control1", "Control2")
+HavCovScaleRecoverySplit <- HavCovScaleRecoverySplit[!(names(HavCovScaleRecoverySplit) %in% RemoveControls)]
+## calculate the covariance matrix for each treatment excluding missing data
+RecoveryCov_Hav <- lapply(HavCovScaleRecoverySplit, function(x) cov(x, use="pairwise.complete.obs"))
+RecoveryCovHavWb <- createWorkbook() # create workbook to save in xlsx
+for (i in seq_along(RecoveryCov_Hav)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(RecoveryCov_Hav)[i] # make sure that treatment names are used and not repeat first treatment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(RecoveryCovHavWb, sheet_name)
+  writeData(RecoveryCovHavWb, sheet=sheet_name, x=RecoveryCov_Hav[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(RecoveryCovHavWb, "Pots1_Recovery_CovMatrix_Haverhill.xlsx")
+# Convert each covariance matrix to a dataframe
+RecoveryCovHav_df <- lapply(seq_along(RecoveryCov_Hav), function(i) {
+  cov_mat1h <- as.matrix(RecoveryCov_Hav[[i]])
+  cov_mat1h <- setNames(cov_mat1h, RecoveryCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(RecoveryCov_Hav)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one and set the variable names as factors and in the correct order
+RecoveryCovHav_dfAll <- do.call(rbind, RecoveryCovHav_df)
+RecoveryCovHav_dfAll$Var1 <- factor(RecoveryCovHav_dfAll$Var1, levels=RecoveryCovVar, labels=c("Precovery"="P Recovery", 
+         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+         "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovHav_dfAll$variable <- factor(RecoveryCovHav_dfAll$variable, levels=RecoveryCovVar, labels=
+         c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
+         "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovHav_dfAll$treatment <- factor(RecoveryCovHav_dfAll$treatment, 
+         levels=c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
+                  "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
+                  "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate"),
+         labels=c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
+                  "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
+                  "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
+                  "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
+write.csv(RecoveryCovHav_dfAll, file="Pots1_Haverhill_RecoveryCov.csv")
+# Generate the heatmap for each treatment and facet wrap them
+(RecoveryCovHavHeat <- ggplot(RecoveryCovHav_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+    geom_tile() +
+    scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
+    facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
+    geom_text(aes(label=round(Covariance, 3)))+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+          legend.text=element_text(size=20), 
+          strip.text=element_text(size=20, face="bold"),
+          strip.placement="outside",
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5),
+          strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(),
+          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
+          axis.text.y.left=element_text(size=15),
+          panel.spacing.x=unit(1, "cm"))+
+        labs(x="", y=""))
+ggsave(RecoveryCovHavHeat, file="Pots1_RecoveryCovHavHeat.jpg", width=20, height=20, dpi=150)
 
 
-#####   P Recovery  ######
 
+
+#####  Oxbow  #####
+######   Yield  ######
+OxCovYield <- subset(Pots1, Soil=="Oxbow", select=c("Treatment", YieldCovVar),  
+                     na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+OxCovScaleYield <- as.data.frame(scale(OxCovYield[,-1]))
+OxCovScaleYield$Treatment <- OxCovYield$Treatment
+OxCovScaleYieldSplit <- split(OxCovScaleYield[, -ncol(OxCovScaleYield)], OxCovScaleYield$Treatment)
+YieldCov_Ox <- lapply(OxCovScaleYieldSplit, function(x) cov(x, use="pairwise.complete.obs"))
+YieldCovOxWb <- createWorkbook() 
+for (i in seq_along(YieldCov_Ox)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(YieldCov_Ox)[i] # make sure that treatment names are used and not repeat first treatment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(YieldCovOxWb, sheet_name)
+  writeData(YieldCovOxWb, sheet=sheet_name, x=YieldCov_Ox[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(YieldCovOxWb, "Pots1_Yield_CovMatrix_Oxbow.xlsx")
+# Convert each covariance matrix to a dataframe
+YieldCovOx_df <- lapply(seq_along(YieldCov_Ox), function(i) {
+  cov_mat1h <- as.matrix(YieldCov_Ox[[i]])
+  cov_mat1h <- setNames(cov_mat1h, YieldCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(YieldCov_Ox)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one and set the variable names as factors and in the correct order
+YieldCovOx_dfAll <- do.call(rbind, YieldCovOx_df)
+YieldCovOx_dfAll$Var1 <- factor(YieldCovOx_dfAll$Var1, levels=YieldCovVar, labels=c("Drywt"="Yield", 
+            "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+            "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+YieldCovOx_dfAll$variable <- factor(YieldCovOx_dfAll$variable, levels=YieldCovVar, labels=
+            c("Drywt"="Yield", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
+              "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+YieldCovOx_dfAll$treatment <- factor(YieldCovOx_dfAll$treatment, 
+        levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
+                 "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
+                 "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate"),
+        labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
+                 "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
+                 "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
+                 "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
+write.csv(YieldCovOx_dfAll, file="Pots1_Oxbow_YieldCov.csv")
+# ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
+(YieldCovOxHeat <- ggplot(YieldCovOx_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+    geom_tile() +
+    scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-0.9, 2.7), breaks=seq(-0.9, 2.7, by=0.5)) +
+    facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
+    geom_text(aes(label=round(Covariance, 3)))+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+          legend.text=element_text(size=20), 
+          strip.text=element_text(size=20, face="bold"),
+          strip.placement="outside",
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5),
+          strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(),
+          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
+          axis.text.y.left=element_text(size=15),
+          panel.spacing.x=unit(1, "cm"))+
+    labs(x="", y=""))
+ggsave(YieldCovOxHeat, file="Pots1_YieldCovOxHeat.jpg", width=20, height=20, dpi=150)
+
+
+
+######   Uptake  ######
+UptakeCovVar <- c("Puptake", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+OxCovUptake <- subset(Pots1, Soil == "Oxbow", select=c("Treatment", UptakeCovVar), 
+                       na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+OxCovScaleUptake <- as.data.frame(scale(OxCovUptake[,-1]))
+OxCovScaleUptake$Treatment <- OxCovUptake$Treatment
+OxCovScaleUptakeSplit <- split(OxCovScaleUptake[, -ncol(OxCovScaleUptake)], OxCovScaleUptake$Treatment)
+## calculate the covariance matrix for each treatment excluding missing data
+UptakeCov_Ox <- lapply(OxCovScaleUptakeSplit, function(x) cov(x, use="pairwise.complete.obs"))
+UptakeCovOxWb <- createWorkbook() # create workbook to save in xlsx
+for (i in seq_along(UptakeCov_Ox)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(UptakeCov_Ox)[i] # make sure that treatment names are used and not repeat first treatment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(UptakeCovOxWb, sheet_name)
+  writeData(UptakeCovOxWb, sheet=sheet_name, x=UptakeCov_Ox[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(UptakeCovOxWb, "Pots1_Uptake_CovMatrix_Oxbow.xlsx")
+# Convert each covariance matrix to a dataframe
+UptakeCovOx_df <- lapply(seq_along(UptakeCov_Ox), function(i) {
+  cov_mat1h <- as.matrix(UptakeCov_Ox[[i]])
+  cov_mat1h <- setNames(cov_mat1h, UptakeCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(UptakeCov_Ox)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one and set the variable names as factors and in the correct order
+UptakeCovOx_dfAll <- do.call(rbind, UptakeCovOx_df)
+UptakeCovOx_dfAll$Var1 <- factor(UptakeCovOx_dfAll$Var1, levels=UptakeCovVar, labels=c("Puptake"="P Uptake", 
+         "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", "WaterSolP"="Water Soluble P", 
+         "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+UptakeCovOx_dfAll$variable <- factor(UptakeCovOx_dfAll$variable, levels=UptakeCovVar, labels=
+         c("Puptake"="P Uptake", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
+         "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+UptakeCovOx_dfAll$treatment <- factor(UptakeCovOx_dfAll$treatment, 
+         levels=c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
+                  "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
+                  "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate"),
+         labels=c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
+                  "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
+                  "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
+                  "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
+write.csv(UptakeCovOx_dfAll, file="Pots1_Oxbow_UptakeCov.csv")
+# Generate the heatmap for each treatment and facet wrap them
+(UptakeCovOxHeat <- ggplot(UptakeCovOx_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+    geom_tile() +
+    scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
+    facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
+    geom_text(aes(label=round(Covariance, 3))) +
+    geom_text(aes(label=round(Covariance, 3)))+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+          legend.text=element_text(size=20), 
+          strip.text=element_text(size=20, face="bold"),
+          strip.placement="outside",
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5),
+          strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(),
+          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
+          axis.text.y.left=element_text(size=15),
+          panel.spacing.x=unit(1, "cm"))+
+    labs(x="", y=""))
+ggsave(UptakeCovOxHeat, file="Pots1_UptakeCovOxHeat.jpg", width=20, height=20, dpi=150)
+
+######   P Recovery  #######
+RecoveryCovVar <- c("Precovery", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+OxCovRecovery <- subset(Pots1, Soil == "Oxbow", select=c("Treatment", RecoveryCovVar), 
+                         na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+OxCovScaleRecovery <- as.data.frame(scale(OxCovRecovery[,-1]))
+OxCovScaleRecovery$Treatment <- OxCovRecovery$Treatment
+OxCovScaleRecoverySplit <- split(OxCovScaleRecovery[, -ncol(OxCovScaleRecovery)], OxCovScaleRecovery$Treatment)
+RemoveControls <- c("Control1", "Control2")
+OxCovScaleRecoverySplit <- OxCovScaleRecoverySplit[!(names(OxCovScaleRecoverySplit) %in% RemoveControls)]
+## calculate the covariance matrix for each treatment excluding missing data
+RecoveryCov_Ox <- lapply(OxCovScaleRecoverySplit, function(x) cov(x, use="pairwise.complete.obs"))
+RecoveryCovOxWb <- createWorkbook() # create workbook to save in xlsx
+for (i in seq_along(RecoveryCov_Ox)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(RecoveryCov_Ox)[i] # make sure that treatment names are used and not repeat first treatment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(RecoveryCovOxWb, sheet_name)
+  writeData(RecoveryCovOxWb, sheet=sheet_name, x=RecoveryCov_Ox[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(RecoveryCovOxWb, "Pots1_Recovery_CovMatrix_Oxbow.xlsx")
+# Convert each covariance matrix to a dataframe
+RecoveryCovOx_df <- lapply(seq_along(RecoveryCov_Ox), function(i) {
+  cov_mat1h <- as.matrix(RecoveryCov_Ox[[i]])
+  cov_mat1h <- setNames(cov_mat1h, RecoveryCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(RecoveryCov_Ox)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one and set the variable names as factors and in the correct order
+RecoveryCovOx_dfAll <- do.call(rbind, RecoveryCovOx_df)
+RecoveryCovOx_dfAll$Var1 <- factor(RecoveryCovOx_dfAll$Var1, levels=RecoveryCovVar, labels=
+               c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
+                 "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovOx_dfAll$variable <- factor(RecoveryCovOx_dfAll$variable, levels=RecoveryCovVar, labels=
+                   c("Precovery"="P Recovery", "NO3"="NO3", "NH4"="NH4", "PO4"="PO4", "ResinP"="Resin P", 
+                     "WaterSolP"="Water Soluble P", "TotalP2"="Total P", "pH"="pH", "EC"="EC", "OC"="% SOC"))
+RecoveryCovOx_dfAll$treatment <- factor(RecoveryCovOx_dfAll$treatment, 
+             levels=c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha", 
+                      "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP", 
+                      "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate"),
+             labels=c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
+                      "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
+                      "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
+                      "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
+write.csv(RecoveryCovOx_dfAll, file="Pots1_Oxbow_RecoveryCov.csv")
+# Generate the heatmap for each treatment and facet wrap them
+(RecoveryCovOxHeat <- ggplot(RecoveryCovOx_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+    geom_tile() +
+    scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
+    facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
+    geom_text(aes(label=round(Covariance, 3)))+
+    theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+          legend.text=element_text(size=20), 
+          strip.text=element_text(size=20, face="bold"),
+          strip.placement="outside",
+          strip.background=element_blank(),
+          strip.text.y=element_text(angle=0, vjust=0.5),
+          strip.text.x=element_text(vjust=1),
+          axis.line=element_blank(),
+          axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
+          axis.text.y.left=element_text(size=15),
+          panel.spacing.x=unit(1, "cm"))+
+    labs(x="", y=""))
+ggsave(RecoveryCovOxHeat, file="Pots1_RecoveryCovOxHeat.jpg", width=20, height=20, dpi=150)
+
+
+
+####   Yield to N & P Recovery  ####
+# Set factor and numeric variables
+Pots1$Soil <- as.factor(Pots1$Soil)
+Pots1$Treatment <- as.factor(Pots1$Treatment)
+Pots1$Yield <- as.numeric(Pots1$Drywt)
+Pots1$`N Recovery` <- as.numeric(Pots1$Nrecovery) # can change variable name, but as unspecified later it didn't matter
+Pots1$`P Recovery` <- as.numeric(Pots1$Precovery)
+#set up subset minus controls and including only necessary variables - var important for predict later on!
+Pots1ContourSub <- subset(Pots1, Treatment != "Control1" & Treatment != "Control2", select = c(Soil, 
+                         Treatment, Drywt, Nrecovery, Precovery))
+View(Pots1ContourSub)
+# Set Treatment levels and in order, and relabel
+Pots1ContourSub$Treatment <- factor(Pots1ContourSub$Treatment, levels=c("CanolaMeal50kgha","CanolaHull50kgha", 
+                   "Manure50kgha", "Willow50kgha", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", 
+                   "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP", "Manure10thaTSP", 
+                   "Willow10thaTSP", "TripleSuperPhosphate"),
+                labels=c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", "Manure 50kg P/ha", 
+                  "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", "Manure 10t/ha", "Willow 10t/ha", 
+                  "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", "Manure 10t/ha & TSP", 
+                  "Willow 10t/ha & TSP", "Phosphorus Fertilizer"))
+View(Pots1ContourSub)
+Pots1ContourExcl <- na.exclude(Pots1ContourSub) # exclude missing values
+View(Pots1ContourExcl)
+# run generalised linear mixed model with soil as fixed and random effect
+Pots1ContourMod <- glmmTMB(Drywt ~ Nrecovery + Precovery + Treatment*Soil + (1|Soil), data = Pots1ContourExcl, 
+                           na.action=na.exclude)
+summary(Pots1ContourMod)
+Anova(Pots1ContourMod) #Treatments and P recovery, as well as treatment*soil significant
+#Set up N & P recovery grids per soil
+# allows for individual N& P recovery values to be added to the grid instead of combined values
+HavNrecovery_grid <- seq(min(Pots1ContourExcl$Nrecovery[Pots1ContourExcl$Soil == "Haverhill"], na.rm = TRUE),
+                         max(Pots1ContourExcl$Nrecovery[Pots1ContourExcl$Soil == "Haverhill"], na.rm = TRUE),
+                         length.out = 100)
+HavPrecovery_grid <- seq(min(Pots1ContourExcl$Precovery[Pots1ContourExcl$Soil == "Haverhill"], na.rm = TRUE),
+                         max(Pots1ContourExcl$Precovery[Pots1ContourExcl$Soil == "Haverhill"], na.rm = TRUE),
+                         length.out = 100)
+OxNrecovery_grid <- seq(min(Pots1ContourExcl$Nrecovery[Pots1ContourExcl$Soil == "Oxbow"], na.rm = TRUE),
+                        max(Pots1ContourExcl$Nrecovery[Pots1ContourExcl$Soil == "Oxbow"], na.rm = TRUE),
+                        length.out = 100)
+OxPrecovery_grid <- seq(min(Pots1ContourExcl$Precovery[Pots1ContourExcl$Soil == "Oxbow"], na.rm = TRUE),
+                        max(Pots1ContourExcl$Precovery[Pots1ContourExcl$Soil == "Oxbow"], na.rm = TRUE),
+                        length.out = 100)
+# Set up expanded grids for each soil then bind before assigning yield
+# has to be combined before splitting as predict function requires all variables to be in the dataframe
+HavContour_grid <- expand.grid(Soil = "Haverhill", 
+                               Treatment = unique(Pots1ContourExcl$Treatment[Pots1ContourExcl$Soil == "Haverhill"]),
+                               Nrecovery = HavNrecovery_grid, Precovery = HavPrecovery_grid)
+OxContour_grid <- expand.grid(Soil = "Oxbow",
+                              Treatment = unique(Pots1ContourExcl$Treatment[Pots1ContourExcl$Soil == "Oxbow"]),
+                              Nrecovery = OxNrecovery_grid, Precovery = OxPrecovery_grid)
+Pots1Contour_grid <- rbind(HavContour_grid, OxContour_grid)
+Pots1Contour_grid$Yield <- predict(Pots1ContourMod, newdata = Pots1Contour_grid)
+View(Pots1Contour_grid)
+# Split data frames 
+Pots1SplitContour <- split(Pots1Contour_grid, Pots1Contour_grid$Soil)
+Pots1SplitContour_new <- c("HavContour_df", "OxContour_df") # give new names to split data frames
+# Assign the data frames to new variable names
+list2env(setNames(Pots1SplitContour, Pots1SplitContour_new), envir = .GlobalEnv)
+HavContour_df <- HavContour_df[, -1] # remove soil name from dataset so it doesn't get used in plot
+OxContour_df <- OxContour_df[, -1]
+View(HavContour_df)
+View(OxContour_df)
+
+#develop contour plot -wrapping everything in () makes it execute upon running instead of assigning
+(HavContours <- ggplot(HavContour_df, aes(x = Nrecovery, y = Precovery, z = Yield)) +
+  geom_raster(aes(fill=Yield)) + #use rastar to make smooth lines instead of tile. Works better than contour or density 
+  geom_contour(aes(z=Yield), color='gray30', binwidth = 1) + 
+  facet_wrap(~Treatment, nrow = 5) + # specify by treatment, if rows specified, don't specify columns
+  scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
+  labs(x = "% N Recovery", y = "% P Recovery", fill = "Yield (g)") +
+  theme(legend.title = element_text(size = 25, face = "bold"),
+        legend.key.size = unit(15, "mm"),
+        legend.text = element_text(size = 20),
+        strip.text = element_text(size = 25, face = "bold"),
+        strip.placement = "outside",
+        strip.background = element_blank(),
+        strip.text.x = element_text(vjust = 1),
+        axis.text.x=element_text(size=15),
+        axis.text.y=element_text(size=15),
+        axis.title.x=element_text(size=30, face="bold"),
+        axis.title.y=element_text(size=30, face="bold"),
+        panel.spacing = unit(0.5, "cm")))
+ggsave(HavContours, file="Pots1_YieldContour_Haverhill.jpg", width=20, height=20, dpi=150)
+
+(OxContours <- ggplot(OxContour_df, aes(x = Nrecovery, y = Precovery, z = Yield)) +
+    geom_raster(aes(fill=Yield)) + 
+    geom_contour(aes(z=Yield), color='gray30', binwidth = 1) + 
+    facet_wrap(~Treatment, nrow = 5) +
+    scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
+    labs(x = "%N Recovery", y = "%P Recovery", fill = "Yield (g)") +
+    theme(legend.title = element_text(size = 25, face = "bold"),
+          legend.key.size = unit(15, "mm"),
+          legend.text = element_text(size = 20),
+          strip.text = element_text(size = 25, face = "bold"),
+          strip.placement = "outside",
+          strip.background = element_blank(),
+          strip.text.x = element_text(vjust = 1),
+          axis.text.x=element_text(size=15),
+          axis.text.y=element_text(size=15),
+          axis.title.x=element_text(size=30, face="bold"),
+          axis.title.y=element_text(size=30, face="bold"),
+          panel.spacing = unit(0.5, "cm")))
+ggsave(OxContours, file="Pots1_YieldContour_Oxbow.jpg", width=20, height=20, dpi=150)
