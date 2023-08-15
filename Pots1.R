@@ -1,4 +1,4 @@
-##### Loading data in to R ####
+#### Loading data in to R ####
 Pots1<-read.csv("Pots1.csv", fileEncoding="UTF-8-BOM")
 View(Pots1)
 plot(Pots1$Drywt)
@@ -29,9 +29,17 @@ library(rsq)
 library(pgirmess)
 library(car)
 library(robustbase)
+library(openxlsx)
+library(ggcorrplot)
+library(pheatmap)
+library(MASS)
+library(RColorBrewer)
+library(tidyHeatmap)
+library(reshape2)
+library(metaSEM)
+library(ggh4x)
 
-
-##### Summary and ordering of data   ####
+#### Summary and ordering of data   ####
 #Check for missing values in a specific field
 missing <- colSums(is.na(Pots1[,]))
 print(missing)
@@ -44,8 +52,8 @@ Trt_order <- c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "
                "CanolaHull10thaTSP", "CanolaMeal10thaTSP", "Manure10thaTSP", "Willow10thaTSP", 
                "TripleSuperPhosphate")
 Soil_order <- c("Haverhill", "Oxbow")
-Pots1$Treatment <- factor(Pots1$Treatment, levels = Trt_order)
-Pots1$Soil <- factor(Pots1$Soil, levels = Soil_order)
+Pots1$Treatment <- factor(Pots1$Treatment, levels=Trt_order)
+Pots1$Soil <- factor(Pots1$Soil, levels=Soil_order)
 summary(Pots1)
 str(Pots1) #displays the structure of the object
 View(Pots1) #view the object in a separate window (e.g. as a table)
@@ -56,104 +64,104 @@ Pots1SD <- summary_by(.~Soil+Treatment, data=Pots1, FUN=sd)
 
 
 
-#####   Check for outliers   ####
+####   Check for outliers   ####
 PotsRaw<-read.csv("Pots1raw.csv", fileEncoding="UTF-8-BOM")
 ##Drywt
-ggplot(PotsRaw, aes(x = Treatment, y = Drywt, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "Drywt")
-ggsave("OutliersDrywt.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=Drywt, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="Drywt")
+ggsave("OutliersDrywt.jpg", width=30, height=30, dpi=600)
 ##Total N
-ggplot(PotsRaw, aes(x = Treatment, y = TotalN, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "Total N")
-ggsave("OutliersTotalN.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=TotalN, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="Total N")
+ggsave("OutliersTotalN.jpg", width=30, height=30, dpi=600)
 ##N Uptake
-ggplot(PotsRaw, aes(x = Treatment, y = Nuptake, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "N uptake")
-ggsave("OutliersNuptake.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=Nuptake, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="N uptake")
+ggsave("OutliersNuptake.jpg", width=30, height=30, dpi=600)
 ##N Recovery
-ggplot(PotsRaw, aes(x = Treatment, y = Nrecovery, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "N Recovery")
-ggsave("OutliersNrecovery.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=Nrecovery, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="N Recovery")
+ggsave("OutliersNrecovery.jpg", width=30, height=30, dpi=600)
 ##Total P1
-ggplot(PotsRaw, aes(x = Treatment, y = TotalP1, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "Total P Plants")
-ggsave("OutliersTotalPplants.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=TotalP1, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="Total P Plants")
+ggsave("OutliersTotalPplants.jpg", width=30, height=30, dpi=600)
 ##P Uptake
-ggplot(PotsRaw, aes(x = Treatment, y = Puptake, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "P uptake")
-ggsave("OutliersPuptake.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=Puptake, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="P uptake")
+ggsave("OutliersPuptake.jpg", width=30, height=30, dpi=600)
 ##P Recovery
-ggplot(PotsRaw, aes(x = Treatment, y = Precovery, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "P recovery")
-ggsave("OutliersPrecovery.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=Precovery, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="P recovery")
+ggsave("OutliersPrecovery.jpg", width=30, height=30, dpi=600)
 ##NO3	
-ggplot(PotsRaw, aes(x = Treatment, y = NO3, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "NO3")
-ggsave("OutliersNO3.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=NO3, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="NO3")
+ggsave("OutliersNO3.jpg", width=30, height=30, dpi=600)
 ##NH4	
-ggplot(PotsRaw, aes(x = Treatment, y = NH4, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "NH4")
-ggsave("OutliersNH4.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=NH4, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="NH4")
+ggsave("OutliersNH4.jpg", width=30, height=30, dpi=600)
 ##PO4	
-ggplot(PotsRaw, aes(x = Treatment, y = PO4, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "PO4")
-ggsave("OutliersPO4.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=PO4, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="PO4")
+ggsave("OutliersPO4.jpg", width=30, height=30, dpi=600)
 ## Resin P
-ggplot(PotsRaw, aes(x = Treatment, y = ResinP, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "ResinP")
-ggsave("OutliersResinP.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=ResinP, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="ResinP")
+ggsave("OutliersResinP.jpg", width=30, height=30, dpi=600)
 ##WaterSolP	
-ggplot(PotsRaw, aes(x = Treatment, y = WaterSolP, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "Water Soluble P")
-ggsave("OutliersWaterSolP.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=WaterSolP, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="Water Soluble P")
+ggsave("OutliersWaterSolP.jpg", width=30, height=30, dpi=600)
 ##TotalP2	
-ggplot(PotsRaw, aes(x = Treatment, y = TotalP2, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "Total P Soil")
-ggsave("OutliersTotalPSoil.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=TotalP2, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="Total P Soil")
+ggsave("OutliersTotalPSoil.jpg", width=30, height=30, dpi=600)
 ##pH	
-ggplot(PotsRaw, aes(x = Treatment, y = pH, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "pH")
-ggsave("OutlierspH.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=pH, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="pH")
+ggsave("OutlierspH.jpg", width=30, height=30, dpi=600)
 ##EC	
-ggplot(PotsRaw, aes(x = Treatment, y = EC, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "Electrical Conductivity")
-ggsave("OutliersEC.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=EC, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="Electrical Conductivity")
+ggsave("OutliersEC.jpg", width=30, height=30, dpi=600)
 ##OC
-ggplot(PotsRaw, aes(x = Treatment, y = OC, fill=Soil)) +
-  geom_boxplot(na.rm = TRUE) +
-  facet_wrap(~ Soil+Treatment, scales = "free") +
-  labs(x = "Treatment", y = "Organic Carbon %")
-ggsave("OutliersOC.jpg", width = 30, height = 30, dpi = 600)
+ggplot(PotsRaw, aes(x=Treatment, y=OC, fill=Soil)) +
+  geom_boxplot(na.rm=TRUE) +
+  facet_wrap(~ Soil+Treatment, scales="free") +
+  labs(x="Treatment", y="Organic Carbon %")
+ggsave("OutliersOC.jpg", width=30, height=30, dpi=600)
 
 
 
@@ -167,24 +175,30 @@ ggsave("OutliersOC.jpg", width = 30, height = 30, dpi = 600)
 #Plots to check residuals to be equally centered around 0, vertical lines are ok if centered around 0
 
 
-##### Dry Weight ####
+#### Dry Weight ####
 #Running models
-Mod1<-lm(Drywt~Treatment+Soil,data=Pots1) #using a linear model as the best fit
-anova(Mod1) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+Mod1<-lm(Drywt~Treatment*Soil,data=Pots1) #using a linear model as the best fit
+anova(Mod1) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod1)
-shapiro.test(resid(Mod1)) ##S-W p value = 0.4382; Data is considered normal
-leveneTest(Drywt~Treatment, data = Pots1) #check for sig dif between variance, Varian is equal P=0.04259
+shapiro.test(resid(Mod1)) ##S-W p value=0.4382; Data is considered normal
+leveneTest(Drywt~Treatment, data=Pots1) #check for sig dif between variance, Varian is equal P=0.04259
 #the residuals plot, qqnorm and shapiro.test all checks normality
-plot(fitted(Mod1),resid(Mod1),pch=16) #plots the residuals vs the fitted values from a linear regression model
+plot(fitted(Mod1),resid(Mod1),pch=16, abline(h=0, lty=2)) #plots the residuals vs the fitted values 
+#from a linear regression model, abline shows the linear horizontal line at 0
+plot(Mod1, which=1) #plots the residuals vs the actual values, the line is the regression line
+plot(Mod1, which=2) # different way to do the below qqnorm & qqline
 qqnorm(resid(Mod1))
 qqline(resid(Mod1))
 #Mod1a
 Mod1a <- aov(Drywt~Treatment*Soil, data=Pots1) #Two-way anova for Dry weight - another way to do the same
 anova(Mod1a)
 summary(Mod1a)
-leveneTest(Drywt ~ Treatment, data = Pots1)
+leveneTest(Drywt ~ Treatment, data=Pots1)
 shapiro.test(resid(Mod1a))
 #The two-way anova appears to be a better fit for the dry weight data
+
+#Compare models
+anova(Mod1, Mod1a)
 
 #extract the anova results in a tidy format
 Mod1_tidy <- tidy(Mod1a)
@@ -192,11 +206,11 @@ View(Mod1_tidy)
 
 #Run emmeans (the new lsmeans) - it creates a Tukey HSD pairwise comparison
 Mod1em <- emmeans(Mod1a,~Soil+Treatment) #a combined table by soil, but comparing all treatments per soil in one
-Mod1cld <- cld(Mod1em, Letters = letters) #use Compact Letter Display (CLD) with a means test to show sig dif as letters
+Mod1cld <- cld(Mod1em, Letters=letters) #use Compact Letter Display (CLD) with a means test to show sig dif as letters
 View(Mod1cld)
 #emmeans for each soil separately - # cld use directly in ggplot - make sure labels are correct in ggplot
 Mod1em_split <- emmeans(Mod1a,~Treatment|Soil, subset=(Pots1$Drywt))
-Mod1cld_split <- cld(Mod1em_split, Letters = letters, by="Soil")
+Mod1cld_split <- cld(Mod1em_split, Letters=letters, reversed=TRUE, by="Soil")
 View(Mod1cld_split)
 
 
@@ -205,86 +219,86 @@ View(Mod1cld_split)
 #Drywt_df <- Pots1 %>%
 #  select(Soil, Treatment, Drywt) %>% # select only relevant columns
 #  group_by(Soil, Treatment) %>% # group by soil and treatment
-#  summarise(Mean = mean(Drywt, na.rm=TRUE), # calculate the mean dry weight for each group
-#            SE = sd(Drywt, na.rm=TRUE)/sqrt(length(Drywt)), # calculate the standard error for each group
-#            .groups = 'drop')
+#  summarise(Mean=mean(Drywt, na.rm=TRUE), # calculate the mean dry weight for each group
+#            SE=sd(Drywt, na.rm=TRUE)/sqrt(length(Drywt)), # calculate the standard error for each group
+#            .groups='drop')
 #View(Drywt_df)
 #write.csv(Drywt_df,"Drywt.csv")
 
 # Plot means with error bars and CLD
 # par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
 #plot all dry weights onto one graph
-#ggplot(Mod1cld_split, aes(x = Treatment, y = emmean, fill = Soil)) +
-#  geom_bar(stat = "identity", position=position_dodge2(padding=0.2)) +
-#  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-#                width = .2, position = position_dodge(width = 0.9)) +
-#  geom_text(aes(label=.group), nudge_y=1.5, nudge_x=0.1, vjust = -0.5, size=2) + 
-#  labs(title = "Dry Weight by Treatment and Soil", x = "Treatment", y = "Dry Weight (ug/g)") +
+#ggplot(Mod1cld_split, aes(x=Treatment, y=emmean, fill=Soil)) +
+#  geom_bar(stat="identity", position=position_dodge2(padding=0.2)) +
+#  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+#                width=.2, position=position_dodge(width=0.9)) +
+#  geom_text(aes(label=.group), nudge_y=1.5, nudge_x=0.1, vjust=-0.5, size=2) + 
+#  labs(title="Dry Weight by Treatment and Soil", x="Treatment", y="Dry Weight (ug/g)") +
 #  theme_bw() +
-#  theme(plot.title = element_text(size = 12))+
-#  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=8)) +
-#  scale_fill_manual(values = c("blue", "red"), breaks = c("Haverhill","Oxbow"), labels = c("Haverhill","Oxbow"))
+#  theme(plot.title=element_text(size=12))+
+#  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=8)) +
+#  scale_fill_manual(values=c("blue", "red"), breaks=c("Haverhill","Oxbow"), labels=c("Haverhill","Oxbow"))
 ##select specific treatments and use those in the graph - repeat for all subsets
 #Plotting dry weight using constant P and variable biochar rates
 Drywt_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha",
                   "TripleSuperPhosphate")
 Drywt_subVar <- Mod1cld_split %>%
   filter(Treatment %in% Drywt_trtVar)
-ggplot(Drywt_subVar, aes(x = Treatment, y = emmean, pattern = Soil))+
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Drywt_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position = position_dodge2(width = 0.9), vjust=-0.5) + 
-  labs(y = "Biomass yield (g) for chars at 50kg P/ha")+
-  scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=6, position=position_dodge2(width=0.9), vjust=-0.5) + 
+  labs(y="Biomass yield (g) for chars at 50kg P/ha")+
+  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                               "Fert.\nPhosphorus"))+
   theme_bw() +
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
         legend.text=element_text(size=12))+
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("Pots1_Biomass_50kgPha.jpg", width = 12, height = 8, dpi = 600)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+  ggsave("Pots1_Biomass_50kgPha.jpg", width=12, height=8, dpi=600)
 #Plotting constant biochar rates with var P rates
 Drywt_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                    "Willow10tha", "Willow10thaTSP")
 Drywt_subCon <- Mod1cld_split %>%
   filter(Treatment %in% Drywt_charCon)
-ggplot(Drywt_subCon, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Drywt_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position = position_dodge2(width = 0.9), vjust=-0.5) + 
-  labs(x = "Treatments", y = "Biomass yield (g) for chars at 10t/ha") +
-  scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=6, position=position_dodge2(width=0.9), vjust=-0.5) + 
+  labs(x="Treatments", y="Biomass yield (g) for chars at 10t/ha") +
+  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                               "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
   theme_bw() +
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
         legend.text=element_text(size=12))+
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("Pots1_Biomass_10tha.jpg", width = 12, height = 8, dpi = 600)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+  ggsave("Pots1_Biomass_10tha.jpg", width=12, height=8, dpi=600)
 
 
 
 #### Total N (Mod2) - only used to calculate N uptake and recovery, don't analyse
 
 
-##### N uptake ######
+#### N uptake ####
 #check kurtosis and skewness - the data is not too moderate to highly skewed with moderate/high kurtosis
 Nup_Mean <- summary_by(Nuptake~Soil+Treatment, data=Pots1, FUN=mean) # calculate means of N recovery
 Nup_Mean <- as.numeric(Nup_Mean$Nuptake)
@@ -295,16 +309,16 @@ cat("Kurtosis:", Nup_kur, "\n") ## data has very high kurtosis @ 2.310
 #check distribution normality
 shapiro.test(Pots1$Nuptake) #  p=3.599e-07
 hist(Pots1$Nuptake) # slight right  skew
-leveneTest(Nuptake ~ Treatment, data = Pots1)  # 0.0001608
+leveneTest(Nuptake ~ Treatment, data=Pots1)  # 0.0001608
 qqnorm(Pots1$Nuptake) # very heavy left tail
 qqline(Pots1$Nuptake)
 # transform
 shapiro.test(log(Pots1$Nuptake)) #p=2.008e-15
 hist(log(Pots1$Nuptake))  # heavy right skew
-leveneTest(log(Nuptake) ~ Treatment, data = Pots1) # p=0.0005804
+leveneTest(log(Nuptake) ~ Treatment, data=Pots1) # p=0.0005804
 shapiro.test(sqrt(Pots1$Nuptake)) #p=1.471e-11 
 hist(sqrt(Pots1$Nuptake)) # heavy right skew
-leveneTest(sqrt(Nuptake) ~ Treatment, data = Pots1) # p=0.0006209
+leveneTest(sqrt(Nuptake) ~ Treatment, data=Pots1) # p=0.0006209
 # transformations did not improve normality or variance
 # Mod3 - anova
 Mod3 <- aov(Nuptake~Treatment*Soil, data=Pots1)
@@ -321,7 +335,7 @@ Mod3sum_sq_resid <- Mod3_tidy$sumsq[2]  # use the summary stats to determine the
 Mod3sum_sq_reg / (Mod3sum_sq_reg + Mod3sum_sq_resid) # 0.866
 #Mode3a1
 Mod3a1 <- lm(Nuptake~Treatment*Soil, data=Pots1)
-rsq(Mod3a1) # r sq = 0.750
+rsq(Mod3a1) # r sq=0.750
 summary(Mod3a1)$adj.r.squared # check adjusted R squared value: 0.639
 summary(Mod3a1)
 shapiro.test(resid(Mod3a1)) ##S-W p value 0.0007889; Data is considered non-normal and needs to be transformed
@@ -329,8 +343,8 @@ plot(fitted(Mod3a1),resid(Mod3a1),pch=16) # not normally distributed
 qqnorm(resid(Mod3a1)) #not normally distributed
 qqline(resid(Mod3a1)) 
 #Mod3a - N uptake (outliers removed)
-Mod3a <- lmer(Nuptake~Treatment*Soil+(1|Soil), data=Pots1, na.action = na.exclude,
-              control=lmerControl(optCtrl = list(maxfun = 1000000)))
+Mod3a <- lmer(Nuptake~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude,
+              control=lmerControl(optCtrl=list(maxfun=1000000)))
 rsq(Mod3a) # adjusted R squared: 0.762
 anova(Mod3a)
 summary(Mod3a)
@@ -339,7 +353,7 @@ plot(fitted(Mod3a),resid(Mod3a),pch=16) # cluster at right end is less severely 
 qqnorm(resid(Mod3a)) #not normally distributed
 qqline(resid(Mod3a)) 
 # Log-transforming Total N and checking normality of transformed data
-Mod3b<-lmer(log(Nuptake)~Treatment*Soil+(1|Soil), data=Pots1, na.action = na.exclude, 
+Mod3b<-lmer(log(Nuptake)~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude, 
             control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
 rsq(Mod3b) # 0.842
 anova(Mod3b)
@@ -348,7 +362,7 @@ plot(fitted(Mod3b),resid(Mod3b),pch=16) #more clustered at the right end
 qqnorm(resid(Mod3b)) # heavy tails
 qqline(resid(Mod3b))
 # Sqrt transformation
-Mod3c<- lmer(sqrt(Nuptake)~Treatment*Soil+(1|Soil),data=Pots1, na.action = na.exclude)
+Mod3c<- lmer(sqrt(Nuptake)~Treatment*Soil+(1|Soil),data=Pots1, na.action=na.exclude)
 rsq(Mod3c) # 0.8086
 vif(Mod3c)
 anova(Mod3c)
@@ -360,7 +374,7 @@ plot(Mod3c)
 qqnorm(resid(Mod3c))
 qqline(resid(Mod3c))
 # Mod3d glm
-Mod3d <- glm(Nuptake ~ Treatment*Soil, family = gaussian, data = Pots1)
+Mod3d <- glm(Nuptake ~ Treatment*Soil, family=gaussian, data=Pots1)
 rsq(Mod3d) #0.750
 anova(Mod3d)
 summary(Mod3d)
@@ -381,7 +395,7 @@ qqline(resid(Mod3e))
 Mod3f <- kruskalmc(Nuptake~Treatment*Soil, data=Pots1)
 # Transformation
 Nuptake_YJ <- yjPower(Pots1$Nuptake, 0.5,jacobian.adjusted=TRUE)
-Mod3g <- lmer(Nuptake_YJ ~ Treatment*Soil + (1|Soil), data=Pots1, control=lmerControl(optCtrl = list(maxfun = 100000)))
+Mod3g <- lmer(Nuptake_YJ ~ Treatment*Soil + (1|Soil), data=Pots1, control=lmerControl(optCtrl=list(maxfun=100000)))
 rsq(Mod3g) # 0.807
 anova(Mod3g)
 summary(Mod3g)
@@ -393,7 +407,7 @@ qqline(resid(Mod3g))
 # weighted lm model
 Mod3var <- tapply(log(Pots1$Nuptake), Pots1$Treatment, var, na.rm=TRUE)
 weightsP1Nuptake <- 1 / Mod3var
-weightsP1Nuptake_full <- rep(weightsP1Nuptake, each = length(Pots1$Nuptake) / length(weightsP1Nuptake))
+weightsP1Nuptake_full <- rep(weightsP1Nuptake, each=length(Pots1$Nuptake) / length(weightsP1Nuptake))
 Mod3h <- lm(Nuptake ~ Treatment*Soil, data=Pots1, weights=weightsP1Nuptake_full) 
 anova(Mod3h)
 summary(Mod3h)
@@ -423,14 +437,14 @@ print(N_AB)
   #7  Mod3e   971.5901  1059.7050
   #8  Mod3g   768.5644   856.6793
   #9  MOd3h   964.1322  1049.4935
-# R squared values for Mod3 (aov) = 0.866; Mod3a1 (lm) = 0.750; Mod3a (lmer) =0.762; Mod3b (lmerlog) = 0.841
-# Mod3c (lmersqrt) = 0.8086; Mod3d (glm) = 0.750;Mod3g (glmr) = 0.807, MOd3h (weightedlm) = 0.672
+# R squared values for Mod3 (aov)=0.866; Mod3a1 (lm)=0.750; Mod3a (lmer) =0.762; Mod3b (lmerlog)=0.841
+# Mod3c (lmersqrt)=0.8086; Mod3d (glm)=0.750;Mod3g (glmr)=0.807, MOd3h (weightedlm)=0.672
 
 #Mod3b chosen as best fit
 #emmeans 
 Mod3em <- emmeans(Mod3e,~Treatment|Soil, data=Pots1)
-Mod3cld <- cld(Mod3em, Letters = letters, by="Soil", type="response") 
-Mod3cld <- Mod3cld %>% rename(emmean = "response")
+Mod3cld <- cld(Mod3em, Letters=letters, by="Soil", type="response") 
+Mod3cld <- Mod3cld %>% rename(emmean="response")
 View(Mod3cld)
 
 ## Visualizations
@@ -438,57 +452,57 @@ Nuptake_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha"
                   "TripleSuperPhosphate")
 Nuptake_subVar <- Mod3cld %>%
   filter(Treatment %in% Nuptake_trtVar)
-ggplot(Nuptake_subVar, aes(x = Treatment, y = emmean, pattern = Soil))+
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Nuptake_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position = position_dodge2(width = 0.9), vjust=-1) + 
-  labs(x = "Treatments", y = "N uptake (ug) for chars at 50kg p/ha")+
-  scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=8, position=position_dodge2(width=0.9), vjust=-1) + 
+  labs(x="Treatments", y="N uptake (ug) for chars at 50kg p/ha")+
+  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                               "Fert.\nPhosphorus"))+
   theme_bw() +
-  theme(plot.title = element_text(size = 20))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=20, face="bold", colour="black"),
-        axis.title.x = element_text(size = 22, face="bold"), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_Nuptake_50kgPha.jpg", width = 18, height = 18, dpi = 500)
+  theme(plot.title=element_text(size=20))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=20, face="bold", colour="black"),
+        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_Nuptake_50kgPha.jpg", width=18, height=18, dpi=500)
 #Plotting constant biochar rates with var P rates
 Nuptake_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                    "Willow10tha", "Willow10thaTSP")
 Nuptake_subCon <- Mod3cld %>%
   filter(Treatment %in% Nuptake_charCon)
-ggplot(Nuptake_subCon, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Nuptake_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position = position_dodge2(width = 0.9), vjust=-1) + 
-  labs(x = "Treatments", y = "N uptake (ug) for chars at 10t/ha") +
-  scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=8, position=position_dodge2(width=0.9), vjust=-1) + 
+  labs(x="Treatments", y="N uptake (ug) for chars at 10t/ha") +
+  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                               "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
   theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=20, face="bold", colour="black"),
-        axis.title.x = element_text(size = 22, face="bold"), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_Nuptake_10tha.jpg", width = 21, height = 21, dpi = 500)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=20, face="bold", colour="black"),
+        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_Nuptake_10tha.jpg", width=21, height=21, dpi=500)
 
 
 
 
 
 
-##### N recovery #######
+#### N recovery ####
 Nrec_Mean <- summary_by(Nrecovery~Soil+Treatment, data=Pots1, FUN=mean) # calculate means of N recovery
 Nrec_Mean <- as.numeric(Nrec_Mean$Nrecovery)
 Nrec_skew <- skewness(Nrec_Mean,na.rm=TRUE)
@@ -496,11 +510,11 @@ Nrec_kur <- kurtosis(Nrec_Mean,na.rm=TRUE)
 cat("Skewness:", Nrec_skew, "\n") ## data is mildly skewed @ 0.797
 cat("Kurtosis:", Nrec_kur, "\n") ## data has very low kurtosis @ -0.231
 hist(Pots1$Nrecovery)
-leveneTest(Nrecovery ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 6.39e-12
+leveneTest(Nrecovery ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 6.39e-12
 ### Nrecovery has missing values for Control1 - the subset removes these values for the glmer model
 Nrec_out <- Pots1[complete.cases(Pots1$Nrecovery),] #set up a subset removing the missing data only from column Nrecovery
 View(Nrec_out)
-leveneTest(Nrecovery ~ Treatment*Soil, data = Nrec_out)  # 6.39e-12; results are the same as for the whole dataset  
+leveneTest(Nrecovery ~ Treatment*Soil, data=Nrec_out)  # 6.39e-12; results are the same as for the whole dataset  
 # Mod4 ANOVA model - did not work ##S-W p value <0.005; Data is considered non-normal and needs to be transformed
 Mod4 <- aov(Nrecovery~Treatment*Soil, data=Pots1)
 anova(Mod4)
@@ -518,9 +532,9 @@ Mod4sum_sq_reg / (Mod4sum_sq_reg + Mod4sum_sq_resid) #calculate the R squared va
 #trying out log transformation in aov - S-W result is much worse than for normal aov
 Mod4_aovlog <- aov(log(Nrecovery)~Treatment*Soil, data=Pots1)
 shapiro.test(resid(Mod4_aovlog)) # highly uneuqla variance p=1.297e-14
-leveneTest(log(Nrecovery) ~ Treatment*Soil, data = Nrec_out) #log transformation improved variance: p=1.507e-06
-leveneTest(log10(Nrecovery) ~ Treatment*Soil, data = Nrec_out) # variances improved compared to raw data p=1.507e-06
-leveneTest(sqrt(Nrecovery) ~ Treatment*Soil, data = Nrec_out) # not much improvement on variances p=8.751e-12
+leveneTest(log(Nrecovery) ~ Treatment*Soil, data=Nrec_out) #log transformation improved variance: p=1.507e-06
+leveneTest(log10(Nrecovery) ~ Treatment*Soil, data=Nrec_out) # variances improved compared to raw data p=1.507e-06
+leveneTest(sqrt(Nrecovery) ~ Treatment*Soil, data=Nrec_out) # not much improvement on variances p=8.751e-12
 summary((Mod4_aovlog))
 # linear model - did not work ##S-W p value <0.005; Data is considered non-normal and needs to be transformed
 Mod4a <- lm(Nrecovery~Soil*Treatment, data=Nrec)
@@ -551,7 +565,7 @@ qqline(resid(Mod4c))
 #Mod4d 
 Mod4d<-lmer(log10(Nrecovery)~Treatment*Soil+(1|Soil),data=Pots1)
 ref.grid(Mod4d)
-Mod4doptim <- lmerControl(optimizer = "Nelder_Mead", optCtrl = list(maxfun=1e9))
+Mod4doptim <- lmerControl(optimizer="Nelder_Mead", optCtrl=list(maxfun=1e9))
 Mod4dOp <- update(Mod4d, control=Mod4doptim)
 rsq(Mod4d) #0.62
 anova(Mod4d)
@@ -561,7 +575,7 @@ shapiro.test(resid(Mod4d)) # p= 1.297e-14
 Mod4e <- lmer(sqrt(Nrecovery)~Treatment*Soil+(1|Soil),data=Pots1)
 anova(Mod4e)
 summary(Mod4e)
-shapiro.test(resid(Mod4e)) # = 8.829e-09
+shapiro.test(resid(Mod4e)) #=8.829e-09
 #Mod4f using "gamma" distribution in glmer test - did not work, data less normally distributed with unequal variance
 Mod4f <- glmer(Nrecovery~Treatment*Soil+(1|Soil),data=Nrec_out,family=Gamma(link="log"))
 anova(Mod4f)
@@ -601,7 +615,7 @@ print(NrecAB)
 
 #run emmeans on Mod4 - showed significant differences
 Mod4em <- emmeans(Mod4c,~Treatment|Soil, subset=(Nrec$Nrecovery))
-Mod4em_cld <- cld(Mod4em, Letters = letters, by="Soil")
+Mod4em_cld <- cld(Mod4em, Letters=letters, by="Soil")
 View(Mod4em_cld)
 
 ## Visualizations
@@ -611,60 +625,60 @@ par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
 Nrec_trtVar <- c("Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
 Nrec_subVar <- Mod4em_cld %>%
   filter(Treatment %in% Nrec_trtVar)
-ggplot(Nrec_subVar, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Nrec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position = position_dodge2(width = 0.9), vjust=-7) +
-  labs(x = "Treatments", y = "Nitrogen Recovery (%)") +
-  scale_x_discrete(labels = c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=8, position=position_dodge2(width=0.9), vjust=-7) +
+  labs(x="Treatments", y="Nitrogen Recovery (%)") +
+  scale_x_discrete(labels=c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
   theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x = element_text(size = 22, face="bold"), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-  ggsave("Pots1_Nrec_50kg_ha.jpg", width = 20, height = 20, dpi = 600)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+  ggsave("Pots1_Nrec_50kg_ha.jpg", width=20, height=20, dpi=600)
 #Plotting constant biochar rates with var P rates
 Nrec_charCon <- c("Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                    "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                    "Willow10tha", "Willow10thaTSP")
 Nrec_subCon <- Mod4em_cld %>%
   filter(Treatment %in% Nrec_charCon)
-ggplot(Nrec_subCon, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Nrec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position = position_dodge2(width = 0.9), vjust=-7) +
-  labs(x = "Treatments", y = "Nitrogen Recovery (%)") +
-  scale_x_discrete(labels = c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=8, position=position_dodge2(width=0.9), vjust=-7) +
+  labs(x="Treatments", y="Nitrogen Recovery (%)") +
+  scale_x_discrete(labels=c("Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                               "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
   theme_bw() +
-  theme(plot.title = element_text(size = 16))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x = element_text(size = 22, face="bold"), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(),         panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_Nrec_10t_ha.jpg", width = 20, height = 20, dpi = 500)
+  theme(plot.title=element_text(size=16))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_text(size=22, face="bold"), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_Nrec_10t_ha.jpg", width=20, height=20, dpi=500)
 
 
 
 
 
-##### Total P ######  No need to analyze - only used for P uptake & P recovery
+#### Total P ####  No need to analyze - only used for P uptake & P recovery
 
 
 
 
-##### P uptake ######## 
+#### P uptake ####
 ## Issues with identical SE values - investigate
 Pup_Mean <- summary_by(Puptake~Soil+Treatment, data=Pots1, FUN=mean) 
 Pup_Mean <- as.numeric(Pup_Mean$Puptake)
@@ -674,13 +688,13 @@ cat("Skewness:", Pup_skew, "\n") ## data is not skewed @ 0.035
 cat("Kurtosis:", Pup_kur, "\n") ## data has low/moderate kurtosis @ -1.115
 shapiro.test(Pots1$Puptake)  # p=0.001144
 hist(Pots1$Puptake) # left skewed
-leveneTest(Puptake ~ Treatment*Soil, data = Pots1) # variances are equal; p=0.1601
+leveneTest(Puptake ~ Treatment*Soil, data=Pots1) # variances are equal; p=0.1601
 #Mod5 - P uptake
 Mod5 <- lm(Puptake~Soil*Treatment,data=Pots1) 
 rsq(Mod5) # 0.9428224
 anova(Mod5)
 summary(Mod5)
-shapiro.test(resid(Mod5))  ##S-W p value = 0.1046; Data is considered normal
+shapiro.test(resid(Mod5))  ##S-W p value=0.1046; Data is considered normal
 plot(fitted(Mod4),resid(Mod4),pch=16) # slightly clustered to the left
 qqnorm(resid(Mod4)) #long tails
 qqline(resid(Mod4))
@@ -697,7 +711,7 @@ Mod5asum_sq_reg <- Mod5a_tidy$sumsq[1]
 Mod5asum_sq_resid <- Mod5a_tidy$sumsq[2]  
 Mod5asum_sq_reg / (Mod5asum_sq_reg + Mod5asum_sq_resid) # 0.9950879
 # robust anova
-Mod5b <- lmrob(Puptake ~ Treatment * Soil, data = Pots1, method = "MM")
+Mod5b <- lmrob(Puptake ~ Treatment * Soil, data=Pots1, method="MM")
 
 #AIC and BIC values - the models were equal
 Pup_modlist <- list(Mod5, Mod5a, Mod5b)
@@ -711,7 +725,7 @@ print(PupAB)
 
 #Mod5a chosen as rsq is higher (0.99)
 Mod5em <- emmeans(Mod5a,~Treatment|Soil)
-Mod5em_cld <- cld(Mod5em, Letters = letters, by="Soil", type="response")
+Mod5em_cld <- cld(Mod5em, Letters=letters, by="Soil", type="response")
 View(Mod5em_cld)
 
 
@@ -720,51 +734,51 @@ par(mar=c(5,6,4,2)+0.1) #c(bottom, left, top, right) + 0.1 lines
 Pup_trtVar <- c("Control1", "Control2","CanolaMeal50kgha","CanolaHull50kgha","Manure50kgha","Willow50kgha",
                 "TripleSuperPhosphate")
 Pup_subVar <- Mod5em_cld %>% filter(Treatment %in% Pup_trtVar)
-ggplot(Pup_subVar, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Pup_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position = position_dodge2(width = 0.9), vjust=-1) +
-  labs(x = "Treatments", y = "Phosphorus uptake (mg) for 50kg P/ha treatments") +
-  scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=8, position=position_dodge2(width=0.9), vjust=-1) +
+  labs(x="Treatments", y="Phosphorus uptake (mg) for 50kg P/ha treatments") +
+  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
   theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x = element_text(size = 20, face="bold"), axis.title.y = element_text(size = 20, face="bold")) +
-  theme(panel.border = element_blank(),         panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_Puptake_50kg_ha.jpg", width = 14, height = 12, dpi = 500)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=16, face="bold", colour="black"),
+        axis.title.x=element_text(size=20, face="bold"), axis.title.y=element_text(size=20, face="bold")) +
+  theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_Puptake_50kg_ha.jpg", width=14, height=12, dpi=500)
 #Plotting constant biochar rates with var P rates
 Pup_charCon <- c("Control1", "Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
                   "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
                   "Willow10tha", "Willow10thaTSP")
 Pup_subCon <- Mod5em_cld %>% filter(Treatment %in% Pup_charCon)
-ggplot(Pup_subCon, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Pup_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=8, position = position_dodge2(width = 0.9), vjust=-1) +
-  labs(x = "Treatments", y = "Phosphorus uptake (mg) for 10t/ha treatments") +
-  scale_x_discrete(labels = c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=8, position=position_dodge2(width=0.9), vjust=-1) +
+  labs(x="Treatments", y="Phosphorus uptake (mg) for 10t/ha treatments") +
+  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
                               "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
   theme_bw() +
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=16, face="bold", colour="black"),
-        axis.title.x = element_text(size = 20, face="bold"), axis.title.y = element_text(size = 20, face="bold")) +
-  theme(panel.border = element_blank(),         panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_Puptake_10t_ha.jpg", width = 14, height = 12, dpi = 500)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=16, face="bold", colour="black"),
+        axis.title.x=element_text(size=20, face="bold"), axis.title.y=element_text(size=20, face="bold")) +
+  theme(panel.border=element_blank(),         panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_Puptake_10t_ha.jpg", width=14, height=12, dpi=500)
 
 
 
-##### P Recovery ########
+#### P Recovery ####
 Prec_Mean <- summary_by(Precovery~Soil+Treatment, data=Pots1, FUN=mean) 
 Prec_Mean <- as.numeric(Prec_Mean$Precovery)
 Prec_skew <- skewness(Prec_Mean,na.rm=TRUE)
@@ -772,7 +786,7 @@ Prec_kur <- kurtosis(Prec_Mean,na.rm=TRUE)
 cat("Skewness:", Prec_skew, "\n") ## data is mildly skewed @ 1.12
 cat("Kurtosis:", Prec_kur, "\n") ## data has low kurtosis @ 1.0798
 hist(Pots1$Precovery) # moderately left skewed
-leveneTest(Precovery ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 1.631e-06
+leveneTest(Precovery ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 1.631e-06
 ## cannot log or sqrt transform as there are negative values in the dataset
 #cannot use glmer with gamma distribution due to negative values
 ###Precovery has missing values for Control1 & Control2 - the subset removes these values
@@ -836,11 +850,11 @@ print(PrecAB)
 
 #run emmeans on Mod6b - this model chosen as the second lowest AIC/BIC and highest Rsq with improved variances
 Mod6bEm<- emmeans(Mod6b,~Treatment|Soil, subset=(Prec$Precovery), type="response")
-Mod6bEm_cld <- cld(Mod6bEm, Letters = letters, alpha = 0.1, by="Soil") 
+Mod6bEm_cld <- cld(Mod6bEm, Letters=letters, alpha=0.1, by="Soil") 
 View(Mod6bEm_cld)
 # Run emmeans on Mod6 - no significant differences detected between treatments
 #Mod6em <- emmeans(Mod6a,~Treatment*Soil, subset=(Pots1$Precovery))
-#Mod6em_cld <- cld(Mod6em, Letters = letters, by="Soil") 
+#Mod6em_cld <- cld(Mod6em, Letters=letters, by="Soil") 
 #View(Mod6em_cld)
 
 ##Developing visualizations
@@ -849,58 +863,58 @@ par(mar=c(4,4,4,4)+0.4) #c(bottom, left, top, right) + 0.1 lines
 Prec_trtVar <- c("CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
 Prec_subVar <- Mod6bEm_cld %>%
   filter(Treatment %in% Prec_trtVar)
-ggplot(Prec_subVar, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Prec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  scale_y_continuous(limits = c(-10, 70))+
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position = position_dodge2(width = 0.9), vjust=-1.5) +
-  labs(x = "Treatments", y = "P Recovery (%) in the 50kg P/ha treatments") +
-  scale_x_discrete(labels = c("Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  scale_y_continuous(limits=c(-10, 70))+
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=6, position=position_dodge2(width=0.9), vjust=-1.5) +
+  labs(x="Treatments", y="P Recovery (%) in the 50kg P/ha treatments") +
+  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Fert.\nPhosphorus"))+
   theme_bw() +
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
         legend.text=element_text(size=12))+
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_Prec_50kg_ha.jpg", width = 12, height = 8, dpi = 500)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_Prec_50kg_ha.jpg", width=12, height=8, dpi=500)
 #Plotting constant biochar rates with var P rates
 par(mar=c(5,6,6,2)+0.4) #c(bottom, left, top, right) + 0.1 lines
 Prec_charCon <- c("CanolaMeal10tha", "CanolaHull10tha", "Manure10tha",  "Willow10tha", "CanolaMeal10thaTSP", "CanolaHull10thaTSP",
                   "Manure10thaTSP", "Willow10thaTSP","TripleSuperPhosphate")
 Prec_subCon <- Mod6bEm_cld %>%
   filter(Treatment %in% Prec_charCon)
-ggplot(Prec_subCon, aes(x = Treatment, y = emmean, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(Prec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+ 
-  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), 
-                width = 0.2, position = position_dodge(width = 0.9)) +
-  geom_text(aes(label=.group, y=emmean+SE, fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position = position_dodge2(width = 0.9), vjust=-0.5) +
-  labs(x = "Treatments", y = "P Recovery (%) in 10t/ha treatments") +
-  scale_x_discrete(labels = c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", "Canola Hull\n& TSP",
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+ 
+  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                width=0.2, position=position_dodge(width=0.9)) +
+  geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=6, position=position_dodge2(width=0.9), vjust=-0.5) +
+  labs(x="Treatments", y="P Recovery (%) in 10t/ha treatments") +
+  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", "Canola Hull\n& TSP",
                               "Manure\n& TSP", "Willow\n& TSP", "Fert.\nPhosphorus"))+
   theme_bw() +
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
         legend.text=element_text(size=12))+
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_Prec_10t_ha.jpg", width = 12, height = 8, dpi = 500)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_Prec_10t_ha.jpg", width=12, height=8, dpi=500)
 
 
 
-#####   NO3   #######
+####   NO3   ####
 NO3_Mean <- summary_by(NO3~Soil+Treatment, data=Pots1, FUN=mean) 
 NO3_Mean <- as.numeric(NO3_Mean$NO3)
 NO3_skew <- skewness(NO3_Mean,na.rm=TRUE)
@@ -908,11 +922,11 @@ NO3_kur <- kurtosis(NO3_Mean,na.rm=TRUE)
 cat("Skewness:", NO3_skew, "\n") ## data is mildly skewed @ 1.29
 cat("Kurtosis:", NO3_kur, "\n") ## data has very low kurtosis @ 0.2929
 hist(Pots1$NO3) #  left skewed
-leveneTest(NO3 ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 2.878e-11
+leveneTest(NO3 ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 2.878e-11
 # Transform data
-leveneTest(log(NO3) ~ Treatment*Soil, data = Pots1)  # much improved variance: 0.003112
-leveneTest(log10(NO3) ~ Treatment*Soil, data = Pots1)  #  much improved variance: 0.003112
-leveneTest(sqrt(NO3) ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 6.088e-07
+leveneTest(log(NO3) ~ Treatment*Soil, data=Pots1)  # much improved variance: 0.003112
+leveneTest(log10(NO3) ~ Treatment*Soil, data=Pots1)  #  much improved variance: 0.003112
+leveneTest(sqrt(NO3) ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 6.088e-07
 hist((log(Pots1$NO3)))
 hist((log10(Pots1$NO3)))
 hist((sqrt(Pots1$NO3)))
@@ -932,7 +946,7 @@ Mod7sum_sq_resid <- Mod7_tidy$sumsq[2]
 Mod7sum_sq_reg / (Mod7sum_sq_reg + Mod7sum_sq_resid) # 0.9784
 # Mod7a lm
 Mod7a <- lm(log10(NO3)~Treatment*Soil,data=Pots1)
-anova(Mod7a) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod7a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod7a)
 summary(Mod7a)$adj.r.squared  # 0.6804
 shapiro.test(resid(Mod7a)) # p=0.04706
@@ -952,14 +966,14 @@ print(NO3AB)
 
 #run emmeans on Mod7 - highest Rsq 
 Mod7em<- emmeans(Mod7,~Treatment|Soil, subset=(Pots1$NO3), type="response")
-Mod7em_cld <- cld(Mod7em, Letters = letters, by="Soil") 
+Mod7em_cld <- cld(Mod7em, Letters=letters, by="Soil") 
 View(Mod7em_cld)
 write.csv(Mod7em_cld, file="Pots1_NO3.csv")
 
 
 
 
-#####   NH4    #######
+####   NH4    ####
 NH4_Mean <- summary_by(NH4~Soil+Treatment, data=Pots1, FUN=mean) 
 NH4_Mean <- as.numeric(NH4_Mean$NH4)
 NH4_skew <- skewness(NH4_Mean,na.rm=TRUE)
@@ -968,11 +982,11 @@ cat("Skewness:", NH4_skew, "\n") ## data is mildly skewed @ 0.8415
 cat("Kurtosis:", NH4_kur, "\n") ## data has low kurtosis @ 0.8102
 shapiro.test(Pots1$NH4) # p=3.14e-05
 hist(Pots1$NH4) #  left skewed
-leveneTest(NH4 ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 2.37e-07
+leveneTest(NH4 ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 2.37e-07
 # Transform data
-leveneTest(log(NH4) ~ Treatment*Soil, data = Pots1)  # improved variance: 5.441e-05
-leveneTest(log10(NH4) ~ Treatment*Soil, data = Pots1)  #  improved variance: 5.441e-05
-leveneTest(sqrt(NH4) ~ Treatment*Soil, data = Pots1)  # slightly improved variance: 2.975e-06
+leveneTest(log(NH4) ~ Treatment*Soil, data=Pots1)  # improved variance: 5.441e-05
+leveneTest(log10(NH4) ~ Treatment*Soil, data=Pots1)  #  improved variance: 5.441e-05
+leveneTest(sqrt(NH4) ~ Treatment*Soil, data=Pots1)  # slightly improved variance: 2.975e-06
 shapiro.test(log(Pots1$NH4)) # p=0.0004557
 shapiro.test(log10(Pots1$NH4)) # p=0.0004557
 shapiro.test(sqrt(Pots1$NH4)) # p=0.01667 data normally distributed
@@ -993,7 +1007,7 @@ Mod8sum_sq_resid <- Mod8_tidy$sumsq[2]
 Mod8sum_sq_reg / (Mod8sum_sq_reg + Mod8sum_sq_resid) # 0.997
 # Mod8a lm
 Mod8a <- lm(sqrt(NH4)~Treatment*Soil,data=Pots1)
-anova(Mod8a) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod8a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod8a)
 summary(Mod8a)$adj.r.squared  # 0.8599
 shapiro.test(resid(Mod8a)) # p=0.002862
@@ -1013,14 +1027,14 @@ print(NO3AB)
 
 #run emmeans on Mod8 - highest Rsq 
 Mod8em<- emmeans(Mod8,~Treatment|Soil, subset=(Pots1$NH4), type="response")
-Mod8em_cld <- cld(Mod8em, Letters = letters, by="Soil") 
+Mod8em_cld <- cld(Mod8em, Letters=letters, by="Soil") 
 View(Mod8em_cld)
 write.csv(Mod8em_cld, file="Pots1_NH4.csv")
 
 
 
 
-##### PO4  #########
+#### PO4  ####
 PO4_Mean <- summary_by(PO4~Soil+Treatment, data=Pots1, FUN=mean) 
 PO4_Mean <- as.numeric(PO4_Mean$PO4)
 PO4_skew <- skewness(PO4_Mean,na.rm=TRUE)
@@ -1029,11 +1043,11 @@ cat("Skewness:", PO4_skew, "\n") ## data is moderately skewed @ 0.769
 cat("Kurtosis:", PO4_kur, "\n") ## data has very low kurtosis @ -0.1055
 shapiro.test(Pots1$PO4) # p=1.214e-08
 hist(Pots1$PO4) #  left skewed
-leveneTest(PO4 ~ Treatment*Soil, data = Pots1)  # data has unequal variance: p=4.024e-07
+leveneTest(PO4 ~ Treatment*Soil, data=Pots1)  # data has unequal variance: p=4.024e-07
 # Transform data
-leveneTest(log(PO4) ~ Treatment*Soil, data = Pots1)  # equal variance: p=0.07069
-leveneTest(log10(PO4) ~ Treatment*Soil, data = Pots1)  #  equal variance: p=0.07069
-leveneTest(sqrt(PO4) ~ Treatment*Soil, data = Pots1)  # improved variance: p=0.001024
+leveneTest(log(PO4) ~ Treatment*Soil, data=Pots1)  # equal variance: p=0.07069
+leveneTest(log10(PO4) ~ Treatment*Soil, data=Pots1)  #  equal variance: p=0.07069
+leveneTest(sqrt(PO4) ~ Treatment*Soil, data=Pots1)  # improved variance: p=0.001024
 shapiro.test(log(Pots1$PO4)) # p=1.4e-06
 shapiro.test(log10(Pots1$PO4)) # p=1.4e-06
 shapiro.test(sqrt(Pots1$PO4)) # p=1.063e-06
@@ -1042,7 +1056,7 @@ hist((log10(Pots1$PO4)))
 hist((sqrt(Pots1$PO4)))
 #Mod9 linear model
 Mod9<-lm(PO4~Treatment*Soil,data=Pots1) 
-anova(Mod9) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod9) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod9)
 summary(Mod9)$adj.r.squared  # 0.8969
 shapiro.test(resid(Mod9)) # p=1.973e-10
@@ -1136,13 +1150,13 @@ print(PO4AB)
 
 #Run emmeans
 Mod9em <- emmeans(Mod9c,~Treatment|Soil, subset=(Pots1$PO4>0), type="response")
-Mod9cld <- cld(Mod9em, Letters = letters, by="Soil")
+Mod9cld <- cld(Mod9em, Letters=letters, by="Soil")
 View(Mod9cld)
 write.csv(Mod9cld, file="Pots1_PO4.csv")
 
 
 
-#####   Resin P    #######
+####   Resin P    ####
 ResinP_Mean <- summary_by(ResinP~Soil+Treatment, data=Pots1, FUN=mean) 
 ResinP_Mean <- as.numeric(ResinP_Mean$ResinP)
 ResinP_skew <- skewness(ResinP_Mean,na.rm=TRUE)
@@ -1151,11 +1165,11 @@ cat("Skewness:", ResinP_skew, "\n") ## data is mildly skewed @ 2.1
 cat("Kurtosis:", ResinP_kur, "\n") ## data has low kurtosis @ 4.34
 shapiro.test(Pots1$ResinP) # p=3.41e-12
 hist(Pots1$ResinP) #  left skewed
-leveneTest(ResinP ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 0.002065
+leveneTest(ResinP ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 0.002065
 # Transform data
-leveneTest(log(ResinP) ~ Treatment*Soil, data = Pots1)  # improved variance: 0.132
-leveneTest(log10(ResinP) ~ Treatment*Soil, data = Pots1)  #  improved variance: 0.132
-leveneTest(sqrt(ResinP) ~ Treatment*Soil, data = Pots1)  # improved variance: 0.06481
+leveneTest(log(ResinP) ~ Treatment*Soil, data=Pots1)  # improved variance: 0.132
+leveneTest(log10(ResinP) ~ Treatment*Soil, data=Pots1)  #  improved variance: 0.132
+leveneTest(sqrt(ResinP) ~ Treatment*Soil, data=Pots1)  # improved variance: 0.06481
 shapiro.test(log(Pots1$ResinP)) # p=0.0002463
 shapiro.test(log10(Pots1$ResinP)) # p=0.0002463
 shapiro.test(sqrt(Pots1$ResinP)) # p=1.703e-05
@@ -1176,7 +1190,7 @@ Mod10sum_sq_resid <- Mod10_tidy$sumsq[2]
 Mod10sum_sq_reg / (Mod10sum_sq_reg + Mod10sum_sq_resid) # 0.9033
 # Mod10a lm
 Mod10a <- lm(log10(ResinP)~Treatment*Soil,data=Pots1)
-anova(Mod10a) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod10a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod10a)
 summary(Mod10a)$adj.r.squared  # 0.7477
 shapiro.test(resid(Mod10a)) # p=0.01133
@@ -1195,13 +1209,13 @@ print(NO3AB)
 
 #run emmeans on Mod10 - highest Rsq 
 Mod10em<- emmeans(Mod10,~Treatment|Soil, subset=(Pots1$ResinP), type="response")
-Mod10em_cld <- cld(Mod10em, Letters = letters, by="Soil") 
+Mod10em_cld <- cld(Mod10em, Letters=letters, by="Soil") 
 View(Mod10em_cld)
 write.csv(Mod10em_cld, file="Pots1_ResinP.csv")
 
 
 
-#####   WaterSolP    #######
+####   WaterSolP    ####
 WaterSolP_Mean <- summary_by(WaterSolP~Soil+Treatment, data=Pots1, FUN=mean) 
 WaterSolP_Mean <- as.numeric(WaterSolP_Mean$WaterSolP)
 WaterSolP_skew <- skewness(WaterSolP_Mean,na.rm=TRUE)
@@ -1210,11 +1224,11 @@ cat("Skewness:", WaterSolP_skew, "\n") ## data is mildly skewed @ 1.764
 cat("Kurtosis:", WaterSolP_kur, "\n") ## data has low kurtosis @ 2.749
 shapiro.test(Pots1$WaterSolP) # p=5.271e-12
 hist(Pots1$WaterSolP) #  left skewed
-leveneTest(WaterSolP ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 4.537e-07
+leveneTest(WaterSolP ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 4.537e-07
 # Transform data
-leveneTest(log(WaterSolP) ~ Treatment*Soil, data = Pots1)  # improved variance: 0.04701
-leveneTest(log10(WaterSolP) ~ Treatment*Soil, data = Pots1)  #  improved variance: 0.04701
-leveneTest(sqrt(WaterSolP) ~ Treatment*Soil, data = Pots1)  # improved variance: 0.0006312
+leveneTest(log(WaterSolP) ~ Treatment*Soil, data=Pots1)  # improved variance: 0.04701
+leveneTest(log10(WaterSolP) ~ Treatment*Soil, data=Pots1)  #  improved variance: 0.04701
+leveneTest(sqrt(WaterSolP) ~ Treatment*Soil, data=Pots1)  # improved variance: 0.0006312
 shapiro.test(log(Pots1$WaterSolP)) # p=8.324e-05
 shapiro.test(log10(Pots1$WaterSolP)) # p=8.324e-05
 shapiro.test(sqrt(Pots1$WaterSolP)) # p=1.39e-08
@@ -1235,7 +1249,7 @@ Mod11sum_sq_resid <- Mod11_tidy$sumsq[2]
 Mod11sum_sq_reg / (Mod11sum_sq_reg + Mod11sum_sq_resid) # 0.9789
 # Mod11a lm
 Mod11a <- lm(log10(WaterSolP)~Treatment*Soil,data=Pots1)
-anova(Mod11a) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod11a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod11a)
 summary(Mod11a)$adj.r.squared  # 0.7369596
 shapiro.test(resid(Mod11a)) # p=0.1704
@@ -1255,13 +1269,13 @@ print(NO3AB)
 
 #run emmeans on Mod11 - highest Rsq 
 Mod11em<- emmeans(Mod11,~Treatment|Soil, subset=(Pots1$WaterSolP), type="response")
-Mod11em_cld <- cld(Mod11em, Letters = letters, by="Soil") 
+Mod11em_cld <- cld(Mod11em, Letters=letters, by="Soil") 
 View(Mod11em_cld)
 write.csv(Mod11em_cld, file="Pots1_WaterSolP.csv")
 
 
 
-#####   Totalp2    #######
+####   Totalp2    ####
 TotalP2_Mean <- summary_by(TotalP2~Soil+Treatment, data=Pots1, FUN=mean) 
 TotalP2_Mean <- as.numeric(TotalP2_Mean$TotalP2)
 TotalP2_skew <- skewness(TotalP2_Mean,na.rm=TRUE)
@@ -1270,7 +1284,7 @@ cat("Skewness:", TotalP2_skew, "\n") ## data is mildly skewed @ 0.997
 cat("Kurtosis:", TotalP2_kur, "\n") ## data has low kurtosis @ 0.284
 shapiro.test(Pots1$TotalP2) # p=0.001277
 hist(Pots1$TotalP2) #  left skewed
-leveneTest(TotalP2 ~ Treatment*Soil, data = Pots1)  # data has equal variance: 0.1879
+leveneTest(TotalP2 ~ Treatment*Soil, data=Pots1)  # data has equal variance: 0.1879
 # Mod12
 Mod12 <- aov(TotalP2~Treatment*Soil, data=Pots1)
 anova(Mod12)
@@ -1285,7 +1299,7 @@ Mod12sum_sq_resid <- Mod12_tidy$sumsq[2]
 Mod12sum_sq_reg / (Mod12sum_sq_reg + Mod12sum_sq_resid) # 0.65341
 # Mod12a lm
 Mod12a <- lm(TotalP2~Treatment*Soil,data=Pots1)
-anova(Mod12a) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod12a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod12a)
 summary(Mod12a)$adj.r.squared  # 0.5276
 shapiro.test(resid(Mod12a)) # p=0.07059
@@ -1293,9 +1307,9 @@ plot(fitted(Mod12a),resid(Mod12a),pch=16) # clustered to left
 qqnorm(resid(Mod12a)) # small-medium tails
 qqline(resid(Mod12a))
 #Mod12b
-Mod12b <- lmer(TotalP2~Treatment*Soil+(1|Soil), data=Pots1, , na.action = na.exclude)
+Mod12b <- lmer(TotalP2~Treatment*Soil+(1|Soil), data=Pots1, , na.action=na.exclude)
 rsq(Mod12b)  # 0.6789
-anova(Mod12b) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod12b) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod12b)
 shapiro.test(resid(Mod12b)) # p=0.07059
 plot(fitted(Mod12b),resid(Mod12b),pch=16) # clustered to left
@@ -1315,14 +1329,14 @@ print(NO3AB)
 
 #run emmeans on Mod12b - highest Rsq & lowest AIC/BIc
 Mod12em<- emmeans(Mod12b,~Treatment|Soil, subset=(Pots1$TotalP2), type="response")
-Mod12em_cld <- cld(Mod12em, Letters = letters, by="Soil") 
+Mod12em_cld <- cld(Mod12em, Letters=letters, by="Soil") 
 View(Mod12em_cld)
 write.csv(Mod12em_cld, file="Pots1_TotalP2.csv")
 
 
 
 
-#####   pH   #######
+####   pH   ####
 pH_Mean <- summary_by(pH~Soil+Treatment, data=Pots1, FUN=mean) 
 pH_Mean <- as.numeric(pH_Mean$pH)
 pH_skew <- skewness(pH_Mean,na.rm=TRUE)
@@ -1331,11 +1345,11 @@ cat("Skewness:", pH_skew, "\n") ## data is mildly skewed @ -0.649
 cat("Kurtosis:", pH_kur, "\n") ## data has low kurtosis @ -0.348
 shapiro.test(Pots1$pH) # p=0.0004384
 hist(Pots1$pH) #  left skewed
-leveneTest(pH ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 0.007327
+leveneTest(pH ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 0.007327
 # Transform data
-leveneTest(log(pH) ~ Treatment*Soil, data = Pots1)  # slightly worsened variance: 0.006375
-leveneTest(log10(pH) ~ Treatment*Soil, data = Pots1)  #  slightly worsened variance: 0.006375
-leveneTest(sqrt(pH) ~ Treatment*Soil, data = Pots1)  # slightly worsened variance: 0.006841
+leveneTest(log(pH) ~ Treatment*Soil, data=Pots1)  # slightly worsened variance: 0.006375
+leveneTest(log10(pH) ~ Treatment*Soil, data=Pots1)  #  slightly worsened variance: 0.006375
+leveneTest(sqrt(pH) ~ Treatment*Soil, data=Pots1)  # slightly worsened variance: 0.006841
 shapiro.test(log(Pots1$pH)) # p=0.00028
 shapiro.test(log10(Pots1$pH)) # p=0.00028
 shapiro.test(sqrt(Pots1$pH)) # 0.0003507
@@ -1364,7 +1378,7 @@ plot(fitted(Mod13a),resid(Mod13a),pch=16) # clustered to right
 qqnorm(resid(Mod13a)) # medium tails
 qqline(resid(Mod13a))
 #Mod13b
-Mod13b <- lmer(pH~Treatment*Soil+(1|Soil), data=Pots1, , na.action = na.exclude)
+Mod13b <- lmer(pH~Treatment*Soil+(1|Soil), data=Pots1, , na.action=na.exclude)
 rsq(Mod13b)  # 0.9428
 anova(Mod13b) 
 summary(Mod13b)
@@ -1383,7 +1397,7 @@ plot(fitted(Mod13c),resid(Mod13c),pch=16) # clustered to right
 qqnorm(resid(Mod13c)) # medium tails
 qqline(resid(Mod13c))
 
-# Rsq summary: Mod13 = 0.53968; Mod13a = 0.9189; Mod13b = 0.9428; Mod13c = 0.9386
+# Rsq summary: Mod13=0.53968; Mod13a=0.9189; Mod13b=0.9428; Mod13c=0.9386
 #AIC and BIC values - this indicated that Mod13 was the best fit
 NO3_modlist <- list(Mod13, Mod13a, Mod13b, Mod13c)
 AIC_values <- sapply(NO3_modlist, AIC)
@@ -1398,7 +1412,7 @@ print(NO3AB)
 
 #run emmeans on Mod13a - Models 13b&c have convergence and singularity issues
 Mod13em<- emmeans(Mod13a,~Treatment|Soil, subset=(Pots1$pH), type="response")
-Mod13em_cld <- cld(Mod13em, Letters = letters, by="Soil") 
+Mod13em_cld <- cld(Mod13em, Letters=letters, by="Soil") 
 View(Mod13em_cld)
 write.csv(Mod13em_cld, file="Pots1_pH.csv")
 
@@ -1407,7 +1421,7 @@ write.csv(Mod13em_cld, file="Pots1_pH.csv")
 
 
 
-#####  EC   #######
+####  EC   ####
 EC_Mean <- summary_by(EC~Soil+Treatment, data=Pots1, FUN=mean) 
 EC_Mean <- as.numeric(EC_Mean$EC)
 EC_skew <- skewness(EC_Mean,na.rm=TRUE)
@@ -1416,11 +1430,11 @@ cat("Skewness:", EC_skew, "\n") ## data is mildly skewed @ 1.1314
 cat("Kurtosis:", EC_kur, "\n") ## data has low kurtosis @ 0.7454
 shapiro.test(Pots1$EC) # p=1.936e-08
 hist(Pots1$EC) #  left skewed
-leveneTest(EC ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 0.000132
+leveneTest(EC ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 0.000132
 # Transform data
-leveneTest(log(EC) ~ Treatment*Soil, data = Pots1)  # improved variance: 0.004631
-leveneTest(log10(EC) ~ Treatment*Soil, data = Pots1)  #  improved variance: 0.004631
-leveneTest(sqrt(EC) ~ Treatment*Soil, data = Pots1)  # slightly improved variance: 0.000926
+leveneTest(log(EC) ~ Treatment*Soil, data=Pots1)  # improved variance: 0.004631
+leveneTest(log10(EC) ~ Treatment*Soil, data=Pots1)  #  improved variance: 0.004631
+leveneTest(sqrt(EC) ~ Treatment*Soil, data=Pots1)  # slightly improved variance: 0.000926
 shapiro.test(log(Pots1$EC)) # p=6.109e-06
 shapiro.test(log10(Pots1$EC)) # p=6.109e-06
 shapiro.test(sqrt(Pots1$EC)) # 3.465e-07
@@ -1441,7 +1455,7 @@ Mod14sum_sq_resid <- Mod14_tidy$sumsq[2]
 Mod14sum_sq_reg / (Mod14sum_sq_reg + Mod14sum_sq_resid) # 0.9513
 # Mod14a lm
 Mod14a <- lm(log(EC)~Treatment*Soil,data=Pots1)
-anova(Mod14a) #note that residuals = error in summary table, and that total SS is not printed (but can be calculated)
+anova(Mod14a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
 summary(Mod14a)
 summary(Mod14a)$adj.r.squared  # 0.75516
 shapiro.test(resid(Mod14a)) # p=0.4634
@@ -1449,7 +1463,7 @@ plot(fitted(Mod14a),resid(Mod14a),pch=16) # clustered to left
 qqnorm(resid(Mod14a)) # small tails
 qqline(resid(Mod14a))
 
-# Rsq summary: Mod14 = 0.9513; Mod14a = 0.75516
+# Rsq summary: Mod14=0.9513; Mod14a=0.75516
 #AIC and BIC values 
 NO3_modlist <- list(Mod14, Mod14a)
 AIC_values <- sapply(NO3_modlist, AIC)
@@ -1462,13 +1476,13 @@ print(NO3AB)
 
 #run emmeans on Mod14 with highest rsq
 Mod14em<- emmeans(Mod14,~Treatment|Soil, subset=(Pots1$EC), type="response")
-Mod14em_cld <- cld(Mod14em, Letters = letters, by="Soil") 
+Mod14em_cld <- cld(Mod14em, Letters=letters, by="Soil") 
 View(Mod14em_cld)
 write.csv(Mod14em_cld, file="Pots1_EC.csv")
 
 
 
-#####   OC   #######
+####   OC   ####
 OC_Mean <- summary_by(OC~Soil+Treatment, data=Pots1, FUN=mean) 
 OC_Mean <- as.numeric(OC_Mean$OC)
 OC_skew <- skewness(OC_Mean,na.rm=TRUE)
@@ -1477,11 +1491,11 @@ cat("Skewness:", OC_skew, "\n") ## data is slightly skewed @ -0.352
 cat("Kurtosis:", OC_kur, "\n") ## data has low/medium kurtosis @ -1.32
 shapiro.test(Pots1$OC) # p=0.002034
 hist(Pots1$OC) #  slightly left skewed
-leveneTest(OC ~ Treatment*Soil, data = Pots1)  # data has unequal variance: 2.511e-07
+leveneTest(OC ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 2.511e-07
 # Transform data
-leveneTest(log(OC) ~ Treatment*Soil, data = Pots1)  # slightly improved variance: 2.138e-06
-leveneTest(log10(OC) ~ Treatment*Soil, data = Pots1)  #  slightly improved variance: 2.138e-06
-leveneTest(sqrt(OC) ~ Treatment*Soil, data = Pots1)  # slightly improved variance: 5.999e-07
+leveneTest(log(OC) ~ Treatment*Soil, data=Pots1)  # slightly improved variance: 2.138e-06
+leveneTest(log10(OC) ~ Treatment*Soil, data=Pots1)  #  slightly improved variance: 2.138e-06
+leveneTest(sqrt(OC) ~ Treatment*Soil, data=Pots1)  # slightly improved variance: 5.999e-07
 shapiro.test(log(Pots1$OC)) # p=0.001123
 shapiro.test(log10(Pots1$OC)) # p=0.001123
 shapiro.test(sqrt(Pots1$OC)) # p=0.0024
@@ -1510,7 +1524,7 @@ plot(fitted(Mod15a),resid(Mod15a),pch=16) # 2 clusters forming
 qqnorm(resid(Mod15a)) # fat tails
 qqline(resid(Mod15a))
 #Mod13b
-Mod15b <- lmer(OC~Treatment*Soil+(1|Soil), data=Pots1, na.action = na.exclude)
+Mod15b <- lmer(OC~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude)
 rsq(Mod15b)  # 0.9366
 anova(Mod15b) 
 summary(Mod15b)
@@ -1519,7 +1533,7 @@ plot(fitted(Mod15b),resid(Mod15b),pch=16) # 2 clusters forming
 qqnorm(resid(Mod15b)) # fat tails
 qqline(resid(Mod15b))
 #Mod15c
-Mod15c <- glmer(OC~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log"), na.action = na.exclude)
+Mod15c <- glmer(OC~Treatment*Soil+(1|Soil),data=Pots1,family=Gamma(link="log"), na.action=na.exclude)
 anova(Mod15c)
 summary(Mod15c)
 shapiro.test(resid(Mod15c))  #p=2.297e-07
@@ -1528,9 +1542,9 @@ plot(fitted(Mod15c),resid(Mod15c),pch=16) # 2 clusters forming
 qqnorm(resid(Mod15c)) # fat tails
 qqline(resid(Mod15c))
 #Mod15d
-Mod15d <- glm(OC ~ Treatment*Soil, family = gaussian, data = Pots1)
+Mod15d <- glm(OC ~ Treatment*Soil, family=gaussian, data=Pots1)
 rsq(Mod15d) # 0.9334
-anova(Mod15d, test = "Chisq")
+anova(Mod15d, test="Chisq")
 summary(Mod15d)
 shapiro.test(resid(Mod15d))  # residuals p=5.413e-09
 plot(fitted(Mod15d),resid(Mod15d),pch=16) # 2 clusters forming
@@ -1538,7 +1552,7 @@ qqnorm(resid(Mod15d))  # fat tails
 qqline(resid(Mod15d))
 #Mod15e - YJ transformation
 OC_YJ <- yjPower(Pots1$OC, 0.5,jacobian.adjusted=TRUE)
-Mod15e <- lmer(OC_YJ ~ Treatment*Soil + (1|Soil), data=Pots1, control=lmerControl(optCtrl = list(maxfun = 100000)))
+Mod15e <- lmer(OC_YJ ~ Treatment*Soil + (1|Soil), data=Pots1, control=lmerControl(optCtrl=list(maxfun=100000)))
 rsq(Mod15e) # adjusted R squared: 0.9223
 anova(Mod15e)
 summary(Mod15e)
@@ -1548,7 +1562,7 @@ plot(fitted(Mod15e),resid(Mod15e),pch=16) # 2 clusters
 qqnorm(resid(Mod15e)) # fat tails
 qqline(resid(Mod15e))
 
-# Rsq summary: Mod15 = 0.1746; Mod15a = 0.9101, Mod15b = 0.9366; Mod15c = ??; Mod15d = 0.9334; Mod15e = 0.9223
+# Rsq summary: Mod15=0.1746; Mod15a=0.9101, Mod15b=0.9366; Mod15c=??; Mod15d=0.9334; Mod15e=0.9223
 #AIC and BIC values 
 NO3_modlist <- list(Mod15, Mod15a, Mod15b, Mod15c, Mod15d, Mod15e)
 AIC_values <- sapply(NO3_modlist, AIC)
@@ -1565,65 +1579,202 @@ print(NO3AB)
 
 #run emmeans on Mod15d high rsq, with lowest combined AIC & BIC
 Mod15em<- emmeans(Mod15d,~Treatment|Soil, subset=(Pots1$OC), type="response")
-Mod15em_cld <- cld(Mod15em, Letters = letters, by="Soil") 
+Mod15em_cld <- cld(Mod15em, Letters=letters, by="Soil") 
 View(Mod15em_cld)
 write.csv(Mod15em_cld, file="Pots1_OC.csv")
 
 
 
 
-####   Water holding capacity  #####
+####   Water holding capacity  ####
+# no reps, couldn't fit to a model
 WHC <- data.frame(
-  Soil = as.factor(rep(c("Haverhill", "Oxbow"), each=5)),
-  Treatment = as.factor(c("Control2", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "Control2",
+  Soil=as.factor(rep(c("Haverhill", "Oxbow"), each=5)),
+  Treatment=as.factor(c("Control2", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "Control2",
               "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha")),
-  VolWatContent = c(21, 22, 21, 24, 21, 22, 23, 24, 24, 24))
+  VolWatContent=c(21, 22, 21, 24, 21, 22, 23, 24, 24, 24))
 print(WHC)
 # boxplot
-ggplot(WHC, aes(x = Soil, y = VolWatContent)) +
+ggplot(WHC, aes(x=Soil, y=VolWatContent)) +
   geom_boxplot() +
-  geom_jitter(shape = 15, color = "steelblue", position = position_jitter(0.21)) +
-    labs(x = "Treatment", y = "Volumetric Water Content %")
-ggsave("WaterHoldingCapacity_boxplot.jpg", width = 8, height = 8, dpi = 300)
-
-#geom_text(aes(label = Treatment), position = position_dodge(width = 0.5), vjust = -0.7, color = "steelblue", size = 3) +
+  geom_jitter(shape=15, color="steelblue", position=position_jitter(0.21)) +
+    labs(x="Treatment", y="Volumetric Water Content %")
+#geom_text(aes(label=Treatment), position=position_dodge(width=0.5), vjust=-0.7, color="steelblue", size=3) +
+ggsave("WaterHoldingCapacity_boxplot.jpg", width=8, height=8, dpi=300)
 
 #model data
-ModWHC1 <- lm(VolWatContent~Treatment*Soil, data=WHC)
-anova(ModWHC1)
-summary(ModWHC1)
-shapiro.test(resid(ModWHC1)) # p=0.0008813
-hist(resid(ModWHC1)) # heavily flattened tails
-qqnorm(resid(ModWHC1)) # heavy tails
-qqline(resid(ModWHC1))
+#ModWHC1 <- lm(VolWatContent~Treatment*Soil, data=WHC)
+#anova(ModWHC1)
+#summary(ModWHC1)
+#shapiro.test(resid(ModWHC1)) # p=0.0008813
+#hist(resid(ModWHC1)) # heavily flattened tails
+#qqnorm(resid(ModWHC1)) # heavy tails
+#qqline(resid(ModWHC1))
+#pairwise.t.test(WHC$VolWatContent, list(WHC$Treatment, WHC$Soil))
+#WHC %>% group_by(Soil) %>% do(tidy(pairwise.t.test(.$VolWatContent, .$Treatment)))
 
-
-
-
-pairwise.t.test(WHC$VolWatContent, list(WHC$Treatment, WHC$Soil))
-
-
-WHC %>%
-  group_by(Soil) %>%
-  do(tidy(pairwise.t.test(.$VolWatContent, .$Treatment)))
-
-ggplot(WHC, aes(x = Treatment, y = VolWatContent, pattern = Soil)) +
-  geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
+ggplot(WHC, aes(x=Treatment, y=VolWatContent, pattern=Soil)) +
+  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values = c("Haverhill" = "stripe", "Oxbow" = "crosshatch"), 
-                       labels = c("Haverhill", "Oxbow"))+
-  geom_text(aes(label = paste0(VolWatContent, "%"), fontface = ifelse(Soil == "Haverhill", "italic", "plain")),
-            size=6, position = position_dodge2(width = 0.9), vjust=-1) +
-  labs(x = "Treatments", y = "Volumetric Water Content (%)") +
-  scale_x_discrete(labels = c("Control 2", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/h"))+
-  scale_y_continuous(limits = c(0, 28))+
+  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
+                       labels=c("Haverhill", "Oxbow"))+
+  geom_text(aes(label=paste0(VolWatContent, "%"), fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+            size=6, position=position_dodge2(width=0.9), vjust=-1) +
+  labs(x="Treatments", y="Volumetric Water Content (%)") +
+  scale_x_discrete(labels=c("Control 2", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/h"))+
+  scale_y_continuous(limits=c(0, 28))+
   theme_bw() +
   theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"),
         legend.text=element_text(size=12))+
-  theme(plot.title = element_text(size = 18))+
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1, size=18, face="bold", colour="black"),
-        axis.title.x = element_blank(), axis.title.y = element_text(size = 22, face="bold")) +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-ggsave("Pots1_WatHolCapacity.jpg", width = 12, height = 8, dpi = 500)
+  theme(plot.title=element_text(size=18))+
+  theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=18, face="bold", colour="black"),
+        axis.title.x=element_blank(), axis.title.y=element_text(size=22, face="bold")) +
+  theme(panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))
+ggsave("Pots1_WatHolCapacity.jpg", width=12, height=8, dpi=500)
+
+
+
+####  PCA analysis  ####
+#create summarised data
+Heat_mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean, na.rm=TRUE)
+Heat_mean <- rename(Heat_mean, Drywt=Drywt.mean, Nuptake=Nuptake.mean, Nrecovery=Nrecovery.mean, Puptake=Puptake.mean, 
+                    Precovery=Precovery.mean, NO3=NO3.mean, NH4=NH4.mean, PO4=PO4.mean, ResinP=ResinP.mean, 
+                    WaterSolP=WaterSolP.mean, TotalP2=TotalP2.mean, pH=pH.mean, EC=EC.mean, OC=OC.mean)
+View(Heat_mean)
+#subset soil
+
+
+##### Yield  #####
+
+
+
+(Hav_heatmap <- heatmap(Hav_data, scale="column", col=cm.colors(256), 
+                        RowSideColors=Heat_haverhill$Treatment, margins=c(5,10)))
+
+#####  N recovery  #####
+
+
+
+#####   P Recovery  ######
+
+
+
+####  Co-variance  ####
+#####  Yield  #####
+#Split and scale data
+YieldCovVar <- c("Drywt", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+HavCovYield <- subset(Pots1, Soil == "Haverhill", select=c("Treatment", YieldCovVar), 
+                      na.action = function(x) x[, complete.cases(x)], na.rm = FALSE)
+HavCovScaleYield <- as.data.frame(scale(HavCovYield[,-1]))
+HavCovScaleYield$Treatment <- HavCovYield$Treatment
+HavCovScaleYieldSplit <- split(HavCovScaleYield[, -ncol(HavCovScaleYield)], HavCovScaleYield$Treatment)
+#HavCovScaleYieldSplit <- lapply(HavCovScaleYieldSplit, function(x) x[, -ncol(x)])
+OxCovYield <- subset(Pots1, Soil=="Oxbow", select=c("Treatment", YieldCovVar),  
+                     na.action = function(x) x[, complete.cases(x)], na.rm = FALSE)
+OxCovScaleYield <- as.data.frame(scale(OxCovYield[,-1]))
+OxCovScaleYield$Treatment <- OxCovYield$Treatment
+OxCovScaleYieldSplit <- split(OxCovScaleYield[, -ncol(OxCovScaleYield)], OxCovScaleYield$Treatment)
+OxCovScaleYieldSplit <- lapply(OxCovScaleYieldSplit, function(x) x[, -ncol(x)])
+
+# calculate the covariance matrix for each treatment
+##Haverhill
+YieldCov_Hav <- lapply(HavCovScaleYieldSplit, function(x) cov(x, use="pairwise.complete.obs"))
+#YieldCov_Hav2 <- cov(HavCovScaleYield) - disn't work
+YieldCovHavWb <- createWorkbook() # create workbook to save in xlsx
+for (i in seq_along(YieldCov_Hav)) { # for loop to bring all matrices into separate worksheets
+  treatment_name <- names(YieldCov_Hav)[i] # make sure that treatment names are used and not repeat first teratment
+  sheet_name <- paste0(treatment_name)
+  addWorksheet(YieldCovHavWb, sheet_name)
+  writeData(YieldCovHavWb, sheet=sheet_name, x=YieldCov_Hav[[i]], startRow=1, startCol=1, rowNames=TRUE)
+}
+saveWorkbook(YieldCovHavWb, "Pots1_Yield_CovMatrix_Haverhill1.xlsx")
+##Oxbow
+YieldCov_Ox <- lapply(OxCovScaleYieldSplit, cov)
+
+# Convert each covariance matrix to a dataframe
+## Option 1 - provides a list of matrices
+YieldCovHav_df1 <- lapply(YieldCov_Hav, as.data.frame) # converts everything into a combined dataframe
+YieldCovHav_df1$treatment <- as.factor(YieldCovHav_df1$treatment) # adds a column for treatment
+## Option 2 - does not include treatment names
+YieldCovHav_df2 <- lapply(seq_along(YieldCov_Hav), function(i) {
+  YieldCov_Hav <- as.matrix(YieldCov_Hav[[i]])
+  rownames(YieldCov_Hav) <- colnames(YieldCov_Hav) # add rownames
+  YieldCovHav_df1 <- melt(YieldCov_Hav) # reshape to long format
+  YieldCovHav_df1$treatment <- names(YieldCov_Hav)[i] # add treatment column
+  return(YieldCovHav_df1)
+})
+# Option 3
+YieldCovHav_df3 <- lapply(seq_along(YieldCov_Hav), function(i) {
+  cov_mat1h <- as.matrix(YieldCov_Hav[[i]])
+  cov_mat1h <- setNames(cov_mat1h, YieldCovVar)
+  cov_df1h <- as.data.frame(cov_mat1h)
+  cov_df1h$Var1 <- rownames(cov_df1h)
+  cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
+  cov_df1h_long$treatment <- names(YieldCov_Hav)[i]
+  return(cov_df1h_long)
+})
+# Combine all dataframes into one
+YieldCovHav_dfAll <- do.call(rbind, YieldCovHav_df3)
+YieldCovHav_dfAll$Var1 <- factor(YieldCovHav_dfAll$Var1, levels = YieldCovVar)
+YieldCovHav_dfAll$variable <- factor(YieldCovHav_dfAll$variable, levels = rev(YieldCovVar))
+write.csv(YieldCovHav_dfAll, file="YieldCovHav_dfAll.csv")
+
+# Generate the heatmap for each treatment and facet wrap them
+(YieldCovHavHeat <- ggplot(YieldCovHav_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
+  geom_tile() +
+  scale_fill_gradientn(colors=brewer.pal(9, "Purples"), limits=c(-1.5, 3.7), breaks=seq(-1.5, 3.7, by=0.5)) +
+  facet_wrap(~ treatment, nrow=5, ncol=3, scales="fixed") +
+  geom_text(aes(label=round(Covariance, 3)))+
+  theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+        legend.text=element_text(size=20), 
+        strip.text=element_text(size=20, face="bold"),
+        strip.placement="outside",
+        strip.background=element_blank(),
+        strip.text.y=element_text(angle=0, vjust=0.5),
+        strip.text.x=element_text(vjust=1),
+        axis.line=element_blank(),
+        axis.text.x.bottom=element_text(size=15, angle=45),
+        axis.text.y.left=element_text(size=15)) +
+  labs(x="", y=""))
+ggsave(YieldCovHavHeat, file="Pots1_YieldCovHaveHeat.jpg", width=20, height=20, dpi=500)
+
+#snippet:
+theme(strip.text=element_text(size=20, face="bold"),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.title=element_blank(), # Remove the axis title
+      panel.spacing=unit(0, "lines"),
+      # Customize axis labels for left and bottom facets
+      strip.placement="outside",
+      strip.background=element_blank(),
+      strip.text.y=element_text(angle=0, vjust=0.5),
+      strip.text.x=element_text(vjust=1)) +
+  theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1),
+      axis.text.y=element_text(angle=45, vjust=1, hjust=1)) +
+  theme(axis.text.x=ifelse(seq_along(unique(YieldCovHav_dfAll$Var1)) == 1, 
+                             element_text(angle=45, vjust=1, hjust=1),
+                             element_blank())) +
+  theme(axis.text.y=ifelse(rep(seq_along(unique(YieldCovHav_dfAll$variable)), each=length(unique(YieldCovHav_dfAll$variable))) == 1,
+                             element_text(angle=45, vjust=1, hjust=1),
+                             element_blank())) +
+
+
+## Didn't work:
+#ggcorrplot(YieldCovHav_df, method="square", type="upper", tl.col="black", tl.srt=45, pch.cex=2) + 
+# facet_wrap(~ treatment, nrow=5, ncol=3, scales="free")
+# ggcorrplot is only applicable to correlation matrices
+#heatmap(YieldCovHav_df, Rowv=NA, Colv=NA, col=rev(heat.colors(256)))
+
+
+#Oxbow
+
+
+
+#####  N recovery  #####
+
+CovVar <- c("Drywt", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
+
+
+#####   P Recovery  ######
 
