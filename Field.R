@@ -12,6 +12,7 @@
   library(doBy)
   library(ggplot2)
   library(ggpattern)
+  library(ggstatsplot)
   library(plotrix)
   library(car)
   library(afex)
@@ -35,6 +36,9 @@
   library(writexl)
   library(glmmTMB)
   library(stringr)
+  library(cowplot) # for combining multiple ggplots instead of par(mfrow=c(x,x))
+  library(openxlsx) # to create workbooks for covriance heatmaps
+  library(RColorBrewer)
   
 ## Combining 0-30cm values   ----
   ## Calculate mean of soil data from incremental depths to combined depth (0-30cm)
@@ -58,7 +62,7 @@
       summarise(c(NO3c	= mean(NO3)), (PO4c=mean(PO4)), (WatSolPc=mean(WatSolP)), (ResinPc =mean(ResinP)),
                   (pHc=mean(pH)), (ECc=mean(EC)), (OCc=mean(OC)))
     View(FieldResid)
-    write.xlsx(FieldResid, file="FieldResidMean.xlsx")
+    write_xlsx(FieldResid, path="FieldResidMean.xlsx")
 
 
 ## Summary and ordering of data   ----
@@ -69,10 +73,10 @@
   #Change columns in a dataframe to factors/categorical values, str displays 
     FieldTrt_order <- c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus")
     Field$Block <- factor(Field$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
-    Field$Treatment <- factor(Field$Treatment,levels=Trt_order)
-    Field$LNO3 <- as.numeric(as.character(Fieldsplitraw$LNO3))
-    Field$LNH4 <- as.numeric(as.character(Fieldsplitraw$LNH3))
-    Field$LPO4 <- as.numeric(as.character(Fieldsplitraw$LPO4))
+    Field$Treatment <- factor(Field$Treatment,levels=FieldTrt_order)
+    Field$LNO3 <- as.numeric(Field$LNO3)
+    Field$LNH4 <- as.numeric(Field$LNH4)
+    Field$LPO4 <- as.numeric(Field$LPO4)
     summary(Field)
     str(Field) #displays the structure of the object
   # Summary data (means, SD, etc.) for each treatment and variable
@@ -374,7 +378,7 @@
   ModFStrawem <- emmeans(ModFStraw4,~Treatment, alpha=0.1)
   ModFStrawem_cld <- cld(ModFStrawem, Letters=trimws(letters), reversed=TRUE) 
   View(ModFStrawem_cld)
-  write.xlsx(ModFStrawem_cld, file="Field_Straw.xlsx")
+  write_xlsx(ModFStrawem_cld, path="Field_Straw.xlsx")
 
 
 
@@ -440,7 +444,7 @@
   ModFGrainem_cld <- cld(ModFGrainem, Letters=trimws(letters), reversed=TRUE, type="response") 
   ModFGrainem_cld <- ModFGrainem_cld %>% dplyr::rename(emmean="response")
   View(ModFGrainem_cld)
-  write.xlsx(ModFGrainem_cld, file="Field_Grain.xlsx")
+  write_xlsx(ModFGrainem_cld, path="Field_Grain.xlsx")
 
 
 ##   Biomass   ----
@@ -506,7 +510,7 @@
   ModFYieldem_cld <- cld(ModFYieldem, Letters=trimws(letters), reversed=TRUE, type="response") 
   ModFYieldem_cld <- ModFYieldem_cld %>% dplyr::rename(emmean="response")
   View(ModFYieldem_cld)
-  write.xlsx(ModFYieldem_cld, file="Field_Yield.xlsx")
+  write_xlsx(ModFYieldem_cld, path="Field_Yield.xlsx")
   
   # Plot option 1 - using grain and straw emmeans
     ## Create combined dataframe
@@ -532,7 +536,7 @@
     }
     View(BiomassFieldEm)
     print(BiomassFieldEm)
-    write.xlsx(BiomassFieldEm, file="Field_BiomassMeans.xlsx")
+    write_xlsx(BiomassFieldEm, path="Field_BiomassMeans.xlsx")
     ## Visualization
     ### Set text labels colours & fontface
     YieldColour <- c("FGrain" = "white", "FStraw" = "black")
@@ -558,7 +562,7 @@
               panel.background = element_blank(),
               panel.border=element_blank(), panel.grid.major=element_blank(),
               panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-        ggsave(FieldYield1, file="Field_Yield1.jpg", width = 10, height = 8, dpi = 150)
+        ggsave(FieldYield1, path="Field_Yield1.jpg", width = 10, height = 8, dpi = 150)
     
   # Plot option 2 - using ordinary means
     ## call dataframe
@@ -649,7 +653,7 @@
   ModFieldNupem_cld <- cld(ModFieldNupem, Letters=trimws(letters), reversed=TRUE, type="response") 
   ModFieldNupem_cld$Treatment <- factor(ModFieldNupem_cld$Treatment, levels = FieldTrt_order)
   print(ModFieldNupem_cld)
-  write.xlsx(ModFieldNupem_cld, file="Field_Nuptake.xlsx")
+  write_xlsx(ModFieldNupem_cld, path="Field_Nuptake.xlsx")
 # Visualizations
   (FieldNup_plot <- ggplot(ModFieldNupem_cld, aes(x=Treatment, y=response))+
       geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -723,11 +727,11 @@
     #1 ModFieldNrec1  165.2383   172.2084 - best AIC/BIC model but with singularity issues it is not the best choice
     #2 ModFieldNrec2  142.2151   147.1715
 #emmeans 
-  ModFieldNrecem <- emmeans(ModFieldNrec2,~Treatment, alpha=0.1) # can also do model,~Soil or other
+  (ModFieldNrecem <- emmeans(ModFieldNrec2,~Treatment, alpha=0.1)) # can also do model,~Soil or other
   #ModFieldNrecem_contrast <- contrast(ModFieldNrecem, method = "tukey") # obtain t & p values, removes upper & lower conf int data
-  ModFieldNrecem_cld <- cld(ModFieldNrecem, Letters=letters, type="response")
+  (ModFieldNrecem_cld <- cld(ModFieldNrecem, Letters=letters, type="response", reversed=TRUE))
   View(ModFieldNrecem_cld)
-  write.xlsx(ModFieldNrecem_cld, file="Field_Nrecovery.xlsx")
+  write_xlsx(ModFieldNrecem_cld, path="Field_Nrecovery.xlsx")
 # Visualizations
     (FielNrecPlot <- ggplot(ModFieldNrecem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
       geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -808,7 +812,7 @@
   ModFieldPupem <- emmeans(ModFieldPup1,~Treatment, alpha=0.1)
   ModFieldPupem_cld <- cld(ModFieldPupem, Letters=letters, reversed=TRUE, type="response") 
   View(ModFieldPupem_cld)
-  write.xlsx(ModFieldPupem_cld, file="Field_Puptake.xlsx")
+  write_xlsx(ModFieldPupem_cld, path="Field_Puptake.xlsx")
 # Visualizations
     (FieldPuptakePlot <- ggplot(ModFieldPupem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
       geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -875,7 +879,7 @@
   ModFieldPrecem <- emmeans(ModFieldPrec2,~Treatment, alpha=0.1)
   ModFieldPrecem_cld <- cld(ModFieldPrecem, Letters=letters, type="response") 
   View(ModFieldPrecem_cld)
-  write.xlsx(ModFieldPrecem_cld, file="Field_Precovery.xlsx")
+  write_xlsx(ModFieldPrecem_cld, path="Field_Precovery.xlsx")
 # Visualizations
   (FieldPrecPlot <- ggplot(ModFieldPrecem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
     geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -967,14 +971,12 @@
       #3 ModFieldSNO33   347.9463   391.4340
       #4 ModFieldSNO34   300.9198   337.9228 - only 3 df
 #emmeans - ModFieldSNO33 chosen as best mod based on rsq and it's response in the emmeans function
-  ModFieldemSNO3 <- emmeans(ModFieldSNO33,~Treatment|Depth, type="response", alpha=0.1)
-  ModFieldemSNO3a <- emmeans(ModFieldSNO33,~Depth|Treatment, type="response", alpha=0.1)
-  ModFieldemSNO3_cld <- cld(ModFieldemSNO3, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
-  View(ModFieldemSNO3_cld)
-  ModFieldemSNO3_clda <- cld(ModFieldemSNO3a, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
-  View(ModFieldemSNO3_clda)
+  (ModFieldemSNO3 <- emmeans(ModFieldSNO33,~Treatment|Depth, alpha=0.1))
+  (ModFieldemSNO3a <- emmeans(ModFieldSNO33,~Depth|Treatment, alpha=0.1))
+  (ModFieldemSNO3_cld <- cld(ModFieldemSNO3, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
+  (ModFieldemSNO3_clda <- cld(ModFieldemSNO3a, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
   NO3_combEm <- list(Treatment=ModFieldemSNO3_cld, Depth=ModFieldemSNO3_clda)
-  write.xlsx(NO3_combEm, file="Field_SoilNO3.xlsx")
+  write_xlsx(NO3_combEm, path="Field_SoilNO3.xlsx")
 
 
 
@@ -1040,17 +1042,15 @@
         #3 ModFieldSPO43   299.3189   343.4127
         #4 ModFieldSPO44   268.4968   306.3332
 #emmeans 
-  ModFieldemSPO4 <- emmeans(ModFieldSPO44,~Treatment|Depth, type="response", alpha=0.1)
-  ModFieldemSPO4a <- emmeans(ModFieldSPO44,~Depth|Treatment, type="response", alpha=0.1)
-  ModFieldemSPO4_cld <- cld(ModFieldemSPO4,Letters=trimws(letters), reversed=TRUE, by = "Depth") 
-  ModFieldemSPO4_cld$Depth <- factor(ModFieldemSPO4_cld$Depth,
+  (ModFieldemSPO4 <- emmeans(ModFieldSPO44,~Treatment|Depth, alpha=0.1))
+  (ModFieldemSPO4a <- emmeans(ModFieldSPO44,~Depth|Treatment, alpha=0.1))
+  (ModFieldemSPO4_cld <- cld(ModFieldemSPO4,Letters=trimws(letters), reversed=TRUE, by = "Depth"))
+  (ModFieldemSPO4_cld$Depth <- factor(ModFieldemSPO4_cld$Depth,
                                      levels = c("PO4_10", "PO4_20", "PO4_30"),
-                                     labels = c("0-10cm", "10-20cm", "20-30cm"))
-  View(ModFieldemSPO4_cld)
-  ModFieldemSPO4_clda <- cld(ModFieldemSPO4a, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
-  View(ModFieldemSPO4_clda)
+                                     labels = c("0-10cm", "10-20cm", "20-30cm")))
+  (ModFieldemSPO4_clda <- cld(ModFieldemSPO4a, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
   PO4_combEm <- list(Treatment=ModFieldemSPO4_cld, Depth=ModFieldemSPO4_clda)
-  write.xlsx(PO4_combEm, file="Field_SoilPO4.xlsx")
+  write_xlsx(PO4_combEm, path="Field_SoilPO4.xlsx")
 # Visualizations
   (FieldPO4Plot <- ggplot(ModFieldemSPO4_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
       geom_point(size = 6, color="black", aes(fill=Treatment)) +
@@ -1219,11 +1219,10 @@
           #2 ModFieldWSP2   97.16340   134.9998 - only 3 df
           #3 ModFieldWSP3   65.04675   109.1406 - singularity issues
 #emmeans 
-    ModFieldemWSP <- emmeans(ModFieldWSP3,~Treatment|Depth, alpha=0.1, type="response")
-    ModFieldemWSP_cld <- cld(ModFieldemWSP,Letters=trimws(letters), reversed=TRUE, by = "Depth")
-    ModFieldemWSP_cld <- ModFieldemWSP_cld %>% dplyr::rename(emmean="response")
-    View(ModFieldemWSP_cld)
-    write.xlsx(ModFieldemWSP_cld, file="Field_SoilWSP.xlsx")
+    (ModFieldemWSP <- emmeans(ModFieldWSP3,~Treatment|Depth, alpha=0.1))
+    (ModFieldemWSP_cld <- cld(ModFieldemWSP,Letters=trimws(letters), reversed=TRUE, by = "Depth"))
+    (ModFieldemWSP_cld <- ModFieldemWSP_cld %>% dplyr::rename(emmean="response"))
+    write_xlsx(ModFieldemWSP_cld, path="Field_SoilWSP.xlsx")
 # Visualizations
     (FieldWSPPlot <- ggplot(ModFieldemWSP_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
         geom_point(size = 6, color="black", aes(fill=Treatment)) +
@@ -1322,11 +1321,10 @@
         #2 ModFieldResP2  -33.96354   3.872862 - best model for AIC/BIC, only 3df 
         #3 ModFieldResP3 -114.25215 -70.158296
 # emmeans 
-  ModFieldemResP <- emmeans(ModFieldResP1,~Treatment|Depth, alpha=0.1, type="response")
-  ModFieldemResP_cld <- cld(ModFieldemResP,Letters=trimws(letters), reversed=TRUE, by = "Depth")
+  (ModFieldemResP <- emmeans(ModFieldResP1,~Treatment|Depth, alpha=0.1))
+  (ModFieldemResP_cld <- cld(ModFieldemResP,Letters=trimws(letters), reversed=TRUE, by = "Depth"))
   ModFieldemResP_cld <- ModFieldemResP_cld %>% dplyr::rename(emmean="response")
-  View(ModFieldemResP_cld)
-  write.xlsx(ModFieldemResP_cld, file="Field_SoilResinP.xlsx")
+  write_xlsx(ModFieldemResP_cld, path="Field_SoilResinP.xlsx")
 # Visualizations
   (FieldResPPlot <- ggplot(ModFieldemResP_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
       geom_point(size = 6, color="black", aes(fill=Treatment)) +
@@ -1412,10 +1410,9 @@
         #2 ModFieldpH2  48.841897   87.47841
         #3 ModFieldpH3  -1.491188   43.19094 - best model
   # emmeans 
-    ModFieldempH <- emmeans(ModFieldpH3,~Treatment|Depth, alpha=0.1, type="response")
-    ModFieldempH_cld <- cld(ModFieldempH, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
-    View(ModFieldempH_cld)
-    write.xlsx(ModFieldempH1_cld, file="Field_pH.xlsx")
+    (ModFieldempH <- emmeans(ModFieldpH3,~Treatment|Depth, alpha=0.1))
+    (ModFieldempH_cld <- cld(ModFieldempH, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
+    write_xlsx(ModFieldempH1_cld, path="Field_pH.xlsx")
   # Visualizations
     (FieldpHPlot <- ggplot(ModFieldempH_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
         geom_point(size = 6, color="black", aes(fill=Treatment)) +
@@ -1514,11 +1511,10 @@
           #2 ModFieldEC2   165.4088   202.8328
           #3 ModFieldEC3   159.4709   203.2640 - best model
     # emmeans 
-    ModFieldemEC <- emmeans(ModFieldEC3,~Treatment|Depth, alpha=0.1, type="response")
-    ModFieldemEC_cld <- cld(ModFieldemEC, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
+    (ModFieldemEC <- emmeans(ModFieldEC3,~Treatment|Depth, alpha=0.1))
+    (ModFieldemEC_cld <- cld(ModFieldemEC, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
     ModFieldemEC_cld <- ModFieldemEC_cld %>% dplyr::rename(emmean="response")
-    View(ModFieldemEC_cld)
-    write.xlsx(ModFieldemEC_cld, file="Field_EC.xlsx")
+    write_xlsx(ModFieldemEC_cld, path="Field_EC.xlsx")
     # Visualizations
     (FieldECPlot <- ggplot(ModFieldemEC_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
         geom_point(size = 6, color="black", aes(fill=Treatment)) +
@@ -1617,10 +1613,9 @@
       #2 ModFieldOC2   43.50440   81.34080 - only 3 df
       #3 ModFieldOC3   -8.32373   35.77012 Best model AIC/BIC
   # emmeans 
-    ModFieldemOC <- emmeans(ModFieldOC1,~Treatment|Depth, alpha=0.1, type="response")
-    ModFieldemOC_cld <- cld(ModFieldemOC, Letters=trimws(letters), reversed=TRUE, by = "Depth") 
-    View(ModFieldemOC_cld)
-    write.xlsx(ModFieldemOC_cld, file="Field_OC.xlsx")
+    (ModFieldemOC <- emmeans(ModFieldOC1,~Treatment|Depth, alpha=0.1))
+    (ModFieldemOC_cld <- cld(ModFieldemOC, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
+    write_xlsx(ModFieldemOC_cld, path="Field_OC.xlsx")
   # Visualizations
     (FieldOCPlot <- ggplot(ModFieldemOC_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
         geom_point(size = 6, color="black", aes(fill=Treatment)) +
@@ -1645,240 +1640,397 @@
 
 # SNOWMELT ----
 ##  NO3 load    ----
-  FieldLNO3_Mean <- summary_by(LNO3~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldLNO3_Mean <- as.numeric(FieldLNO3_Mean$LNO3)
-  FieldLNO3_skew <- skewness(FieldLNO3_Mean,na.rm=TRUE)
-  FieldLNO3_kur <- kurtosis(FieldLNO3_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldLNO3_skew, "\n") #0.5753607 
-  cat("Kurtosis:", FieldLNO3_kur, "\n") #-0.808033 
-  shapiro.test(Field$LNO3) # p=0.1175
-  hist(Field$LNO3) #  left skew
-  leveneTest(LNO3~factor(Treatment), data=Field)  # P=0.5404
-#ModFieldLNO31
-  ModFieldLNO3a <- 
-# ModFieldLNO3b
-  ModFieldLNO3b <- 
-# glmm model
-  Mod3i <- glmmTMB(Nuptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
-  summary(Mod3i)
-  performance::r2(Mod3i) # 0.752
-#emmeans 
-  ModFieldemLNO3 <- emmeans(ModFieldLNO3c,~Treatment) 
-  ModFieldemLNO3_cld <- cld(ModFieldemLNO3, Letters=letters, type="response") 
-  View(ModFieldemLNO3_cld)
-  write.xlsx(ModFieldemLNO3_cld, file="Field_NO3Load.xlsx")
-
+    print(LNO3_stats <- Field_stats(Field, "LNO3"))
+          #skewness kurtosis
+          #1 0.6142101 2.395002
+    shapiro.test(Field$LNO3) # p=0.118
+    hist(Field$LNO3) #  slight left skew
+    leveneTest(LNO3~factor(Treatment), data=Field)  # P=0.542
+  #ModFieldLNO3a - model has singularity issues due to block having no effect
+    ModFieldLNO3a <- lmer(LNO3~Treatment + (1|Block), data=Field, na.action=na.omit)
+    ranef(ModFieldLNO3a)
+    Anova(ModFieldLNO3a, type="III") # significant differences
+    summary(ModFieldLNO3a)
+    print(coef(summary(ModFieldLNO3a))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+    hist(resid(ModFieldLNO3a)) # normalish
+    shapiro.test(resid(ModFieldLNO3a))  #0.366
+    plot(fitted(ModFieldLNO3a),resid(ModFieldLNO3a),pch=16)   # equal around 0
+    qqnorm(resid(ModFieldLNO3a)) # small tails
+    qqline(resid(ModFieldLNO3a))
+    rsq(ModFieldLNO3a) # 0.41
+  # ModFieldLNO3b
+    ModFieldLNO3b <- lme(LNO3~Treatment,random=~1|Block, data=Field, na.action=na.omit)
+    ranef(ModFieldLNO3b)
+    Anova(ModFieldLNO3b, type="III")  # significant differences
+    summary(ModFieldLNO3b)
+    hist(resid(ModFieldLNO3b)) # normalish
+    shapiro.test(resid(ModFieldLNO3b))  #0.366
+    plot(fitted(ModFieldLNO3b),resid(ModFieldLNO3b),pch=16)   # equal around 0
+    qqnorm(resid(ModFieldLNO3b)) # small tails
+    qqline(resid(ModFieldLNO3b))
+    rsq(ModFieldLNO3b) # 0.378
+  # ModFieldLNO3c - singularity issues in the R2 function
+    ModFieldLNO3c <- glmmTMB(LNO3~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+    ranef(ModFieldLNO3c)
+    glmmTMB:::Anova.glmmTMB(ModFieldLNO3c, type="III") # significant differences
+    summary(ModFieldLNO3c)
+    hist(resid(ModFieldLNO3c)) # normalish
+    shapiro.test(resid(ModFieldLNO3c))  #0.366
+    plot(fitted(ModFieldLNO3c),resid(ModFieldLNO3c),pch=16)   # equal around 0
+    qqnorm(resid(ModFieldLNO3c)) # small tails
+    qqline(resid(ModFieldLNO3c))
+    performance::r2(ModFieldLNO3c) # NA
+  # compare models  
+    # Rsq = mod a, nots sure about mod c
+    # AIC & BIC
+    LNO3_modlist <- list(ModFieldLNO3a, ModFieldLNO3b, ModFieldLNO3c)
+    AIC_values <- sapply(LNO3_modlist, AIC)
+    BIC_values <- sapply(LNO3_modlist, BIC)
+    N_AB <- data.frame(Model=c("ModFieldLNO3a", "ModFieldLNO3b", "ModFieldLNO3c"), AIC_values, BIC_values)
+    print(N_AB)
+          #Model AIC_values BIC_values
+          #1 ModFieldLNO3a   96.09301   105.1770 - model has singularity issues, df=17, chosen as best model
+          #2 ModFieldLNO3b   96.09301   102.7587 - best model but lowest rsq, only 3 df
+          #3 ModFieldLNO3c  106.54443   115.6284 - model has singularity issues, df=15
+    # emmeans 
+    (ModFieldemLNO3 <- emmeans(ModFieldLNO3b,~"Treatment", infer = TRUE, alpha=0.1)) #%>%pairs(method="lsd", side="="))
+    (ModFieldemLNO3_cld <- cld(ModFieldemLNO3, Letters=trimws(letters), reversed=TRUE, alpha=0.1))
+    #kruskal.test(LNO3 ~ Treatment, data = Field)
+    pwpm(ModFieldemLNO3)
+    pwpp(ModFieldemLNO3)
+    (LNO3plot <- ggplot(ModFieldemLNO3_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+    pairs(ModFieldemLNO3)
+    comparison.plot(ModFieldemLNO3)
+    write_xlsx(ModFieldemLNO3_cld, path ="Field_NO3Load.xlsx")
+ggstatsplot::ggbetweenstats(ModFieldemLNO3, x=Treatment, y=emmeans) # testing this out
 
 
 
 ##   NH4 load  ----
-  FieldLNH4_Mean <- summary_by(LNH4~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldLNH4_Mean <- as.numeric(FieldLNH4_Mean$LNH4)
-  FieldLNH4_skew <- skewness(FieldLNH4_Mean,na.rm=TRUE)
-  FieldLNH4_kur <- kurtosis(FieldLNH4_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldLNH4_skew, "\n") # 1.924935 /  2.028875
-  cat("Kurtosis:", FieldLNH4_kur, "\n") # 3.370188    /  3.518249 
-  shapiro.test(Field$LNH4) # p= 2.222e-05   // 6.638e-06
+  print(LNH4_stats <- Field_stats(Field, "LNH4"))
+        #skewness kurtosis
+        #1 2.057661 6.962457
+  shapiro.test(Field$LNH4) # p= 2.222e-05
   hist(Field$LNH4) #  heavy left skew
-  leveneTest(LNH4~factor(Treatment), data=Field)  # P=0.004341  / 0.0006837
+  leveneTest(LNH4~factor(Treatment), data=Field)  # P=0.004341
 # transform
   shapiro.test(na.omit(log(Field$LNH4))) # p=0.6202
-  hist(log(Field$LNH4)) 
+  hist(log(Field$LNH4)) # normal
   leveneTest(log(LNH4)~factor(Treatment), data=Field)  # P=0.4345
   shapiro.test(sqrt(Field$LNH4)) # p=0.02159
   hist(sqrt(Field$LNH4)) #  slight left skew
   leveneTest(sqrt(LNH4)~factor(Treatment), data=Field)  # P=0.02392
 #ModFieldLNH41
-  LNH4_subset <- subset(Field, !is.na(LNH4))
-  ModFieldLNH4a <- aov(log(LNH4)~Treatment+Block, data=Field)
-  anova(ModFieldLNH4a)
+  ModFieldLNH4a <- lmer(log(LNH4)~Treatment + (1|Block), data=Field, na.action=na.omit)
+  ranef(ModFieldLNH4a)
+  Anova(ModFieldLNH4a, type="III") # significant differences
   summary(ModFieldLNH4a)
+  print(coef(summary(ModFieldLNH4a))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
   hist(resid(ModFieldLNH4a)) # slight right skew
-  shapiro.test(resid(ModFieldLNH4a))  # p=0.05745
-  plot(fitted(ModFieldLNH4a),resid(ModFieldLNH4a),pch=16) # random but along upper half
-  qqnorm(resid(ModFieldLNH4a)) # slight tails
+  shapiro.test(resid(ModFieldLNH4a))  #0.036
+  plot(fitted(ModFieldLNH4a),resid(ModFieldLNH4a),pch=16)   # slightly more above 0
+  qqnorm(resid(ModFieldLNH4a)) # moderate right tail
   qqline(resid(ModFieldLNH4a))
-  ModFieldLNH41_tidy <- tidy(ModFieldLNH4a)
-  ModFieldLNH41sum_sq_reg <- ModFieldLNH41_tidy$sumsq[1] 
-  ModFieldLNH41sum_sq_resid <- ModFieldLNH41_tidy$sumsq[2]
-  ModFieldLNH41sum_sq_reg / (ModFieldLNH41sum_sq_reg + ModFieldLNH41sum_sq_resid) # 0.401
-# lm model with weighted least squares
-  ModFieldLNH4b <- 
-# AIC& BIC
+  rsq(ModFieldLNH4a) # 0.46
+# ModFieldLNH4b
+  ModFieldLNH4b <- lme(log(LNH4)~Treatment,random=~1|Block, data=Field, na.action=na.omit)
+  ranef(ModFieldLNH4b)
+  Anova(ModFieldLNH4b, type="III")  # significant differences
+  summary(ModFieldLNH4b)
+  hist(resid(ModFieldLNH4b)) # slight right skew
+  shapiro.test(resid(ModFieldLNH4b))  #0.036
+  plot(fitted(ModFieldLNH4b),resid(ModFieldLNH4b),pch=16)   # slightly more above 0
+  qqnorm(resid(ModFieldLNH4b)) # moderate right tail
+  qqline(resid(ModFieldLNH4b))
+  rsq(ModFieldLNH4b) # 0.433
+  # ModFieldLNH4c 
+  ModFieldLNH4c <- glmmTMB(log(LNH4)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+  ranef(ModFieldLNH4c)
+  glmmTMB:::Anova.glmmTMB(ModFieldLNH4c, type="III") # significant differences
+  summary(ModFieldLNH4c)
+  hist(resid(ModFieldLNH4c)) # slight right skew
+  shapiro.test(resid(ModFieldLNH4c))  #0.036
+  plot(fitted(ModFieldLNH4c),resid(ModFieldLNH4c),pch=16)   # slightly more above 0
+  qqnorm(resid(ModFieldLNH4c)) # moderate right tail
+  qqline(resid(ModFieldLNH4c))
+  performance::r2(ModFieldLNH4c) # 0.538
+# compare models  
+  # Rsq = mod c
+  # AIC& BIC
   FLNH4_modlist <- list(ModFieldLNH4a, ModFieldLNH4b, ModFieldLNH4c)
   AIC_values <- sapply(FLNH4_modlist, AIC)
   BIC_values <- sapply(FLNH4_modlist, BIC)
   FLNH4AB <- data.frame(Model=c("ModFieldLNH4a", "ModFieldLNH4b", "ModFieldLNH4c"), AIC_values, BIC_values)
   print(FLNH4AB)
-  #Model AIC_values BIC_values
-  #1 ModFieldLNH4a   82.06943   93.42437
-  #2 ModFieldLNH4b  -45.00245  -33.64751
-  #3 ModFieldLNH4c  -50.35223  -38.99728
-#emmeans 
-  ModFieldemLNH4 <- emmeans(ModFieldLNH4c, ~Treatment, alpha=0.1)
-  ModFieldemLNH4_cld <- cld(ModFieldemLNH4, Letters=letters, type="response") 
-  View(ModFieldemLNH4_cld)
-  ModFieldemLNH4$contrasts
-  summary(ModFieldemLNH4)
-  levels(ModFieldLNH4c)
-  levels(ModFieldemLNH4)
-  plot(ModFieldLNH4c)
-  plot(ModFieldLNH4a)
+        ## Model AIC_values BIC_values
+        #1 ModFieldLNH4a   82.71708   91.80103
+        #2 ModFieldLNH4b   82.71708   89.38278
+        #3 ModFieldLNH4c   88.40730   97.49126
+# emmeans 
+  (ModFieldemLNH4 <- emmeans(ModFieldLNH4c, ~Treatment, alpha=0.1,infer = TRUE))
+  (ModFieldemLNH4_cld <- cld(ModFieldemLNH4, Letters=trimws(letters), reversed=TRUE, type="response"))
+  ModFieldemLNH4_cld <- ModFieldemLNH4_cld %>% rename(emmean="response")
+  pwpm(ModFieldemLNH4) # pairwise p-value mean
+  pwpp(ModFieldemLNH4) # pairwise p-value plot
+  (LNH4plot <- ggplot(ModFieldemLNH4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+  pairs(ModFieldemLNH4)
   emmip(ModFieldLNH4c, ~Treatment)
-  emmip(ModFieldLNH4a, ~Treatment)
-
-  ModFieldemLNH4a <- TukeyHSD(ModFieldLNH4c)
-  View(ModFieldemLNH4a)
-  ModFieldemLNH4_cld2 <- cld(ModFieldemLNH4a$diff, alpha=0.05, Letters=letters) 
-  View(ModFieldemLNH4_cld2)
-  summary(ModFieldemLNH4_cld)
-  ModFieldemLNH4_pairs <- pairs(ModFieldemLNH4)
-  ModFieldemLNH4_pairs
-  write.xlsx(ModFieldemLNH4_cld, file="Field_LNH4.xlsx")
-
-# Perform the Sheffe's test
-  LNH4contrasts <- glht(ModFieldLNH4c, linfct=as.list(mcp(Treatment="Tukey")))
-  LNH4_sheffes <- summary(LNH4contrasts, test=adjusted(type="single-step"))
-  print(LNH4_sheffes)
-  LNH4contrasts <- glht(ModFieldLNH4c, linfct=as.list(mcp(Treatment="Tukey")))$test$pvalues
-  LNH4pval <- LNH4_sheffes$tTable[, "p value"]
-  LNH4F_cld <- cld(LNH4pval, alpha=0.05, Letters=letters)
-  print(LNH4F_cld)
-
-
-
-##   PO4 load ----
-  FieldLPO4_Mean <- summary_by(LPO4~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldLPO4_Mean <- as.numeric(FieldLPO4_Mean$LPO4)
-  FieldLPO4_skew <- skewness(FieldLPO4_Mean,na.rm=TRUE)
-  FieldLPO4_kur <- kurtosis(FieldLPO4_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldLPO4_skew, "\n") # 2.72015
-  cat("Kurtosis:", FieldLPO4_kur, "\n") # 7.623074
-  shapiro.test(Field$LPO4) # p=6.935e-07
-  hist(Field$LPO4) # heavy left skew
-  leveneTest(LPO4~factor(Treatment), data=Field)  # P=0.1006
-# transform - can't seem to log transfrom data, possibly linked to missing values or extrenmely low values
-  shapiro.test(log(Field$LPO4)) # p=0.8156
-  hist(log(Field$LPO4)) #  right skew
-  leveneTest(log(LPO4)~Treatment, data=Field)  # P= 0.4527
-  shapiro.test(sqrt(Field$LPO4)) # p=0.008712
-  hist(sqrt(Field$LPO4)) #  left skew
-  leveneTest(sqrt(LPO4)~Treatment, data=Field)  # P= 0.08256
-#ModFieldLPO41
-  ModFieldLPO4a <- 
-# lm model with weighted least squares
-  ModFieldLPO4b <- 
-# normal lm model
-  ModFieldLPO4c <- 
-# one-way Kruskal-Wallis
-  LPO4_subset <- subset(Field, !is.na(LPO4))
-  ModFieldLPO4e=kruskal.test(LPO4 ~Treatment, data=LPO4_subset)
-  ModFPO4_Dunn <- dunn.test(LPO4_subset$LPO4, LPO4_subset$Treatment, method="bonferroni")
-  print(ModFieldLPO4e)
-  print(ModFPO4_Dunn)
-# AIC& BIC
-  FLPO4_modlist <- list(ModFieldLPO4a, ModFieldLPO4b, ModFieldLPO4c, ModFieldLPO4d)
-  AIC_values <- sapply(FLPO4_modlist, AIC)
-  BIC_values <- sapply(FLPO4_modlist, BIC)
-  FLPO4AB <- data.frame(Model=c("ModFieldLPO4a", "ModFieldLPO4b", "ModFieldLPO4c","ModFieldLPO4d"), AIC_values, BIC_values)
-  print(FLPO4AB)
-    #Model AIC_values BIC_values
-    #1 ModFieldLPO4a   74.77800   85.22322
-    #2 ModFieldLPO4b  -80.78077  -70.33555
-    #3 ModFieldLPO4c   74.77800   85.22322
-    #4 ModFieldLPO4d -102.88242  -92.43720
-#emmeans 
-  ModFieldemLPO4 <- emmeans(ModFieldLPO4c,~Treatment)
-  ModFieldemLPO4_cld <- cld(ModFieldemLPO4, Letters=letters, type="response") 
-  ModFieldemLPO4_cld <- ModFieldemLPO4_cld %>% rename(emmean="response")
-  View(ModFieldemLPO4_cld)
-  write.xlsx(ModFieldemLPO4_cld, file="Field_PO4Load.xlsx")
-
-# Plotting Snowmelt NO3, PO4 and NH4 load
-#create and combine data frames for the three emmeans functions
-  emNO3 <- as.data.frame(ModFieldemLNO3_cld)
-  emNH4 <- as.data.frame(ModFieldemLNH4_cld)
-  emPO4 <- as.data.frame(ModFieldemLPO4_cld)
-  em_labels <- list("EM1"="NO3", "EM2"="NH4", "EM3"="PO4")
-  em_all <- bind_rows(list(EM1=emNO3, EM2=emNH4, EM3=emPO4), .id="EM") 
-  em_all$EM <- factor(em_all$EM, levels=names(em_labels), labels=unlist(em_labels))
-  View(em_all)
-# define function to calculate position adjustment for secondary axis
-  ggplot(em_all, aes(x=Treatment, y=emmean, pattern=EM)) +
-    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
-                      pattern_density=0.005, pattern_spacing=0.01)+
-    scale_pattern_manual(values=c("NO3"="stripe", "NH4"="crosshatch", "PO4"="wave"))+
-    facet_wrap(~ EM, scales="free_y", ) +
-    labs(x="Treatment", y="Nutrient load in runoff (kg/ha)") +
-    scale_x_discrete(labels=c("Control1", "Control2", "Biochar\n25kgP/ha", "Biochar 10t/ha", "Biochar\n10t/ha&TSP",
-                                "Fertilizer\nPhosphorus"))+
-    theme_bw() +
-    theme(legend.title=element_blank() , legend.key.size=unit(10,"mm"), legend.text=element_text(size=12),
-          strip.text.x.top=element_text(size=18, face="bold"))+
-    theme(plot.title=element_text(size=16))+
-    theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1, size=16, face="bold", colour="black"),
-          axis.title.x=element_blank(), axis.title.y=element_text(size=24, face="bold")) +
-    theme(panel.grid.major=element_blank(),panel.grid.minor=element_blank(), 
-          axis.line=element_line(colour="black"))
-    ggsave("LargePlots_Snowmelt.jpg", width=12, height=8, dpi=150)
-  
-  #geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +  
-  
- 
-
-
-##  Resin PO4 load ----
-  FieldResPO4_Mean <- summary_by(ResinPO4~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldResPO4_Mean <- as.numeric(FieldResPO4_Mean$ResinPO4)
-  FieldResPO4_skew <- skewness(FieldResPO4_Mean,na.rm=TRUE)
-  FieldResPO4_kur <- kurtosis(FieldResPO4_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldResPO4_skew, "\n") # 1.686603 
-  cat("Kurtosis:", FieldResPO4_kur, "\n") # 2.578513 
-  shapiro.test(Field$ResinPO4) # p=0.0003421
-  hist(Field$ResinPO4) #  left skew
-  leveneTest(ResinPO4~Treatment, data=Field)  # P=0.0674
-#transform
-  shapiro.test(log(Field$ResinPO4))  #p=0.8348
-  hist(log(Field$ResinPO4)) 
-  leveneTest(log(ResinPO4)~Treatment, data=Field)  # p=0.6948
-#ModFieldResP1
-ModFieldResPO41 <- 
-#emmeans 
-  ModFieldemResPO41 <- emmeans(ModFieldResPO41,~Treatment)
-  ModFieldemResPO41_cld <- cld(ModFieldemResPO41, Letters=letters, type="response") 
-  View(ModFieldemResPO41_cld)
-  write.xlsx(ModFieldemResPO41_cld, file="Field_ResinPO4.xlsx")
-
-
-
-
+  write_xlsx(ModFieldemLNH4_cld, path="Field_LNH4.xlsx")
 
 ##  Resin NO3 load ----
-  FieldResinNO3_Mean <- summary_by(ResinNO3~Treatment+Block, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) 
-  FieldResinNO3_Mean <- as.numeric(FieldResinNO3_Mean$ResinNO3)
-  FieldResinNO3_skew <- skewness(FieldResinNO3_Mean,na.rm=TRUE)
-  FieldResinNO3_kur <- kurtosis(FieldResinNO3_Mean,na.rm=TRUE)
-  cat("Skewness:", FieldResinNO3_skew, "\n") # 1.817733
-  cat("Kurtosis:", FieldResinNO3_kur, "\n") # 3.409184 
+  print(ResNO3_stats <- Field_stats(Field, "ResinNO3"))
+          #skewness kurtosis
+          #1 1.943068  7.00508
   shapiro.test(Field$ResinNO3) # p=0.0002299
   hist(Field$ResinNO3) #  left skew
   leveneTest(ResinNO3~Treatment, data=Field)  # P=0.1291
-# Transform
+  # Transform
   shapiro.test(log(Field$ResinNO3))  #p=0.7096
-  hist(log(Field$ResinNO3))
+  hist(log(Field$ResinNO3)) # normalish
   leveneTest(log(ResinNO3)~Treatment, data=Field)  # p=0.4265
-#ModFieldResNO31
-  ModFieldResNO31 <- 
-#emmeans 
-  ModFieldResNO3em <- emmeans(ModFieldResNO31,~Treatment)
-  ModFieldResNO3em_cld <- cld(ModFieldResNO3em, Letters=letters, type="response") 
-  View(ModFieldResNO3em_cld)
-  write.xlsx(ModFieldResNO3em_cld, file="Field_ResinNO3.xlsx")
+  #ModFieldResNO31 - singularity issues
+  ModFieldResNO3a <- lmer((ResinNO3)~Treatment + (1|Block), data=Field, na.action=na.omit)
+  ranef(ModFieldResNO3a) # intercept=0
+  Anova(ModFieldResNO3a, type="III") # no significant differences
+  summary(ModFieldResNO3a)
+  print(coef(summary(ModFieldResNO3a))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+  hist(resid(ModFieldResNO3a)) # normal
+  shapiro.test(resid(ModFieldResNO3a))  #0.23
+  plot(fitted(ModFieldResNO3a),resid(ModFieldResNO3a),pch=16)   # slightly more above 0
+  qqnorm(resid(ModFieldResNO3a)) # small tails
+  qqline(resid(ModFieldResNO3a))
+  rsq(ModFieldResNO3a) # 0.377
+  # ModFieldResNO3b
+  ModFieldResNO3b <- lme(log(ResinNO3)~Treatment,random=~1|Block, data=Field, na.action=na.omit)
+  ranef(ModFieldResNO3b) 
+  Anova(ModFieldResNO3b, type="III")  # no significant differences
+  summary(ModFieldResNO3b)
+  hist(resid(ModFieldResNO3b)) # normal
+  shapiro.test(resid(ModFieldResNO3b))  #0.23
+  plot(fitted(ModFieldResNO3b),resid(ModFieldResNO3b),pch=16)   # slightly more above 0
+  qqnorm(resid(ModFieldResNO3b)) # small  tails
+  qqline(resid(ModFieldResNO3b))
+  rsq(ModFieldResNO3b) # 0.375
+  # ModFieldResNO3c - singularity issues in R2
+  ModFieldResNO3c <- glmmTMB(log(ResinNO3)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+  ranef(ModFieldResNO3c)
+  glmmTMB:::Anova.glmmTMB(ModFieldResNO3c, type="III") # significant differences
+  summary(ModFieldResNO3c)
+  hist(resid(ModFieldResNO3c)) # normal
+  shapiro.test(resid(ModFieldResNO3c))  #0.23
+  plot(fitted(ModFieldResNO3c),resid(ModFieldResNO3c),pch=16)   # slightly more above 0
+  qqnorm(resid(ModFieldResNO3c)) # small  tails
+  qqline(resid(ModFieldResNO3c))
+  performance::r2(ModFieldResNO3c) # NA
+  # compare models  
+  # Rsq = mod b
+  # AIC& BIC
+  FResNO3_modlist <- list(ModFieldResNO3a, ModFieldResNO3b, ModFieldResNO3c)
+  AIC_values <- sapply(FResNO3_modlist, AIC)
+  BIC_values <- sapply(FResNO3_modlist, BIC)
+  FResNO3AB <- data.frame(Model=c("ModFieldResNO3a", "ModFieldResNO3b", "ModFieldResNO3c"), AIC_values, BIC_values)
+  print(FResNO3AB)
+        ##Model AIC_values BIC_values
+        ##1 ModFieldResNO3a   63.10933   72.19328
+        ##2 ModFieldResNO3b   63.10933   69.77504
+        ##3 ModFieldResNO3c   61.91946   71.00342
+  #emmeans 
+    (ModFieldResNO3em <- emmeans(ModFieldResNO3a,~Treatment,infer = TRUE, alpha=0.1))
+    (ModFieldResNO3em_cld <- cld(ModFieldResNO3em, Letters=trimws(letters), type="response") )
+    ModFieldResNO3em_cld <- ModFieldResNO3em_cld %>% rename(emmean="response")
+    pwpm(ModFieldResNO3em) # pairwise p-value mean
+    pwpp(ModFieldResNO3em) # pairwise p-value plot
+    (ResNO3plot <- ggplot(ModFieldResNO3em_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+    pairs(ModFieldResNO3em)
+    emmip(ModFieldResNO3em, ~Treatment)
+    write_xlsx(ModFieldResNO3em_cld, path="Field_ResinNO3.xlsx")
+  
+  # To combine multiple ggplots in one use cowplot
+    plot_grid(LNO3plot, LNH4plot, ResNO3plot, labels = c('NO3', 'NH4', 'ResNO3'), label_size = 12)
+    
+
+##   PO4 load ----
+    print(LPO4_stats <- Field_stats(Field, "LPO4"))
+          #skewness kurtosis
+          #1 3.058225 12.68079
+    shapiro.test(Field$LPO4) # p=6.935e-07
+    hist(Field$LPO4) # heavy left skew
+    leveneTest(LPO4~factor(Treatment), data=Field)  # P=0.1006
+  # transform - can't seem to log transfrom data, possibly linked to missing values or extrenmely low values
+    shapiro.test(log(Field$LPO4)) # p=0.8156
+    hist(log(Field$LPO4)) #  slight right skew
+    leveneTest(log(LPO4)~Treatment, data=Field)  # P= 0.4527
+    shapiro.test(sqrt(Field$LPO4)) # p=0.008712
+    hist(sqrt(Field$LPO4)) #  severe left skew
+    leveneTest(sqrt(LPO4)~Treatment, data=Field)  # P= 0.03249
+  #ModFieldLPO4a
+    ModFieldLPO4a <- lmer(log(LPO4)~Treatment + (1|Block), data=Field, na.action=na.omit)
+    ranef(ModFieldLPO4a)
+    Anova(ModFieldLPO4a, type="III") # no significant differences
+    summary(ModFieldLPO4a)
+    print(coef(summary(ModFieldLPO4a))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+    hist(resid(ModFieldLPO4a)) # normal
+    shapiro.test(resid(ModFieldLPO4a))  #0.886
+    plot(fitted(ModFieldLPO4a),resid(ModFieldLPO4a),pch=16)   # normal
+    qqnorm(resid(ModFieldLPO4a)) # small tails
+    qqline(resid(ModFieldLPO4a))
+    rsq(ModFieldLPO4a) # 0.297
+  # ModFieldLPO4b
+    ModFieldLPO4b <- lme(log(LPO4)~Treatment,random=~1|Block, data=Field, na.action=na.omit)
+    ranef(ModFieldLPO4b)
+    Anova(ModFieldLPO4b, type="III")  # no significant differences
+    summary(ModFieldLPO4b)
+    hist(resid(ModFieldLPO4b))  # normal
+    shapiro.test(resid(ModFieldLPO4b))  #0.886
+    plot(fitted(ModFieldLPO4b),resid(ModFieldLPO4b),pch=16)    # normal
+    qqnorm(resid(ModFieldLPO4b)) # small tails
+    qqline(resid(ModFieldLPO4b))
+    rsq(ModFieldLPO4b) # 0.269
+  # ModFieldLPO4c 
+    ModFieldLPO4c <- glmmTMB(log(LPO4)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+    ranef(ModFieldLPO4c)
+    glmmTMB:::Anova.glmmTMB(ModFieldLPO4c, type="III") # no significant differences
+    summary(ModFieldLPO4c)
+    hist(resid(ModFieldLPO4c))  # normal
+    shapiro.test(resid(ModFieldLPO4c))  #0.888
+    plot(fitted(ModFieldLPO4c),resid(ModFieldLPO4c),pch=16)    # normal
+    qqnorm(resid(ModFieldLPO4c)) # small tails
+    qqline(resid(ModFieldLPO4c))
+    performance::r2(ModFieldLPO4c) # 0.359
+  # one-way Kruskal-Wallis
+    LPO4_subset <- subset(Field, !is.na(LPO4))
+    ModFieldLPO4d=kruskal.test(LPO4 ~Treatment, data=LPO4_subset)
+    ModFPO4_Dunn <- dunn.test(LPO4_subset$LPO4, LPO4_subset$Treatment, method="bonferroni")
+    print(ModFPO4_Dunn)
+  # AIC& BIC
+    FLPO4_modlist <- list(ModFieldLPO4a, ModFieldLPO4b, ModFieldLPO4c)
+    AIC_values <- sapply(FLPO4_modlist, AIC)
+    BIC_values <- sapply(FLPO4_modlist, BIC)
+    FLPO4AB <- data.frame(Model=c("ModFieldLPO4a", "ModFieldLPO4b", "ModFieldLPO4c"), AIC_values, BIC_values)
+    print(FLPO4AB)
+            ##Model AIC_values BIC_values
+            ##1 ModFieldLPO4a    91.6988  100.78276
+            ##2 ModFieldLPO4b    91.6988   98.36451
+            ##3 ModFieldLPO4c   100.5754  109.65934
+  # emmeans 
+    (ModFieldLPO4em <- emmeans(ModFieldLPO4a,~Treatment,infer = TRUE))
+    (ModFieldLPO4em_cld <- cld(ModFieldResPO4em, Letters=trimws(letters), reversed=TRUE, type="response"))
+    ModFieldLPO4em_cld <- ModFieldLPO4em_cld %>% rename(emmean="response")
+    pwpm(ModFieldLPO4em) # pairwise p-value mean
+    pwpp(ModFieldLPO4em) # pairwise p-value plot
+    (LPO4plot <- ggplot(ModFieldResPO4em_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+    pairs(ModFieldLPO4em)
+    emmip(ModFieldLPO4em, ~Treatment)
+    View(ModFieldLPO4em_cld)
+    write_xlsx(ModFieldLPO4em_cld, path="Field_PO4Load.xlsx")
+
+  
+##  Resin PO4 load ----
+  print(ResPO4_stats <- Field_stats(Field, "ResinPO4"))
+          #skewness kurtosis
+          #1 1.797786 6.074146
+  shapiro.test(Field$ResinPO4) # p=0.0003421
+  hist(Field$ResinPO4) #  left skew
+  leveneTest(ResinPO4~Treatment, data=Field)  # P=0.227
+  #transform
+  shapiro.test(log(Field$ResinPO4))  #p=0.8348
+  hist(log(Field$ResinPO4)) # normal
+  leveneTest(log(ResinPO4)~Treatment, data=Field)  # p=0.6948
+  #ModFieldResP1
+  ModFieldResPO4a <- lmer(log(ResinPO4)~Treatment + (1|Block), data=Field, na.action=na.omit)
+  ranef(ModFieldResPO4a) 
+  Anova(ModFieldResPO4a, type="III") # significant differences
+  summary(ModFieldResPO4a)
+  print(coef(summary(ModFieldResPO4a))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+  hist(resid(ModFieldResPO4a)) # normal
+  shapiro.test(resid(ModFieldResPO4a))  #0.204
+  plot(fitted(ModFieldResPO4a),resid(ModFieldResPO4a),pch=16)  # normal
+  qqnorm(resid(ModFieldResPO4a)) # very large tails
+  qqline(resid(ModFieldResPO4a))
+  rsq(ModFieldResPO4a) # 0.455
+  # ModFieldResPO4b
+  ModFieldResPO4b <- lme(log(ResinPO4)~Treatment,random=~1|Block, data=Field, na.action=na.omit)
+  ranef(ModFieldResPO4b) 
+  Anova(ModFieldResPO4b, type="III")  # significant differences
+  summary(ModFieldResPO4b)
+  hist(resid(ModFieldResPO4b)) # normal
+  shapiro.test(resid(ModFieldResPO4b))  #0.204
+  plot(fitted(ModFieldResPO4b),resid(ModFieldResPO4b),pch=16)  # normal
+  qqnorm(resid(ModFieldResPO4b)) # very large tails
+  qqline(resid(ModFieldResPO4b))
+  rsq(ModFieldResPO4b) # 0.455
+  # ModFieldResPO4c
+  ModFieldResPO4c <- glmmTMB(log(ResinPO4)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+  ranef(ModFieldResPO4c)
+  glmmTMB:::Anova.glmmTMB(ModFieldResPO4c, type="III") # significant differences
+  summary(ModFieldResPO4c)
+  hist(resid(ModFieldResPO4c)) # normal
+  shapiro.test(resid(ModFieldResPO4c))  #0.204
+  plot(fitted(ModFieldResPO4c),resid(ModFieldResPO4c),pch=16) # normal
+  qqnorm(resid(ModFieldResPO4c)) # very large tails
+  qqline(resid(ModFieldResPO4c))
+  performance::r2(ModFieldResPO4c) # 0.499
+  # compare models  
+  # Rsq = mod b
+  # AIC& BIC
+  FResPO4_modlist <- list(ModFieldResPO4a, ModFieldResPO4b, ModFieldResPO4c)
+  AIC_values <- sapply(FResPO4_modlist, AIC)
+  BIC_values <- sapply(FResPO4_modlist, BIC)
+  FResPO4AB <- data.frame(Model=c("ModFieldResPO4a", "ModFieldResPO4b", "ModFieldResPO4c"), AIC_values, BIC_values)
+  print(FResPO4AB)
+          ##Model AIC_values BIC_values
+          ##1 ModFieldResPO4a    56.75125   66.17568
+          ##2 ModFieldResPO4b    56.75125   63.87423
+          ##3 ModFieldResPO4c    52.34028   61.76471 - highest r2, best AIC/BIC
+  # emmeans 
+    (ModFieldemResPO4 <- emmeans(ModFieldResPO4c,~Treatment,infer = TRUE))
+    (ModFieldemResPO4_cld <- cld(ModFieldemResPO4, Letters=trimws(letters), reversed=TRUE, type="response"))
+    ModFieldemResPO4_cld <- ModFieldemResPO4_cld %>% rename(emmean="response")
+    pwpm(ModFieldemResPO4) # pairwise p-value mean
+    pwpp(ModFieldemResPO4) # pairwise p-value plot
+    (LPO4plot <- ggplot(ModFieldemResPO4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+    pairs(ModFieldemResPO4)
+    emmip(ModFieldemResPO4, ~Treatment)
+    View(ModFieldemResPO4_cld)
+    write_xlsx(ModFieldemResPO4_cld, path="Field_ResinPO4.xlsx")
+  
+  
+  
+## Plotting Snowmelt load ----
+#create and combine data frames for the emmeans functions
+  emPO4 <- as.data.frame(ModFieldLPO4em_cld)
+  emResP <- as.data.frame(ModFieldemResPO4_cld)
+  em_labels <- list("EM1" = "PO\u2084", "EM2" = "Resin PO\u2084")
+  em_all <- bind_rows(list(EM1=emPO4, EM2=emResP), .id="EM") 
+  em_all$EM <- factor(em_all$EM, levels=names(em_labels), labels=unlist(em_labels))
+  View(em_all)
+# define function to calculate position adjustment for secondary axis
+  (Snowmeltplot <- ggplot(em_all, aes(x=Treatment, y=emmean)) +
+      geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
+                       pattern_density=0.05, pattern_spacing=0.01, width=0.65)+
+      facet_wrap(~ EM, scales="free_y") +
+      scale_y_continuous(expand = expansion(mult = c(0.05, 0.1))) +
+      geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
+      geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
+      labs(x="Treatment", y="Nutrient load in snowmelt runoff (kg/ha)") +
+      scale_x_discrete(labels=c("Control1", "Control2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                "TSP\nFertilizer"))+
+      theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
+            strip.text.x.top=element_text(size=18, face="bold"), strip.background = element_blank(),
+            plot.title=element_blank(),
+            axis.text.x=element_text(angle=45, vjust=1, hjust=1, size=16, face="bold", colour="black"),
+            axis.text.y=element_text(size=16, face="bold", colour="black"),
+            axis.title.x=element_blank(), axis.title.y=element_text(size=24, face="bold"),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(Snowmeltplot, file="LargePlots_Snowmelt.jpg", width=12, height=8, dpi=150)
+  
 
 
 # COVARIANCE HEAT MAPS ----
 ##   Yield  ----
-  FieldCovVar <- c("Yield", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
+  FieldCovVar <- c("Yield", "NO3_10", "PO4_10", "WatSolP_10", "ResinP_10", "pH_10", "EC_10", "OC_10")
   FieldCovYield <- subset(Field, select=c("Treatment", FieldCovVar), 
                          na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
   FieldCovScaleYield <- as.data.frame(scale(FieldCovYield[,-1])) #remove treatment
@@ -1896,7 +2048,7 @@ ModFieldResPO41 <-
 # Convert each covariance matrix to a dataframe
   YieldCovField_df <- lapply(seq_along(YieldCov_Field), function(i) {
     cov_mat1h <- as.matrix(YieldCov_Field[[i]])
-    cov_mat1h <- setNames(cov_mat1h, YieldCovVar)
+    cov_mat1h <- setNames(cov_mat1h, FieldCovVar)
     cov_df1h <- as.data.frame(cov_mat1h)
     cov_df1h$Var1 <- rownames(cov_df1h)
     cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
@@ -1906,34 +2058,36 @@ ModFieldResPO41 <-
 # Combine all dataframes into one and set the variable names as factors and in the correct order
   YieldCovField_dfAll <- do.call(rbind, YieldCovField_df)
   YieldCovField_dfAll$Var1 <- factor(YieldCovField_dfAll$Var1, levels=FieldCovVar, 
-                                     labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P",
+                                     labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P",
                                               "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
   YieldCovField_dfAll$variable <- factor(YieldCovField_dfAll$variable, levels=FieldCovVar, 
                                          labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
-                                                  "WatSolP"="Water Soluble P", "ResinP"="Resin P", "pH"="pH", 
+                                                  "WatSolP"="Soluble P", "ResinP"="Resin P", "pH"="pH", 
                                                   "EC"="EC", "OC"="% SOC"))
   YieldCovField_dfAll$treatment <- factor(YieldCovField_dfAll$treatment,
                                           levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
                                                    "Biochar10thaTSP", "Phosphorus"),
                                           labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
                                                    "Biochar 10t/ha", "Biochar 10t/ha & TSP", "Phosphorus Fertilizer"))
-  write.xlsx(YieldCovField_dfAll, file="Field_YieldCov.xlsx")
+  write_xlsx(YieldCovField_dfAll, path="Field_YieldCov.xlsx")
 # ggplot best option - brackets on both sides of the variable and plot code assigns and calls all in one
   (YieldCovFieldHeat <- ggplot(YieldCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
       geom_tile() +
       scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-2.4, 3.3), breaks=seq(-2.4, 3.3, by=1)) +
       facet_wrap(~ treatment, nrow=3, scales="fixed") +
-      geom_text(aes(label=round(Covariance, 3)))+
-      theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+      geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+      scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+      theme(legend.title=element_text(size=20, face="bold"),
+            legend.key.size=unit(15,"mm"),
             legend.text=element_text(size=20), 
-            strip.text=element_text(size=20, face="bold"),
+            strip.text=element_text(size=26, face="bold"),
             strip.placement="outside",
             strip.background=element_blank(),
             strip.text.y=element_text(angle=0, vjust=0.5),
             strip.text.x=element_text(vjust=1),
             axis.line=element_blank(),
-            axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-            axis.text.y.left=element_text(size=15),
+            axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
             panel.spacing.x=unit(1, "cm"))+
       labs(x="", y=""))
   ggsave(YieldCovFieldHeat, file="Field_YieldCovHeat.jpg", width=20, height=20, dpi=150)
@@ -1941,8 +2095,8 @@ ModFieldResPO41 <-
 
 
 ##   Uptake  ----
-  UptakeCovVar <- c("Puptake", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
-  FieldCovUptake <- subset(Field, select=c("Treatment", UptakeCovVar), 
+  FieldUptakeCovVar <- c("Puptake",  "NO3_10", "PO4_10", "WatSolP_10", "ResinP_10", "pH_10", "EC_10", "OC_10")
+  FieldCovUptake <- subset(Field, select=c("Treatment", FieldUptakeCovVar), 
                           na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
   FieldCovScaleUptake <- as.data.frame(scale(FieldCovUptake[,-1]))
   FieldCovScaleUptake$Treatment <- FieldCovUptake$Treatment
@@ -1960,7 +2114,7 @@ ModFieldResPO41 <-
 # Convert each covariance matrix to a dataframe
   UptakeCovField_df <- lapply(seq_along(UptakeCov_Field), function(i) {
     cov_mat1h <- as.matrix(UptakeCov_Field[[i]])
-    cov_mat1h <- setNames(cov_mat1h, UptakeCovVar)
+    cov_mat1h <- setNames(cov_mat1h, FieldUptakeCovVar)
     cov_df1h <- as.data.frame(cov_mat1h)
     cov_df1h$Var1 <- rownames(cov_df1h)
     cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
@@ -1969,42 +2123,44 @@ ModFieldResPO41 <-
   })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
   UptakeCovField_dfAll <- do.call(rbind, UptakeCovField_df)
-  UptakeCovField_dfAll$Var1 <- factor(UptakeCovField_dfAll$Var1, levels=UptakeCovVar, 
-                                     labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P",
+  UptakeCovField_dfAll$Var1 <- factor(UptakeCovField_dfAll$Var1, levels=FieldUptakeCovVar, 
+                                     labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P",
                                               "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
-  UptakeCovField_dfAll$variable <- factor(UptakeCovField_dfAll$variable, levels=UptakeCovVar, 
+  UptakeCovField_dfAll$variable <- factor(UptakeCovField_dfAll$variable, levels=FieldUptakeCovVar, 
                                          labels=c("Biomass"="Yield", "NO3"="NO3", "PO4"="PO4", 
-                                                  "WatSolP"="Water Soluble P", "ResinP"="Resin P", "pH"="pH", 
+                                                  "WatSolP"="Soluble P", "ResinP"="Resin P", "pH"="pH", 
                                                   "EC"="EC", "OC"="% SOC"))
   UptakeCovField_dfAll$treatment <- factor(UptakeCovField_dfAll$treatment,
                                           levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
                                                    "Biochar10thaTSP", "Phosphorus"),
                                           labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
                                                    "Biochar 10t/ha", "Biochar 10t/ha & TSP", "Phosphorus Fertilizer"))
-  write.xlsx(UptakeCovField_dfAll, file="Field_UptakeCov.xlsx")
+  write_xlsx(UptakeCovField_dfAll, path="Field_UptakeCov.xlsx")
 # Generate the heatmap for each treatment and facet wrap them
   (UptakeCovFieldHeat <- ggplot(UptakeCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
       geom_tile() +
-      scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.6, 3.3), breaks=seq(-1.6, 3.3, by=1)) +
+      scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.7, 3.3), breaks=seq(-1.7, 3.3, by=1)) +
       facet_wrap(~ treatment, nrow=3, scales="fixed") +
-      geom_text(aes(label=round(Covariance, 3)))+
-      theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+      geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+      scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
+      theme(legend.title=element_text(size=20, face="bold"),
+            legend.key.size=unit(15,"mm"),
             legend.text=element_text(size=20), 
-            strip.text=element_text(size=20, face="bold"),
+            strip.text=element_text(size=26, face="bold"),
             strip.placement="outside",
             strip.background=element_blank(),
             strip.text.y=element_text(angle=0, vjust=0.5),
             strip.text.x=element_text(vjust=1),
             axis.line=element_blank(),
-            axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-            axis.text.y.left=element_text(size=15),
+            axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
             panel.spacing.x=unit(1, "cm"))+
       labs(x="", y=""))
   ggsave(UptakeCovFieldHeat, file="Field_UptakeCovHeat.jpg", width=20, height=20, dpi=150)
 
 ##   P Recovery  ----
-  RecoveryCovVar <- c("Precovery", "NO3", "PO4", "WatSolP", "ResinP", "pH", "EC", "OC")
-  FieldCovRecovery <- subset(Field, select=c("Treatment", RecoveryCovVar), 
+  FieldRecoveryCovVar <- c("Precovery",  "NO3_10", "PO4_10", "WatSolP_10", "ResinP_10", "pH_10", "EC_10", "OC_10")
+  FieldCovRecovery <- subset(Field, select=c("Treatment", FieldRecoveryCovVar), 
                             na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
   FieldCovScaleRecovery <- as.data.frame(scale(FieldCovRecovery[,-1]))
   FieldCovScaleRecovery$Treatment <- FieldCovRecovery$Treatment
@@ -2024,7 +2180,7 @@ ModFieldResPO41 <-
 # Convert each covariance matrix to a dataframe
   RecoveryCovField_df <- lapply(seq_along(RecoveryCov_Field), function(i) {
     cov_mat1h <- as.matrix(RecoveryCov_Field[[i]])
-    cov_mat1h <- setNames(cov_mat1h, RecoveryCovVar)
+    cov_mat1h <- setNames(cov_mat1h, FieldRecoveryCovVar)
     cov_df1h <- as.data.frame(cov_mat1h)
     cov_df1h$Var1 <- rownames(cov_df1h)
     cov_df1h_long <- reshape2::melt(cov_df1h, id.vars="Var1", varnames=c("Var2"), value.name="Covariance")
@@ -2033,12 +2189,12 @@ ModFieldResPO41 <-
   })
 # Combine all dataframes into one and set the variable names as factors and in the correct order
   RecoveryCovField_dfAll <- do.call(rbind, RecoveryCovField_df)
-  RecoveryCovField_dfAll$Var1 <- factor(RecoveryCovField_dfAll$Var1, levels=RecoveryCovVar, 
-                                        labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Water Soluble P",
+  RecoveryCovField_dfAll$Var1 <- factor(RecoveryCovField_dfAll$Var1, levels=FieldRecoveryCovVar, 
+                                        labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", "WatSolP"="Soluble P",
                                                  "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
-  RecoveryCovField_dfAll$variable <- factor(RecoveryCovField_dfAll$variable, levels=RecoveryCovVar, 
+  RecoveryCovField_dfAll$variable <- factor(RecoveryCovField_dfAll$variable, levels=FieldRecoveryCovVar, 
                                             labels=c("Yield"="Yield", "NO3"="NO3", "PO4"="PO4", 
-                                                     "WatSolP"="Water Soluble P",
+                                                     "WatSolP"="Soluble P",
                                                      "ResinP"="Resin P","pH"="pH", "EC"="EC", "OC"="% SOC"))
   RecoveryCovField_dfAll$treatment <- factor(RecoveryCovField_dfAll$treatment,
                                              levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha",
@@ -2046,23 +2202,25 @@ ModFieldResPO41 <-
                                              labels=c("Control 1", "Control 2", "Biochar 25kg P/ha", 
                                                       "Biochar 10t/ha", "Biochar 10t/ha & TSP", 
                                                       "Phosphorus Fertilizer"))
-  write.xlsx(RecoveryCovField_dfAll, file="Field_RecoveryCov.xlsx")
+  write_xlsx(RecoveryCovField_dfAll, path="Field_RecoveryCov.xlsx")
 # Generate the heatmap for each treatment and facet wrap them
   (RecoveryCovFieldHeat <- ggplot(RecoveryCovField_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
       geom_tile() +
       scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.6, 3.3), breaks=seq(-1.6, 3.3, by=1)) +
-      facet_wrap(~ treatment, nrow=2, scales="fixed") +
-      geom_text(aes(label=round(Covariance, 3)))+
-      theme(legend.title=element_text(size=20, face="bold"), legend.key.size=unit(15,"mm"),
+      facet_wrap(~ treatment, nrow=3, scales="fixed") +
+      geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=6.5) +
+      scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+
+      theme(legend.title=element_text(size=20, face="bold"),
+            legend.key.size=unit(15,"mm"),
             legend.text=element_text(size=20), 
-            strip.text=element_text(size=20, face="bold"),
+            strip.text=element_text(size=26, face="bold"),
             strip.placement="outside",
             strip.background=element_blank(),
             strip.text.y=element_text(angle=0, vjust=0.5),
             strip.text.x=element_text(vjust=1),
             axis.line=element_blank(),
-            axis.text.x.bottom=element_text(size=15, angle=45, hjust=1),
-            axis.text.y.left=element_text(size=15),
+            axis.text.x.bottom=element_text(size=18, angle=45, hjust=1, colour = "black", face = "bold"),
+            axis.text.y.left=element_text(size=18, angle=45, colour = "black", face = "bold"),
             panel.spacing.x=unit(1, "cm"))+
       labs(x="", y=""))
   ggsave(RecoveryCovFieldHeat, file="Field_RecoveryCovHeat.jpg", width=20, height=15, dpi=150)
@@ -2085,7 +2243,6 @@ ModFieldResPO41 <-
   View(FieldContourSub)
   FieldContourExcl <- na.exclude(FieldContourSub)
   View(FieldContourExcl)
-  
   FieldContourMod <- glmmTMB(Yield ~ Nrecovery + Precovery + Treatment + (1|Block), data=FieldContourExcl, 
                             na.action=na.exclude)
   summary(FieldContourMod)
@@ -2115,63 +2272,113 @@ ModFieldResPO41 <-
             strip.placement="outside",
             strip.background=element_blank(),
             strip.text.x=element_text(vjust=1),
-            axis.text.x=element_text(size=15),
-            axis.text.y=element_text(size=15),
+            axis.text.x=element_text(size=20),
+            axis.text.y=element_text(size=20),
             axis.title.x=element_text(size=30, face="bold"),
             axis.title.y=element_text(size=30, face="bold"),
             panel.spacing=unit(0.5, "cm")))
-  ggsave(FieldContours, file="Field_YieldContour.jpg", width=20, height=20, dpi=150)
+  ggsave(FieldContours, file="Field_YieldContour.jpg", width=15, height=15, dpi=150)
 
   
   
 # EXTRACT ANOVA TABLES ----
+  ModFStraw4 <- glmmTMB(FStraw~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  FStrawAN <- glmmTMB:::Anova.glmmTMB(ModFStraw4, type="III") 
+  FStrawAN$RowNames <- row.names(FStrawAN)
+  rownames(FStrawAN) <- NULL
+  
+  ModFGrain4 <- glmmTMB(log(FGrain)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  FGrainAN <- glmmTMB:::Anova.glmmTMB(ModFGrain4, type="III") 
+  FGrainAN$RowNames <- row.names(FGrainAN)
+  rownames(FGrainAN) <- NULL
+  
+  ModFYield4 <- glmmTMB(log(Yield)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  FYieldAN <- glmmTMB:::Anova.glmmTMB(ModFYield4, type="III") 
   FYieldAN$RowNames <- row.names(FYieldAN)
   rownames(FYieldAN) <- NULL
   
+  ModFieldNup2 <- glmer(log(Nuptake)~Treatment+(1|Block),data=Field,family=gaussian(link="log"), na.action=na.omit)
+  (FNupAN <- Anova(ModFieldNup2))
   FNupAN$RowNames <- row.names(FNupAN)
   rownames(FNupAN) <- NULL
   
+  ModFieldNrec2 <- lme(Nuptake~Treatment,random=~1|Block, data=FNrec_out)
+  FNrecAN <- anova(ModFieldNrec2) 
+  FNrecAN$RowNames <- row.names(FNrecAN)
+  rownames(FNrecAN) <- NULL
+  
+  ModFieldPup1 <- glmmTMB(Puptake~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  FPupAN <- glmmTMB:::Anova.glmmTMB(ModFieldPup1, type="III") 
   FPupAN$RowNames <- row.names(FPupAN)
   rownames(FPupAN) <- NULL
   
+  ModFieldPrec2 <- lmer(Precovery~Treatment+(1|Block),data=Field)
+  FPrecAN <- Anova(ModFieldPrec2, type="III") 
+  FPrecAN$RowNames <- row.names(FPrecAN)
+  rownames(FPrecAN) <- NULL
+  
+  ModFieldSNO33 <- glmmTMB(NO3~Treatment*Depth+(1|Block), data=NO3_long, family=gaussian(), na.action=na.exclude)
+  FSNO3AN <- glmmTMB:::Anova.glmmTMB(ModFieldSNO33, type="III") 
   FSNO3AN$RowNames <- row.names(FSNO3AN)
   rownames(FSNO3AN) <- NULL
   
-  FSNH4AN$RowNames <- row.names(FSNH4AN)
-  rownames(FSNH4AN) <- NULL
-  
+  ModFieldSPO44 <- lme(PO4~Treatment*Depth,random=~1|Block, data=PO4_long, na.action=na.exclude)
+  FSPO4AN <- Anova(ModFieldSPO44, type="III")
   FSPO4AN$RowNames <- row.names(FSPO4AN)
   rownames(FSPO4AN) <- NULL
   
-  FResPAN$RowNames <- row.names(FResPAN)
-  rownames(FResPAN) <- NULL
-  
+  ModFieldWSP3 <- glmmTMB(sqrt(WSP)~Treatment*Depth+(1|Block), data=WSP_long_sub, family=gaussian())
+  FWSPAN <- glmmTMB:::Anova.glmmTMB(ModFieldWSP3, type="III") 
   FWSPAN$RowNames <- row.names(FWSPAN)
   rownames(FWSPAN) <- NULL
   
-  FtotPAN$RowNames <- row.names(FtotPAN)
-  rownames(FtotPAN) <- NULL
+  ModFieldResP1 <- lmer(sqrt(ResP)~Treatment*Depth + (1|Block), data=ResP_long_sub)
+  FResPAN <- Anova(ModFieldResP1, alpha=0.1) 
+  FResPAN$RowNames <- row.names(FResPAN)
+  rownames(FResPAN) <- NULL
   
+  ModFieldpH3 <- glmmTMB(pH~Treatment*Depth+(1|Block), data=pH_long_sub, family=gaussian())
+  FpHAN <- glmmTMB:::Anova.glmmTMB(ModFieldpH3, type="III") 
   FpHAN$RowNames <- row.names(FpHAN)
   rownames(FpHAN) <- NULL
   
+  ModFieldEC3 <- glmmTMB(log(EC)~Treatment*Depth+(1|Block), data=EC_long_sub, family=gaussian())
+  FecAN <- glmmTMB:::Anova.glmmTMB(ModFieldEC3, type="III") 
   FecAN$RowNames <- row.names(FecAN)
   rownames(FecAN) <- NULL
   
+  ModFieldOC1 <- lmer(OC~Treatment*Depth + (1|Block), data=OC_long_sub)
+  FocAN <- Anova(ModFieldOC1, alpha=0.1) 
   FocAN$RowNames <- row.names(FocAN)
   rownames(FocAN) <- NULL
   
+  ModFieldLNO3b <- lme(LNO3~Treatment,random=~1|Block, data=Field, na.action=na.omit)
+  FLNO3AN <- Anova(ModFieldLNO3b, type="III")  
   FLNO3AN$RowNames <- row.names(FLNO3AN)
   rownames(FLNO3AN) <- NULL
   
+  ModFieldLNH4c <- glmmTMB(log(LNH4)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+  FLNH4AN <- glmmTMB:::Anova.glmmTMB(ModFieldLNH4c, type="III") 
   FLNH4AN$RowNames <- row.names(FLNH4AN)
   rownames(FLNH4AN) <- NULL
   
+  ModFieldResNO3a <- lmer((ResinNO3)~Treatment + (1|Block), data=Field, na.action=na.omit)
+  FResNO3AN <- Anova(ModFieldResNO3a, type="III") 
+  FResNO3AN$RowNames <- row.names(FResNO3AN)
+  rownames(FResNO3AN) <- NULL
+  
+  ModFieldLPO4a <- lmer(log(LPO4)~Treatment + (1|Block), data=Field, na.action=na.omit)
+  FLPO4AN <- Anova(ModFieldLPO4a, type="III") 
   FLPO4AN$RowNames <- row.names(FLPO4AN)
   rownames(FLPO4AN) <- NULL
   
-  FieldANOVAtables <- list(FYieldAN, FNupAN, FNrecAN, FPupAN, FPrecAN, FSNO3AN, FSPO4AN, FResPAN, FWSPAN, FpHAN, 
-                           FecAN, FocAN, FLNO3AN, FLNH4AN, FLPO4AN, FResPo4, FResNO3)
-  names(FieldANOVAtables) <- c("Yield", "Nuptake", "Nrecovery", "Puptake", "Precovery", "SoilNO3", "SoilPO4", "ResinP", 
+  ModFieldResPO4c <- glmmTMB(log(ResinPO4)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+  FResPO4AN <- glmmTMB:::Anova.glmmTMB(ModFieldResPO4c, type="III") 
+  FResPO4AN$RowNames <- row.names(FResPO4AN)
+  rownames(FResPO4AN) <- NULL
+  
+  FieldANOVAtables <- list(FStrawAN, FGrainAN, FYieldAN, FNupAN, FNrecAN, FPupAN, FPrecAN, FSNO3AN, FSPO4AN, FWSPAN, FResPAN, FpHAN, 
+                           FecAN, FocAN, FLNO3AN, FLNH4AN, FResNO3AN, FLPO4AN, FResPO4AN)
+  names(FieldANOVAtables) <- c("Straw", "Grain", "Yield", "Nuptake", "Nrecovery", "Puptake", "Precovery", "SoilNO3", "SoilPO4", "ResinP", 
                                "WaterSolP", "pH", "EC", "OC", "SnowNO3", "SnowNH4", "SnowPO4", "ResinPO4", "ResinNO3")
   write_xlsx(FieldANOVAtables, path="FieldANOVAtables.xlsx")
