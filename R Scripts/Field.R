@@ -922,6 +922,49 @@
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
   ggsave(FieldPrecPlot, file="Field_Precovery.jpg", width=8, height=8, dpi=150)
 
+  
+  ## Nutrient Use Efficiency ----
+  # Nitrogen
+  Field$NUE <- as.numeric(as.character(Field$NUE))
+  FNUE_df <- subset(Field, select = c("Block", "Treatment", "NUE"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
+  FNUE_df <- FNUE_df[!FNUE_df$Treatment %in% "Control1", ]
+  print(FNUE_df)
+  shapiro.test(FNUE_df$NUE)  #p=0.000313
+  shapiro.test(log(FNUE_df$NUE))  #p=0.705 - it improves normality but cannot be applied as some values are negative
+  hist(FNUE_df$NUE) # severe left skew
+  hist(log(FNUE_df$NUE)) # normalish
+  leveneTest(NUE ~ Treatment, data=FNUE_df)  # p=0.239
+  FNUEmod1 <- glmmTMB(NUE~Treatment+(1|Block), data=FNUE_df, family=gaussian(), na.action = na.exclude)
+  glmmTMB:::Anova.glmmTMB(FNUEmod1, type="III") # NO significant differences
+  summary(FNUEmod1)
+  performance::r2(FNUEmod1) # 0.293
+  shapiro.test(resid(FNUEmod1)) # p= 0.015
+  plot(fitted(FNUEmod1),resid(FNUEmod1),pch=16) # clustered below zero
+  qqnorm(resid(FNUEmod1)) # heavy  tails
+  qqline(resid(FNUEmod1))
+  FNUEmodEm<- emmeans(FNUEmod1,~Treatment, subset=(Field$NUE), type="response",infer = TRUE, alpha=0.1)
+  (FNUEmod_cld <- cld(FNUEmodEm, Letters=trimws(letters), reversed=TRUE))
+  print(FNUEmod_cld)
+  write_xlsx(FNUEmod_cld, path="Field_NUE.xlsx")
+  # Phosphorus
+  Field$PUE <- as.numeric(Field$PUE)
+  shapiro.test(Field$PUE)  #p=0.026
+  hist(Field$PUE) # slight left skew
+  leveneTest(PUE ~ Treatment, data=Field)  # p=0.716
+  FPUEmod1 <- glmmTMB(PUE~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
+  glmmTMB:::Anova.glmmTMB(FPUEmod1, type="III") # significant differences
+  summary(FPUEmod1)
+  performance::r2(FPUEmod1) # 0.591
+  shapiro.test(resid(FPUEmod1)) # p= 0.032
+  plot(fitted(FPUEmod1),resid(FPUEmod1),pch=16) # normal
+  qqnorm(resid(FPUEmod1)) # slight  tails
+  qqline(resid(FPUEmod1))
+  FPUEmodEm<- emmeans(FPUEmod1,~Treatment, subset=(Field$PUE), type="response",infer = TRUE, alpha=0.1)
+  FPUEmod_cld <- cld(FPUEmodEm, Letters=trimws(letters), reversed=TRUE) # no differences as SE is huge
+  print(FPUEmod_cld)
+  write_xlsx(FPUEmod_cld, path="Field_PUE.xlsx")
+  
+  
 
 # SOIL ANALYSIS ----
   ### Soils at 3 different depths will be analysed for differences as well as auto-correlated
@@ -2357,48 +2400,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
   summary(FieldEigenPrin, digits=3)
   round(FieldEigenPrin$loadings[, 1:2], 3)
   
-  
-# NUTRIENT USE EFFICIENCY ----
-  # Nitrogen
-  Field$NUE <- as.numeric(as.character(Field$NUE))
-  FNUE_df <- subset(Field, select = c("Block", "Treatment", "NUE"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
-  FNUE_df <- FNUE_df[!FNUE_df$Treatment %in% "Control1", ]
-  print(FNUE_df)
-  shapiro.test(FNUE_df$NUE)  #p=0.000313
-  shapiro.test(log(FNUE_df$NUE))  #p=0.705 - it improves normality but cannot be applied as some values are negative
-  hist(FNUE_df$NUE) # severe left skew
-  hist(log(FNUE_df$NUE)) # normalish
-  leveneTest(NUE ~ Treatment, data=FNUE_df)  # p=0.239
-  FNUEmod1 <- glmmTMB(NUE~Treatment+(1|Block), data=FNUE_df, family=gaussian(), na.action = na.exclude)
-  glmmTMB:::Anova.glmmTMB(FNUEmod1, type="III") # NO significant differences
-  summary(FNUEmod1)
-  performance::r2(FNUEmod1) # 0.293
-  shapiro.test(resid(FNUEmod1)) # p= 0.015
-  plot(fitted(FNUEmod1),resid(FNUEmod1),pch=16) # clustered below zero
-  qqnorm(resid(FNUEmod1)) # heavy  tails
-  qqline(resid(FNUEmod1))
-  FNUEmodEm<- emmeans(FNUEmod1,~Treatment, subset=(Field$NUE), type="response",infer = TRUE, alpha=0.1)
-  (FNUEmod_cld <- cld(FNUEmodEm, Letters=trimws(letters), reversed=TRUE))
-  print(FNUEmod_cld)
-  write_xlsx(FNUEmod_cld, path="Field_NUE.xlsx")
-  # Phosphorus
-  Field$PUE <- as.numeric(Field$PUE)
-  shapiro.test(Field$PUE)  #p=0.026
-  hist(Field$PUE) # slight left skew
-  leveneTest(PUE ~ Treatment, data=Field)  # p=0.716
-  FPUEmod1 <- glmmTMB(PUE~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
-  glmmTMB:::Anova.glmmTMB(FPUEmod1, type="III") # significant differences
-  summary(FPUEmod1)
-  performance::r2(FPUEmod1) # 0.591
-  shapiro.test(resid(FPUEmod1)) # p= 0.032
-  plot(fitted(FPUEmod1),resid(FPUEmod1),pch=16) # normal
-  qqnorm(resid(FPUEmod1)) # slight  tails
-  qqline(resid(FPUEmod1))
-  FPUEmodEm<- emmeans(FPUEmod1,~Treatment, subset=(Field$PUE), type="response",infer = TRUE, alpha=0.1)
-  FPUEmod_cld <- cld(FPUEmodEm, Letters=trimws(letters), reversed=TRUE) # no differences as SE is huge
-  print(FPUEmod_cld)
-  write_xlsx(FPUEmod_cld, path="Field_PUE.xlsx")
-  
+
   
 # EXTRACT ANOVA TABLES ----
   ModFStraw4 <- glmmTMB(FStraw~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
