@@ -923,8 +923,8 @@ qqline(resid(ModP2ResP1))
 performance::r2(ModP2ResP2) # Na, possible singularity effect
 
 #emmeans 
-ModP2emResP1 <- emmeans(ModP2ResP2,~Treatment, type="response")
-ModP2emResP1_cld <- cld(ModP2emNup, Letters = trimws(letters), reversed = TRUE) 
+ModP2emResP1 <- emmeans(ModP2ResP2,~Treatment, infer=TRUE, type="response")
+(ModP2emResP1_cld <- cld(ModP2emNup, Letters = trimws(letters), reversed = TRUE) )
 View(ModP2emResP1_cld)
 write.csv(ModP2emResP1_cld, file="Pots2_resinP.csv")
 
@@ -1171,15 +1171,14 @@ qqline(resid(ModP2EC6))
 rsq(ModP2EC6) # 0.376
 
 #emmeans 
-ModP2emEC1 <- emmeans(ModP2EC5,~Treatment, type="response")
-ModP2emEC1_cld <- cld(ModP2emEC1, Letters = trimws(letters), reversed=TRUE) 
-View(ModP2emEC1_cld)
-write.csv(ModP2emEC1_cld, file="Pots2_EC.csv")
+ModP2emEC1 <- emmeans(ModP2EC5,~Treatment, type="response", infer=TRUE, alpha=0.1)
+(ModP2emEC1_cld <- cld(ModP2emEC1, Letters = trimws(letters), reversed=TRUE))
+write_xlsx(ModP2emEC1_cld, path="Pots2_EC.xlsx")
 
 
 
 #####   ORGANIC CARBON   #####
-Pots2OC_Mean <- summary_by(OC~Treatment+Block, data=Pots2, FUN=mean) 
+Pots2OC_Mean <- summary_by(OC~Treatment+Block, data=Pots2, FUN=mean)
 Pots2OC_Mean <- as.numeric(Pots2OC_Mean$OC)
 Pots2OC_skew <- skewness(Pots2OC_Mean,na.rm=TRUE)
 Pots2OC_kur <- kurtosis(Pots2OC_Mean,na.rm=TRUE)
@@ -1229,8 +1228,8 @@ qqnorm(resid(ModP2OC4)) # moderate tails
 qqline(resid(ModP2OC4))
 rsq(ModP2OC4) # 0.588
 #ModP2OC5 glmer
-ModP2OC5 <- glmer(OC~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"), na.action=na.exclude)
-anova(ModP2OC5)
+ModP2OC5 <- glmer(log(OC)~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"), na.action=na.exclude)
+Anova(ModP2OC5, type="III")
 summary(ModP2OC5)
 shapiro.test(resid(ModP2OC5)) # p=0.86
 bf.test(OC~Treatment, data=Pots2) # p=0.0.25, variances unequal
@@ -1240,14 +1239,18 @@ qqline(resid(ModP2OC5))
 rsq(ModP2OC5) # 0.609
 
 #emmeans on glmer - higher rsq value
-ModP2emOC1 <- emmeans(ModP2OC5,~Treatment, type="response")
-ModP2emOC1_cld <- cld(ModP2emNup, Letters = trimws(letters), reversed=TRUE) 
-View(ModP2emOC1_cld)
-write.csv(ModP2emOC1_cld, file="Pots2_OC.csv")
+ModP2emOC1 <- emmeans(ModP2OC5,~Treatment, infer=TRUE, type="response")
+(ModP2emOC1_cld <- cld(ModP2emOC1, Letters = trimws(letters), reversed=TRUE))
+write_xlsx(ModP2emOC1_cld, path = "Pots2_OC.xlsx")
 
 
 
-#####   LEACHATE PO4   #####
+# LEACHATE ----
+Leach_labels <- factor(unique(Pots2$Treatment), levels=c("Control1", "Control2", "CanolaMeal", "Manure", "Willow",
+                                                        "MBMACoarse", "MBMAFine", "Phosphorus"),
+                       labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
+                                "Meat & Bone\nMeal- Fine", "Fertilizer\nPhosphorus"))
+##   LPO4   ----
 Pots2LPO4_Mean <- summary_by(LPO4~Treatment*Block, data=Pots2, FUN=mean) 
 Pots2LPO4_Mean <- as.numeric(Pots2LPO4_Mean$LPO4)
 Pots2LPO4_skew <- skewness(Pots2LPO4_Mean,na.rm=TRUE)
@@ -1313,10 +1316,20 @@ qqline(resid(ModP2LPO45))
 rsq(ModP2LPO45) # N/A
 
 #emmeans on glmm - least issues
-ModP2emLPO4 <- emmeans(ModP2LPO42,~Treatment, alpha=0.1, type="response")
-ModP2emLPO4_cld <- cld(ModP2emLPO4, Letters = trimws(letters), reversed = TRUE) 
+ModP2emLPO4 <- emmeans(ModP2LPO42,~Treatment, alpha=0.1, type="response", infer=TRUE)
+(ModP2emLPO4_cld <- cld(ModP2emLPO4, Letters = trimws(letters), reversed = TRUE))
+ModP2emLPO4_cld <- ModP2emLPO4_cld %>% dplyr::rename(emmean="response")
 View(ModP2emLPO4_cld)
 write.csv(ModP2emLPO4_cld, file="Pots2_LPO4.csv")
+(Pots2PO4LeachPlot <- ggplot(ModP2emLPO4_cld,aes(x=Treatment,y=emmean))+
+    geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="grey80", width=0.45)+
+    geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
+    scale_y_continuous(limits = c(0,0.05))+
+    geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
+    labs(x="", y=bquote(bold("PO"[4]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Leach_labels)+
+    theme(axis.title = element_text(size=18), axis.text=element_text(size=13, face="bold", angle=45, hjust=1, color="black"),
+          panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 
 
 
@@ -1389,11 +1402,20 @@ qqline(resid(ModP2LNO35))
 rsq(ModP2LNO35) # 317
 
 #emmeans on glmm as it's the most suitable, no singularity, decent df
-ModP2emLNO3 <- emmeans(ModP2LNO32,~Treatment, type="response") # check at 10% level and still no sig dif
-ModP2emLNO3_cld <- cld(ModP2emLNO3, Letters = trimws(letters), alpha=0.1, reversed = TRUE) 
+ModP2emLNO3 <- emmeans(ModP2LNO32,~Treatment, type="response", infer=TRUE, alpha=0.01) # check at 10% level and still no sig dif
+ModP2emLNO3_cld <- cld(ModP2emLNO3, Letters = trimws(letters), reversed = TRUE) 
+ModP2emLNO3_cld <- ModP2emLNO3_cld %>% dplyr::rename(emmean="response")
 View(ModP2emLNO3_cld)
 write.csv(ModP2emLNO3_cld, file="Pots2_LNO3.csv")
-
+(Pots2NO3LeachPlot <- ggplot(ModP2emLNO3_cld,aes(x=Treatment,y=emmean))+
+    geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="grey80", width=0.45)+
+    geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
+    scale_y_continuous(limits = c(0,5.5))+
+    geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
+    labs(x="", y=bquote(bold("NO"[3]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Leach_labels)+
+    theme(axis.title = element_text(size=18), axis.text=element_text(size=13, face="bold", angle=45, hjust=1, color="black"),
+          panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 
 #####   LEACHATE NH4   #####
 Pots2LNH4_Mean <- summary_by(LNH4~Treatment+Block, data=Pots2, FUN=mean) 
@@ -1454,11 +1476,25 @@ qqline(resid(ModP2LNH44))
 rsq(ModP2LNH44) # 0.44
 
 #emmeans on glmm - only suitable model
-ModP2emLNH4 <- emmeans(ModP2LNH42,~Treatment, type="response")
-ModP2emLNH4_cld <- cld(ModP2emLNH4, alpha=0.1, Letters = trimws(letters), reversed=TRUE) 
-View(ModP2emLNH4_cld)
+ModP2emLNH4 <- emmeans(ModP2LNH42,~Treatment, type="response", infer=TRUE, alpha=0.01)
+(ModP2emLNH4_cld <- cld(ModP2emLNH4, alpha=0.1, Letters = trimws(letters), reversed=TRUE))
+ModP2emLNH4_cld <- ModP2emLNH4_cld %>% dplyr::rename(emmean="response")
 write.csv(ModP2emLNH4_cld, file="Pots2_LNH4.csv")
+(Pots2NH4LeachPlot <- ggplot(ModP2emLNH4_cld,aes(x=Treatment,y=emmean))+
+    geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="grey80", width=0.45)+
+    geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
+    scale_y_continuous(limits = c(0,0.11))+
+    geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
+    labs(x="", y=bquote(bold("NH"[4]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Leach_labels)+
+    theme(axis.title = element_text(size=18), axis.text=element_text(size=13, face="bold", angle=45, hjust=1, color="black"),
+          panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 
+## Combineleachate plots ----
+(Leach_plot <- plot_grid(Pots2PO4LeachPlot, Pots2NO3LeachPlot, Pots2NH4LeachPlot, labels = c('A', 'B', 'C'), label_size = 20, ncol=3, 
+                         label_x = c(0.18,0.15,0.18)))
+(LeachPlot_label <- ggdraw()+draw_plot(Leach_plot)+ draw_label("Treatment", y=0.03, size=18, fontface="bold"))
+ggsave("Pots2_Leachate.jpg", height=7, width=14, dpi=150)
 
 ####  CORRELATION OF P FRACTIONS  ####
     ## comparison of the P fractions overall is obvious, need to separate by treatment
@@ -1959,12 +1995,12 @@ P2pHAN$RowNames <- row.names(P2pHAN)
 rownames(P2pHAN) <- NULL
 
 ModP2EC5 <- lme(EC ~ Treatment, random=~1|Block, data=Pots2, na.action=na.exclude)
-P2ecAN <- anova(ModP2EC5)
+P2ecAN <- Anova(ModP2EC5, type="III")
 P2ecAN$RowNames <- row.names(P2ecAN)
 rownames(P2ecAN) <- NULL
 
 ModP2OC5 <- glmer(OC~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"), na.action=na.exclude)
-P2ocAN <- anova(ModP2OC5)
+P2ocAN <- Anova(ModP2OC5, type="III")
 P2ocAN$RowNames <- row.names(P2ocAN)
 rownames(P2ocAN) <- NULL
 

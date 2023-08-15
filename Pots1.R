@@ -2482,7 +2482,7 @@ View(OxContour_df)
 
 
 (HavOxControur <- plot_grid(HavContours, OxContours, labels = c("A", "B"), label_size = 30, label_x = c(0.05,0.05)))
-ggsave(HavOxControur, file="Pots1 Combined Contour.jpg", height=12, width=24)
+ggsave(HavOxControur, file="Pots1 Combined Contour.jpg", height=16, width=26)
 
 #### Correlation & eigenvalues  ####
 ## for all treatments and both soils

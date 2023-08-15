@@ -664,18 +664,19 @@
       #3 ModFieldNup3  24.585345   31.70832  - 3rd best AIC/BIC and only one with no df issues in emmeans
       #4 ModFieldNup4   9.452402   18.87683  - infinite df
 #emmeans 
-  ModFieldNupem <- emmeans(ModFieldNup2,~Treatment, alpha=0.1)
-  ModFieldNupem_cld <- cld(ModFieldNupem, Letters=trimws(letters), reversed=TRUE, type="response") 
-  ModFieldNupem_cld$Treatment <- factor(ModFieldNupem_cld$Treatment, levels = FieldTrt_order)
+  (ModFieldNupem <- emmeans(ModFieldNup3,~Treatment, alpha=0.1, infer=TRUE, type="response"))
+  (ModFieldNupem_cld <- cld(ModFieldNupem, Letters=trimws(letters), reversed=TRUE))
+  ModFieldNupem_cld <- as.data.frame(ModFieldNupem_cld)
+  (ModFieldNupem_cld <- ModFieldNupem_cld %>% dplyr::rename(emmean="response"))
   print(ModFieldNupem_cld)
   write_xlsx(ModFieldNupem_cld, path="Field_Nuptake.xlsx")
 # Visualizations
-  (FieldNup_plot <- ggplot(ModFieldNupem_cld, aes(x=Treatment, y=response))+
+  (FieldNup_plot <- ggplot(ModFieldNupem_cld, aes(x=Treatment, y=emmean))+
       geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                      pattern_density=0.05, pattern_spacing=0.01, width=0.65)+
-      geom_errorbar(aes(ymin=response - SE, ymax=response + SE), 
+      geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                     width=0.2, position=position_dodge(width=0.9)) +
-      geom_text(aes(label=trimws(.group), y=response+SE), size=8, vjust=-1) +
+      geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1) +
       labs(x="Treatments", y="Canola nitrogen uptake (mg/kg)") +
       scale_x_discrete(labels=c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                                   "TSP\nFertilizer"))+
@@ -991,7 +992,26 @@
   (ModFieldemSNO3_clda <- cld(ModFieldemSNO3a, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
   NO3_combEm <- list(Treatment=ModFieldemSNO3_cld, Depth=ModFieldemSNO3_clda)
   write_xlsx(NO3_combEm, path="Field_SoilNO3.xlsx")
-
+# Visualizations
+  (FieldNO3Plot <- ggplot(ModFieldemSNO3_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
+      geom_point(size = 8, color="black", aes(fill=Treatment)) +
+      scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+      scale_shape_manual(values = c(21,24,22)) +
+      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
+      scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                       labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
+                                "TSP\nFertilizer"))+
+      labs(x = "Treatment", y = bquote(bold("NO"[3]~" (mg/kg)"))) +
+      theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
+            legend.title = element_blank(), legend.text=element_text(size=16),
+            axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+            axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+            axis.title.x=element_blank(),
+            axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FieldNO3Plot, file="Field_soilNO3.jpg", height=8, width = 11, dpi=150)
 
 
 ##  Soil PO4   ----
@@ -1538,7 +1558,7 @@
       scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
                        labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                                 "TSP\nFertilizer"))+
-      labs(x = "", y = bquote(bold("Electric conductivity (mS/cm)"))) +
+      labs(x = "", y = bquote(bold("Electric conductivity (µS/cm)"))) +
         theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
               legend.title = element_blank(), legend.text=element_text(size=16),
               axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -1653,7 +1673,7 @@
   
 ## combined residual plots ----
      (FresidPlot <- plot_grid(FieldPO4Plot, FieldWSPPlot, FieldResPPlot, FieldOCPlot, FieldpHPlot, FieldECPlot, nrow=3, ncol=2,
-               labels = c("A", "B", "C", "D", "E", "F"), label_size = 35, label_x = c(0.11,0.11,0.11,0.11,0.11,0.11)))
+               labels = c("A", "B", "C", "D", "E", "F"), label_size = 35, label_x = c(0.11,0.13,0.13,0.12,0.12,0.12)))
      (FresidPlot_label <- ggdraw()+draw_plot(FresidPlot)+ draw_label("Treatment", y=0.02, size=30, fontface="bold"))
      ggsave("Combined residual soil.jpg", height=24, width=20, dpi=150)
      
@@ -1721,12 +1741,18 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
     #kruskal.test(LNO3 ~ Treatment, data = Field)
     pwpm(ModFieldemLNO3)
     pwpp(ModFieldemLNO3)
-    (LNO3plot <- ggplot(ModFieldemLNO3_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE))+
+    (LNO3plot <- ggplot(ModFieldemLNO3_cld,aes(x=Treatment,y=emmean))+
+        geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="grey80", width=0.45)+
+        geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.2)+
+        scale_y_continuous(limits = c(0,7.5))+
+        geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
         labs(x="", y=bquote(bold("Resin NO"[3]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
-        theme(axis.title = element_text(size=18), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black")))
+        theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
+              panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
     pairs(ModFieldemLNO3)
     comparison.plot(ModFieldemLNO3)
-    write_xlsx(ModFieldemLNO3_cld, path ="Field_NO3Load.xlsx")
+    write_xlsx(ModFieldemLNO3_cld, path ="Field_snowNO3.xlsx")
 
 
 
@@ -1796,12 +1822,18 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
   ModFieldemLNH4_cld <- ModFieldemLNH4_cld %>% dplyr::rename(emmean="response")
   pwpm(ModFieldemLNH4) # pairwise p-value mean
   pwpp(ModFieldemLNH4) # pairwise p-value plot
-  (LNH4plot <- ggplot(ModFieldemLNH4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE))+
+  (LNH4plot <- ggplot(ModFieldemLNH4_cld,aes(x=Treatment,y=emmean))+
+      geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="grey80", width=0.45)+
+      geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.2)+
+      scale_y_continuous(limits = c(0,0.13))+
+      geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
       labs(x="", y=bquote(bold("Resin NH"[4]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
-      theme(axis.title = element_text(size=18), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black")))
+      theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
+            panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
   pairs(ModFieldemLNH4)
   emmip(ModFieldLNH4c, ~Treatment)
-  write_xlsx(ModFieldemLNH4_cld, path="Field_LNH4.xlsx")
+  write_xlsx(ModFieldemLNH4_cld, path="Field_snowNH4.xlsx")
 
 ##  Resin NO3 load ----
   print(ResNO3_stats <- Field_stats(Field, "ResinNO3"))
@@ -1866,17 +1898,24 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
     ModFieldResNO3em_cld <- ModFieldResNO3em_cld %>% dplyr::rename(emmean="response")
     pwpm(ModFieldResNO3em) # pairwise p-value mean
     pwpp(ModFieldResNO3em) # pairwise p-value plot
-    (ResNO3plot <- ggplot(ModFieldResNO3em_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE))+
+    (ResNO3plot <- ggplot(ModFieldResNO3em_cld,aes(x=Treatment,y=emmean))+
+        geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="grey80", width=0.45)+
+        geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
+        scale_y_continuous(limits = c(0,13))+
+        geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
         labs(x="", y=bquote(bold("Resin NO"[3]~" load (µg/cm"^2*~")")))+ scale_x_discrete(labels=Snowmelt_labels)+
-        theme(axis.title = element_text(size=18), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black")))
+        theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
+              panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
     pairs(ModFieldResNO3em)
     emmip(ModFieldResNO3em, ~Treatment)
-    write_xlsx(ModFieldResNO3em_cld, path="Field_ResinNO3.xlsx")
+    write_xlsx(ModFieldResNO3em_cld, path="Field_snowResinNO3.xlsx")
   
   # To combine multiple ggplots in one use cowplot
-    (SnowN_plot <- plot_grid(LNO3plot, LNH4plot, ResNO3plot, labels = c('A', 'B', 'C'), label_size = 22, ncol=3))
-    (SnowN_label <- ggdraw()+draw_plot(SnowN_plot)+ draw_label("Treatment", y=0.02, size=20, fontface="bold"))
-    ggsave("Nitrogen in snowmelt.jpg", height=6, width=12, dpi=150)
+    (SnowN_plot <- plot_grid(LNO3plot, LNH4plot, ResNO3plot, labels = c('A', 'B', 'C'), label_size = 20, ncol=3, 
+                             label_x = c(0.15,0.23,0.2)))
+    (SnowN_label <- ggdraw()+draw_plot(SnowN_plot)+ draw_label("Treatment", y=0.04, size=18, fontface="bold"))
+    ggsave("Field_snowNitrogen.jpg", height=7, width=14, dpi=150)
     
 
 ##  PO4 load ----
@@ -1954,7 +1993,7 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
     pairs(ModFieldLPO4em)
     emmip(ModFieldLPO4em, ~Treatment)
     View(ModFieldLPO4em_cld)
-    write_xlsx(ModFieldLPO4em_cld, path="Field_PO4Load.xlsx")
+    write_xlsx(ModFieldLPO4em_cld, path="Field_snowPO4.xlsx")
     # Vizualization
     (LPO4plot <- ggplot(ModFieldLPO4em_cld, aes(x=Treatment, y=emmean)) +
         geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -1980,7 +2019,7 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
                                      ylab=expression("Leachate PO"[4]), xlab="Treatments", # expression used for subscript at end of text
                                      ggtheme = ggplot2::theme_gray(), # change theme & look of plot
                                      title=bquote(bold("Leachate PO"[4] ~ "-" ~ " in snowmelt runoff")))) # bquote used for subscript within text
-    ggsave(LPO4statsplot, file="Field_leachatePO4.jpg", width=12, height=8, dpi=150)
+    ggsave(LPO4statsplot, file="Field_snowPO4_curiosity plot.jpg", width=12, height=8, dpi=150)
     
     
 ##  Resin PO4 load ----
@@ -2050,7 +2089,7 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
     pairs(ModFieldemResPO4)
     emmip(ModFieldemResPO4, ~Treatment)
     View(ModFieldemResPO4_cld)
-    write_xlsx(ModFieldemResPO4_cld, path="Field_ResinPO4.xlsx")
+    write_xlsx(ModFieldemResPO4_cld, path="Field_snowResinPO4.xlsx")
     # Vizualization
     (ResinPO4PPlot <- ggplot(ModFieldemResPO4_cld, aes(x=Treatment, y=emmean)) +
         geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -2385,8 +2424,8 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
   plot(fitted(FNUEmod1),resid(FNUEmod1),pch=16) # clustered below zero
   qqnorm(resid(FNUEmod1)) # heavy  tails
   qqline(resid(FNUEmod1))
-  FNUEmodEm<- emmeans(FNUEmod1,~Treatment, subset=(Field$NUE), type="response",infer = TRUE)
-  FNUEmod_cld <- cld(FNUEmodEm, Letters=trimws(letters), reversed=TRUE) 
+  FNUEmodEm<- emmeans(FNUEmod1,~Treatment, subset=(Field$NUE), type="response",infer = TRUE, alpha=0.1)
+  (FNUEmod_cld <- cld(FNUEmodEm, Letters=trimws(letters), reversed=TRUE))
   print(FNUEmod_cld)
   write_xlsx(FNUEmod_cld, path="Field_NUE.xlsx")
   # Phosphorus
@@ -2424,8 +2463,8 @@ Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control
   FYieldAN$RowNames <- row.names(FYieldAN)
   rownames(FYieldAN) <- NULL
   
-  ModFieldNup2 <- glmer(log(Nuptake)~Treatment+(1|Block),data=Field,family=gaussian(link="log"), na.action=na.omit)
-  (FNupAN <- Anova(ModFieldNup2))
+  ModFieldNup3 <- glmmTMB(log(Nuptake)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.exclude)
+  (FNupAN <- glmmTMB:::Anova.glmmTMB(ModFieldNup3, type="III"))
   FNupAN$RowNames <- row.names(FNupAN)
   rownames(FNupAN) <- NULL
   
