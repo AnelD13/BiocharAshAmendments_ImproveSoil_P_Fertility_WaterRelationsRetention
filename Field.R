@@ -5,6 +5,7 @@
   Fieldraw <- read.csv("Fieldraw.csv", fileEncoding="UTF-8-BOM") # includes split data
   
 ## Loading libraries ----
+  library(summarytools) # get the mean, media, skewness, SD, Min/Max, CV, etc. for a dataset
   library(lme4)
   library(nlme)
   library(lmerTest)
@@ -12,7 +13,8 @@
   library(doBy)
   library(ggplot2)
   library(ggpattern)
-  library(ggstatsplot)
+  library(statsExpressions) # needed to run ggstatsplot
+  library(ggstatsplot) #combo violin plots
   library(plotrix)
   library(car)
   library(afex)
@@ -316,7 +318,6 @@
       facet_wrap(~ Treatment, scales="free") +
       labs(x="Treatment", y="ResinNO3")
     ggsave("OutliersField_ResinNO3.jpg", width=10, height=10, dpi=200)
-
 
 
 # PLANT ANALYSIS ----  
@@ -752,7 +753,7 @@
           panel.background = element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-  ggsave(FielNrecPlot, file="LargePlots_Nreocvery.jpg", width=8, height=8, dpi=150)
+  ggsave(FielNrecPlot, file="Field_Nreocvery.jpg", width=8, height=8, dpi=150)
 
 
 
@@ -1702,11 +1703,10 @@
     pairs(ModFieldemLNO3)
     comparison.plot(ModFieldemLNO3)
     write_xlsx(ModFieldemLNO3_cld, path ="Field_NO3Load.xlsx")
-ggstatsplot::ggbetweenstats(ModFieldemLNO3, x=Treatment, y=emmeans) # testing this out
 
 
 
-##   NH4 load  ----
+##  NH4 load  ----
   print(LNH4_stats <- Field_stats(Field, "LNH4"))
         #skewness kurtosis
         #1 2.057661 6.962457
@@ -1849,7 +1849,7 @@ ggstatsplot::ggbetweenstats(ModFieldemLNO3, x=Treatment, y=emmeans) # testing th
     plot_grid(LNO3plot, LNH4plot, ResNO3plot, labels = c('NO3', 'NH4', 'ResNO3'), label_size = 12)
     
 
-##   PO4 load ----
+##  PO4 load ----
     print(LPO4_stats <- Field_stats(Field, "LPO4"))
           #skewness kurtosis
           #1 3.058225 12.68079
@@ -1899,6 +1899,8 @@ ggstatsplot::ggbetweenstats(ModFieldemLNO3, x=Treatment, y=emmeans) # testing th
     performance::r2(ModFieldLPO4c) # 0.359
   # one-way Kruskal-Wallis
     LPO4_subset <- subset(Field, !is.na(LPO4))
+    LPO4_subset$LPO4 <- as.numeric(LPO4_subset$LPO4)
+    LPO4_subset$Treatment <- as.factor(LPO4_subset$Treatment)
     ModFieldLPO4d=kruskal.test(LPO4 ~Treatment, data=LPO4_subset)
     ModFPO4_Dunn <- dunn.test(LPO4_subset$LPO4, LPO4_subset$Treatment, method="bonferroni")
     print(ModFPO4_Dunn)
@@ -1914,7 +1916,7 @@ ggstatsplot::ggbetweenstats(ModFieldemLNO3, x=Treatment, y=emmeans) # testing th
             ##3 ModFieldLPO4c   100.5754  109.65934
   # emmeans 
     (ModFieldLPO4em <- emmeans(ModFieldLPO4a,~Treatment,infer = TRUE))
-    (ModFieldLPO4em_cld <- cld(ModFieldResPO4em, Letters=trimws(letters), reversed=TRUE, type="response"))
+    (ModFieldLPO4em_cld <- cld(ModFieldLPO4em, Letters=trimws(letters), reversed=TRUE, type="response"))
     ModFieldLPO4em_cld <- ModFieldLPO4em_cld %>% rename(emmean="response")
     pwpm(ModFieldLPO4em) # pairwise p-value mean
     pwpp(ModFieldLPO4em) # pairwise p-value plot
@@ -1996,14 +1998,14 @@ ggstatsplot::ggbetweenstats(ModFieldemLNO3, x=Treatment, y=emmeans) # testing th
   
   
   
-## Plotting Snowmelt load ----
+##  Plotting Snowmelt load ----
 #create and combine data frames for the emmeans functions
   emPO4 <- as.data.frame(ModFieldLPO4em_cld)
   emResP <- as.data.frame(ModFieldemResPO4_cld)
   em_labels <- list("EM1" = "PO\u2084", "EM2" = "Resin PO\u2084")
   em_all <- bind_rows(list(EM1=emPO4, EM2=emResP), .id="EM") 
   em_all$EM <- factor(em_all$EM, levels=names(em_labels), labels=unlist(em_labels))
-  View(em_all)
+  print(em_all)
 # define function to calculate position adjustment for secondary axis
   (Snowmeltplot <- ggplot(em_all, aes(x=Treatment, y=emmean)) +
       geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
@@ -2024,8 +2026,15 @@ ggstatsplot::ggbetweenstats(ModFieldemLNO3, x=Treatment, y=emmeans) # testing th
             panel.background = element_blank(),
             panel.border=element_blank(), panel.grid.major=element_blank(),
             panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-    ggsave(Snowmeltplot, file="LargePlots_Snowmelt.jpg", width=12, height=8, dpi=150)
-  
+    ggsave(Snowmeltplot, file="Field_Snowmelt.jpg", width=12, height=8, dpi=150)
+
+  ## ggbetweenstats
+    (LPO4statsplot <- ggbetweenstats(LPO4_subset, x=Treatment, y=LPO4, #need to used dataset with no missing values
+                                     type="robust", # required
+                                     ylab=expression("Leachate PO"[4]), xlab="Treatments", # expression used for subscript at end of text
+                                     ggtheme = ggplot2::theme_gray(), # change theme & look of plot
+                                     title=bquote(bold("Leachate PO"[4] ~ "-" ~ " in snowmelt runoff")))) # bquote used for subscript within text
+    ggsave(LPO4statsplot, file="Field_leachatePO4.jpg", width=12, height=8, dpi=150)
 
 
 # COVARIANCE HEAT MAPS ----

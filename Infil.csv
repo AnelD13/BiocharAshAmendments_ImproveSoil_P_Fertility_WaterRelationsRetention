@@ -1,25 +1,25 @@
-Block,Treatment,Infil
-Block1,Control1,2.15
-Block2,Control1,1.86
-Block3,Control1,1.97
-Block4,Control1,6.12
-Block1,Control2,5.47
-Block2,Control2,1.74
-Block3,Control2,1.63
-Block4,Control2,2.44
-Block1,Biochar25kgPha,6.59
-Block2,Biochar25kgPha,2.3
-Block3,Biochar25kgPha,4.25
-Block4,Biochar25kgPha,2.3
-Block1,Biochar10tha,7.27
-Block2,Biochar10tha,2.9
-Block3,Biochar10tha,6.5
-Block4,Biochar10tha,5.74
-Block1,Biochar10thaTSP,4.34
-Block2,Biochar10thaTSP,4.57
-Block3,Biochar10thaTSP,2.27
-Block4,Biochar10thaTSP,3.71
-Block1,Phosphorus,3.95
-Block2,Phosphorus,2.36
-Block3,Phosphorus,2.12
-Block4,Phosphorus,6.1
+Block,Treatment,CombinedLabel,InitialRate,FinalRate,MoisturePerc,S,K
+Block1,Biochar10tha,Block1 Biochar10tha,36.36,7.27,34.90%,124.89,-17.99
+Block2,Biochar10tha,Block2 Biochar10tha,,2.90,48.40%,,
+Block3,Biochar10tha,Block3 Biochar10tha,43.90,6.50,44.10%,143.67,-33.73
+Block4,Biochar10tha,Block4 Biochar10tha,44.44,5.74,46.50%,136.43,-34.53
+Block1,Biochar10thaTSP,Block1 Biochar10thaTSP,60.00,4.34,54.00%,159.23,-52.80
+Block2,Biochar10thaTSP,Block2 Biochar10thaTSP,117.82,4.57,45.50%,283.49,-153.23
+Block3,Biochar10thaTSP,Block3 Biochar10thaTSP,31.58,2.41,41.10%,116.36,-28.96
+Block4,Biochar10thaTSP,Block4 Biochar10thaTSP,27.07,3.71,38.10%,108.37,-21.18
+Block1,Biochar25kgPha,Block1 Biochar25kgPha,40.00,6.59,36.30%,149.56,-34.13
+Block2,Biochar25kgPha,Block2 Biochar25kgPha,61.02,2.30,36.40%,162.45,-60.96
+Block3,Biochar25kgPha,Block3 Biochar25kgPha,72.00,4.25,52.60%,180.99,-68.18
+Block4,Biochar25kgPha,Block4 Biochar25kgPha,36.73,2.36,47.90%,125.50,-34.68
+Block1,Control1,Block1 Control1,,2.15,56.30%,175.94,-61.73
+Block2,Control1,Block2 Control1,32.73,1.86,47.40%,121.36,-36.21
+Block3,Control1,Block3 Control1,39.13,2.19,48.10%,140.19,-44.04
+Block4,Control1,Block4 Control1,33.03,,42.30%,120.51,-19.84
+Block1,Control2,Block1 Control2,36.00,,39.30%,122.35,-24.27
+Block2,Control2,Block2 Control2,14.12,1.74,49.00%,112.10,-24.86
+Block3,Control2,Block3 Control2,59.02,1.86,41.80%,158.52,
+Block4,Control2,Block4 Control2,17.39,2.44,44.80%,94.37,-20.00
+Block1,Phosphorus,Block1 Phosphorus,22.50,3.95,41.20%,98.63,
+Block2,Phosphorus,Block2 Phosphorus,61.02,2.36,57.40%,164.38,-56.62
+Block3,Phosphorus,Block3 Phosphorus,50.00,2.12,40.00%,146.70,-49.65
+Block4,Phosphorus,Block4 Phosphorus,63.16,6.10,46.40%,169.09,-56.62
