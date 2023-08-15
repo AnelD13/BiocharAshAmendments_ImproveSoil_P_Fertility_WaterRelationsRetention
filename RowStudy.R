@@ -1,4 +1,4 @@
-# Loading data in to R  & Summaries ----
+# Loading data in to R & Summaries ----
 Rows<-read.csv("Rows.csv", fileEncoding="UTF-8-BOM")
 View(Rows)
 Rowsraw<-read.csv("Rowsraw.csv", fileEncoding="UTF-8-BOM")
@@ -1271,21 +1271,15 @@ print(RowsCharCor3)
     scale_size(range = c(30,45)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.2f", Correlation)), size=7)+
+    labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4])))+
     theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
-          legend.text=element_text(size=12),
-          legend.title=element_text(size=16, face="bold"),
+          legend.text=element_text(size=16), legend.title=element_text(size=18, face="bold"),
           legend.key.siz=unit(15,"mm"),
-          axis.title.y=element_text(size=14, colour="black", face="bold"),
-          axis.title.x=element_text(size=14, colour="black", face="bold"),
-          axis.text.y=element_blank(),
-          axis.text.x=element_blank(), #no labels
-          axis.ticks.y=element_blank(),
-          axis.ticks.x=element_blank(),
-          panel.background=element_blank(),  # remove gray background
-          panel.spacing.x=unit(1, "cm"),
+          axis.title=element_text(size=14, colour="black", face="bold"),
+          axis.ticks=element_blank(), axis.text=element_blank(), #no labelson x axis
+          panel.background=element_blank(), panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(5, 5, 5, 5))+
-    guides(size = "none")+
-    labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4]))))
+    guides(size = "none"))
 
 ## heatmap didn't work - needs more than one row        
  
@@ -1309,21 +1303,15 @@ print(RowsRecCor)
     scale_size(range = c(30,45)) +
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.2f",Correlation)), size=7)+
-    theme(plot.title=element_text(hjust=0.5, face="bold",  size=22),
-          legend.text=element_text(size=12),
-          legend.title=element_text(size=16, face="bold"),
+    labs(x="", y="", title="Percentage P in treatment - Percentage P Recovery")+
+    theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
+          legend.text=element_text(size=16), legend.title=element_text(size=18, face="bold"),
           legend.key.siz=unit(15,"mm"),
-          axis.title.y=element_text(size=14, colour="black", face="bold"),
-          axis.title.x=element_text(size=14, colour="black", face="bold"),
-          axis.text.y=element_blank(),
-          axis.text.x=element_blank(), #no labels
-          axis.ticks.y=element_blank(),
-          axis.ticks.x=element_blank(),
-          panel.background=element_blank(),  # remove gray background
-          panel.spacing.x=unit(1, "cm"),
+          axis.title=element_text(size=14, colour="black", face="bold"),
+          axis.ticks=element_blank(), axis.text=element_blank(), #no labelson x axis
+          panel.background=element_blank(), panel.spacing.x=unit(1, "cm"),
           plot.margin=margin(5, 5, 5, 5))+
-    guides(size = "none")+
-    labs(x="", y="", title="Percentage P in treatment - Percentage P Recovery"))
+    guides(size = "none"))
 
 ## correlate P recovery to residual PO4
 RowsPO4Pdf <- data.frame(Treatment=Rows$Treatment,
@@ -1346,21 +1334,15 @@ print(RowsPO4Cor)
     scale_fill_gradientn(colors=brewer.pal(9, "PiYG"), limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.2f", Correlation)), size=7)+
     scale_x_discrete(position="bottom")+ #used for labels on the bottom
+    labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4])))+
     theme(plot.title=element_text(hjust=0.5, face="bold", size=22),
-          legend.text=element_text(size=12),
-          legend.title=element_text(size=16, face="bold"),
-          legend.key.siz=unit(15,"mm"),
-          axis.title.y=element_blank(),
-          axis.title.x=element_blank(),
-          axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=19, colour="black", hjust=1), #keep only in the last one
-          axis.ticks.y=element_blank(),
-          axis.ticks.x=element_blank(),
-          panel.background=element_blank(),  # remove gray background
-          panel.spacing.x=unit(1, "cm"),
-          plot.margin=margin(5, 5, 5, 5))+
-    guides(size = "none")+
-    labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4]))))
+        legend.text=element_text(size=16), legend.title=element_text(size=18, face="bold"),
+        legend.key.siz=unit(15,"mm"),
+        axis.title=element_text(size=14, colour="black", face="bold"),
+        axis.ticks=element_blank(), axis.text.y=element_blank(),
+        axis.text.x=element_text(angle=45, size=19, colour="black", hjust=1, face="bold"), #keep only in the last one
+        panel.background=element_blank(), panel.spacing.x=unit(1, "cm"), plot.margin=margin(-5, 5, -5, 5))+ #set -margin to increase plot space
+    guides(size = "none"))
 
 ## combined plot - combined legend and ggarrange uses ggpubr package, set legend in individual plots
 (RowsCharRecPO4_plot <-ggarrange(RowsCharHeatPlot, RowsRecHeatPlot, RowsPO4HeatPlot, nrow=3, common.legend=TRUE,

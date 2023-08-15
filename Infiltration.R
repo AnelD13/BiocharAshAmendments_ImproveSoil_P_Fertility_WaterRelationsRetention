@@ -1,11 +1,11 @@
-#Loading data in to R ----
+# Loading data in to R& Summaries ----
   Infil<-read.csv("Infiltration.csv", fileEncoding="UTF-8-BOM") # full dataset with 8-10 observations per plot
   Infiltrationraw<-read.csv("Infiltrationraw.csv", fileEncoding="UTF-8-BOM")
   Infilsub <- read.csv("Infil.csv", fileEncoding="UTF-8-BOM") # #combined data with 24 observations total
   Infilsubraw <- read.csv("Infilraw.csv", fileEncoding="UTF-8-BOM")
   Field<-read.csv("Field.csv", fileEncoding="UTF-8-BOM")
 
-    ## Loading libraries ----
+  ## Loading libraries ----
   library(summarytools)
   library(lme4)
   library(nlme)
@@ -37,7 +37,7 @@
   library(aqp) #pedometrics
   library(writexl)# write xls or slsx files (specify path="xx.csv")
 
-    ## Summary and ordering of data   ----
+  ## Summary and ordering of data   ----
   # Summary data and missing values
     colSums(is.na(Infil[,]))
     colSums(is.na(Infiltrationraw[,]))
@@ -52,7 +52,7 @@
     Infil$Time <- as.numeric(as.character(Infil$Time))
     Infil$CI <- as.numeric(as.character(Infil$CI))
     
-    ## Check for outliers   ----
+  ## Check for outliers   ----
     Infiltrationraw$Block <- factor(Infiltrationraw$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
     Infiltrationraw$Treatment <- factor(Infiltrationraw$Treatment,levels = FieldTrt_order)
     Infiltrationraw$Time <- as.numeric(as.character(Infiltrationraw$TimeS))
@@ -146,26 +146,26 @@ Field$BDwet <- as.numeric(Field$BDwet)
 Field$BDdry <- as.numeric(Field$BDdry)
 Field$MoistWet <- as.numeric(Field$MoistWet)
 Field$MoistDry <- as.numeric(Field$MoistDry)
-    ##  Bulk density - wet   ----
+  ##  Bulk density - wet   ----
   #NORMAL
     descr(Field$BDwet, na.rm=TRUE)
     # skewness -0.54; kurtosis -0.61
     shapiro.test(Field$BDwet) # p=0.51
     hist(Field$BDwet) # mostly normal, two spikes
     leveneTest(BDwet~Treatment, data=Field)  # 0.033
-    ## Bulk density - dry   ----
+  ## Bulk density - dry   ----
     descr(Field$BDdry, na.rm=TRUE)
     # skewness 0.01; kurtosis -0.74
     shapiro.test(Field$BDdry) # p=0.43
     hist(Field$BDdry) # mostly normal
     leveneTest(BDdry~Treatment, data=Field)  # 0.55
-    ## Volumetric moisture - wet   ----
+  ## Volumetric moisture - wet   ----
     descr(Field$MoistWet, na.rm=TRUE)
     # skewness 0.35; kurtosis-0.71
     shapiro.test(Field$MoistWet) # p=0.63
     hist(Field$MoistWet) # slight left skew
     leveneTest(MoistWet~Treatment, data=Field)  # 0.76
-    ## Volumetric moisture - dry   ----
+  ## Volumetric moisture - dry   ----
   # Data non-normal, transformations did not improve it  
     descr(Field$MoistDry, na.rm=TRUE)
     # skewness 0.46; kurtosis 0.31
@@ -182,9 +182,9 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
 
 
 # MODEL AND GRAPH INFILTRATION DATA ----
-    ## Model predicted data using Philips model ----
-      ### Set up the new database to include values from both Infilstration.csv and Infil.csv
-      ### DO NOT RUN THE DIVISION CODE MORE THAN ONCE!!!!!!
+  ## Model predicted data using Philips model ----
+     ### Set up the new database to include values from both Infilstration.csv and Infil.csv
+     ### DO NOT RUN THE DIVISION CODE MORE THAN ONCE!!!!!!
         Infil$CI <- Infil$CI/10 # change CI to cm
         Infil$Infiltration <- Infil$Infiltration/10 # set infiltration to the same scale as CI (cm)
         Infil$Time <- Infil$Time/3600 # csale time to hours
@@ -221,8 +221,8 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
         write_xlsx(InfilCombined, path="Predicted infiltration data.xlsx")
     
   
-    ## Visualizations ----
-        # reshape the data into long format
+  ## Visualizations ----
+     # reshape the data into long format
         InfilReady <- filter(InfilCombined, Time <= 2)
         InfilReady_long <- InfilReady%>%
           pivot_longer(cols = c(CI, PredictedCI, Infiltration),
@@ -253,7 +253,7 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
 
 
 # OBTAIN ALL SLOPE AND INTERCEPT VALUES ----    
-    ## Initial and final infiltration rates ----
+  ## Initial and final infiltration rates ----
         InitFinRate <- InfilCombined %>% # Extract the initial and final rates (final rate at t=2h as per predicted modelling)
           group_by(Block, Treatment) %>%
           summarize( # summarize function has been deprecated, use mutate
@@ -264,7 +264,7 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
         View(InitFinRate)
         write_xlsx(InitFinRate, path="Initial and final rates.xlsx")
         
-    ## Estimated slope and intercept values ----
+  ## Estimated slope and intercept values ----
         # Get estimated slope and intercept values from Philips starter model - used to obtain parameters necessary for Philips two term model
         InfilMod <- nlsList(log(CI) ~ SSphilip(Time,fc,S) | Treatment, data=Infil, na.action=na.omit)
         (InfilModSum <- coef(summary(InfilMod))) # prints values for fc (or) and S
@@ -274,7 +274,7 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
         # coefficients vastly different from manual calculation - not sure if correct
         
         
-    ## Estimate S & K values manually ----  
+  ## Estimate S & K values manually ----  
         ### Use Philips equation for rate of infiltration fp = 0.5*s*t^-0.5 + k where s/2 = slope of trendline and k= intercept
         ### this is also know as dI/dt=0.5St^-0.5 + A
         ## Create an empty data frame to store the slope and intercept values
@@ -296,7 +296,7 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
         print(InfilNewData)
         write_xlsx(InfilNewData, path="Slope&Intercept.xlsx") # values added manually to Infilraw.csv data set
         
-    ## Model Infilsub for significant differences ----
+  ## Model Infilsub for significant differences ----
     ### Initial infiltration rate - modelled on predicted CI values
         InfilModInit <- lme(InitialRate~Treatment,random=~1|Block, data=Infilsub, na.action=na.omit)
         ranef(InfilModInit)

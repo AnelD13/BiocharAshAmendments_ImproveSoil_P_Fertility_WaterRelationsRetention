@@ -1716,7 +1716,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
         geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.2)+
         scale_y_continuous(limits = c(0,7.5))+
         geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
-        labs(x="", y=bquote(bold("Resin NO"[3]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
+        labs(x="", y=bquote(bold("NO"[3]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
         theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
               panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
               panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
@@ -1797,7 +1797,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
       geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.2)+
       scale_y_continuous(limits = c(0,0.13))+
       geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
-      labs(x="", y=bquote(bold("Resin NH"[4]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
+      labs(x="", y=bquote(bold("NH"[4]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
       theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
             panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
             panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
@@ -2081,7 +2081,12 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
     
   
 ## Plotting Snowmelt load ----
-#create and combine data frames for the emmeans functions
+  # OPtion 1 Combined plot using cowplot
+    (Snowmeltplot <- plot_grid(LPO4plot, ResinPO4PPlot, ncol=2, labels = c("A", "B"), label_size = 20, label_x = c(0.16,0.15)))
+    (SnowPlot_label <- ggdraw()+draw_plot(Snowmeltplot)+ draw_label("Treatment", y=0.02, size=25, fontface="bold"))
+    ggsave("Field_Snowmelt.jpg", height=8, width=12, dpi=150)    
+    
+# OPtion 2 create and combine data frames for the emmeans functions (nots used)
   emPO4 <- as.data.frame(ModFieldLPO4em_cld)
   emResP <- as.data.frame(ModFieldemResPO4_cld)
   em_labels <- list("EM1" = "PO\u2084", "EM2" = "Resin PO\u2084")
@@ -2109,10 +2114,6 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
             panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
     ggsave(Snowmeltplot, file="Field_Snowmelt.jpg", width=12, height=8, dpi=150)
 
-    # Combined plot using cowplot
-    (Snowmeltplot <- plot_grid(LPO4plot, ResinPO4PPlot, ncol=2, labels = c("A", "B"), label_size = 20, label_x = c(0.16,0.15)))
-    (SnowPlot_label <- ggdraw()+draw_plot(Snowmeltplot)+ draw_label("Treatment", y=0.02, size=25, fontface="bold"))
-    ggsave("Field_Snowmelt.jpg", height=8, width=12, dpi=150)
 
 
 

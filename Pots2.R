@@ -733,7 +733,7 @@ ggsave(Pots2PuptakePlot, file="Pots2_Puptake.jpg", width = 8, height = 6, dpi = 
 
 
 
-# SOIL ----
+# SOIL ANALYSIS ----
 ## Soil NO3 ----
 Pots2SNO3_Mean <- summary_by(SNO3~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2SNO3_Mean <- as.numeric(Pots2SNO3_Mean$SNO3)
@@ -1807,7 +1807,7 @@ print(Pots2PO4Cor)
           axis.title=element_blank(), axis.text.y=element_blank(),
           axis.text.x=element_text(angle=45, size=22, colour="black", hjust=1.1, face="bold"), #keep only in the last one
           axis.ticks=element_blank(), panel.background=element_blank(),
-          panel.spacing.x=unit(1, "cm"), plot.margin=margin(-5, 5, -5, 5))+
+          panel.spacing.x=unit(1, "cm"), plot.margin=margin(-5, 5, -5, 5))+ #set -margin to increase plot space
     guides(size = "none"))
 
 ## combined plot - combined legend and ggarrange uses ggpubr package, set legend in individual plots

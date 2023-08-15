@@ -1,87 +1,85 @@
-# Loading data in to R  & Summaries ----
+# Loading data in to R & Summaries ----
 Pots1<-read.csv("Pots1.csv", fileEncoding="UTF-8-BOM")
-View(Pots1)
-plot(Pots1$Yield)
-PotsRaw<-read.csv("Pots1raw.csv", fileEncoding="UTF-8-BOM")
+PotsRaw<-read.csv("Pots1raw.csv", fileEncoding="UTF-8-BOM") # used for checking outliers
 
 ## Loading libraries ----
-library(lme4)
-library(nlme)
-library(glmm)
+library(summarytools) # more concise summaries 
+library(stats)
+library(sjstats)
+library(lme4) # lmer model
+library(lmerTest) # provides ANOVA and summary capabilities
+library(nlme) # lme model
 library(glmmTMB)
-library(lmerTest)
-library(doBy)
+library(doBy) # working with grouped data, specifically the do and by functions
 library(ggplot2)
 library(ggpattern)
-library(ggforce)
-library(ggrepel)
-library(plotrix)
-library(car)
-library(afex)
-library(onewaytests)
-library(plyr)
-library(dplyr)
-library(tidyr)
-library(magrittr)
-library(readr)
-library(broom)
-library(multcomp)
-library(multcompView)
-library(emmeans)
-library(lsmeans)
-library(e1071)
-library(rsq)
-library(pgirmess)
-library(car)
-library(robustbase)
-library(openxlsx)
-library(ggcorrplot)
-library(pheatmap)
-library(MASS)
-library(RColorBrewer)
-library(reshape2)
-library(metaSEM)
-library(ggh4x)
-library(gridExtra)
-library(sjstats)
+library(ggforce) # specialized plots
+library(ggrepel) # repel labels on plots (WHC)
+library(ggExtra) # add marginal layers to plot
+library(ggcorrplot) # correlations plots
+library(ggh4x) # customize ggplot facets
+library(plotrix) # various plot options, I used it for ablines
+library(cowplot) # combine ggplot output into a single graph
+library(patchwork) #similar to cowplot
+library(gridExtra) # Functions for grid based plots
+library(ggpubr) # make ggplots publication ready
+library(car) # general package with lots of uses, including Anova
+library(afex) # used to bring raw data into ggplot
+library(onewaytests) # for one way ANOVAs
+library(plyr) # breaking larger sets into smaller sets and afterward back together
+library(dplyr) # general package with lots of uses
+library(tidyr) # tidies up data
+library(magrittr) # pipe operator %>%
+library(readr) # easy way to read csv and other 'rectangular' files
+library(broom) # cleans up messy output into tibbles
+library(multcomp) # simultaneous test and confidence intervals
+library(multcompView) # for correlations
+library(wCorr) # for calculating correlations
 library(corrr)
-library(FactoMineR)
-library(factoextra)
-library(reshape2)
-library(writexl)
-library(glmmTMB)
-library(corrplot)
-library(viridis)
-library(patchwork)
-library(wCorr)
-library(cowplot)
-library(ggpubr)
+library(emmeans) # estimated marginal means in place of lsmeans
+library(e1071) #skewness and kurtosis
+library(rsq)
+library(pgirmess) # reading, writing and transforming spatial and seasonal data
+library(robustbase) # Tools allowing analysis with robust methods
+library(MASS)
+library(RColorBrewer) # colour package
+library(viridis) # colour package
+library(reshape2) # for long/wide data frame changes
+library(metaSEM) # for structural equation modellling
+library(FactoMineR) # Multivariate Exploratory Data Analysis and Data Mining
+library(factoextra) # Extract and Visualize the Results of Multivariate Data Analyses 
+library(openxlsx)  # write xls or slsx files
+library(writexl) #  as for openxlsx; specify path="xx.csv"
+
 
 ## Summary and ordering of data ----
-#Check for missing values in a specific field
-missing <- colSums(is.na(Pots1[,]))
-print(missing)
-
-#Change columns in a dataframe to factors/categorical values, useful for treatments and soils, str displays 
-#the structure of R objects or the contents of a list
-#treatment order specifies the order in which treatments will appear 
+(missing <- colSums(is.na(Pots1[,]))) #Check for missing values in a specific field
+summary(Pots1)
+str(Pots1) #displays the structure of the object
+View(Pots1) #view the object in a separate window (e.g. as a table)
+Pots1$Soil <- factor(Pots1$Soil, levels=c("Haverhill", "Oxbow"))  #Change columns in a dataframe to factors/categorical values
+    #treatment order specifies the order in which treatments will appear
+    # used for 'levels'
 Pots1Trt_order <- c("Control1", "Control2", "CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha",
                     "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha",  "Willow10tha", "CanolaMeal10thaTSP",
-                    "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate")
-Pots1$Treatment <- factor(Pots1$Treatment, levels=Pots1Trt_order)
+                    "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate") # general
+Pots1$Treatment <- factor(Pots1$Treatment, levels=Pots1Trt_order) 
 Pots1Trt_sub <- c("CanolaMeal50kgha", "CanolaHull50kgha", "Manure50kgha", "Willow50kgha",
                   "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha",  "Willow10tha", "CanolaMeal10thaTSP",
-                  "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate")
+                  "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP", "TripleSuperPhosphate") # no controls
 CharCon <- c("Control1", "Control2", "CanolaMeal10tha", "CanolaHull10tha", "Manure10tha", "Willow10tha", "CanolaMeal10thaTSP",
-             "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP","TripleSuperPhosphate")
+             "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP","TripleSuperPhosphate") # split plot 10t/ha
+TrtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha",
+                  "TripleSuperPhosphate") # split plot 25kg P/ha
+    # used for 'labels'
 PotsLabel_Main <- c("Control 1", "Control 2", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", 
                     "Manure 50kg P/ha", "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", 
                     "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
-                    "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer")
+                    "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer") # everything included
 PotsLabel_Sub <- c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", 
                    "Manure 50kg P/ha", "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", 
                    "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
-                   "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer")
+                   "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer") # no controls
 PotsLabDash_main <- c("Control 1","COntrol 2", "Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure\n50kg P/ha", 
                          "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
                          "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
@@ -90,10 +88,6 @@ PotsLabDash_sub <- c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure
                    "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
                    "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
                    "Willow\n10t/ha & TSP", "TSP\nFertilizer")
-Pots1$Soil <- factor(Pots1$Soil, levels=c("Haverhill", "Oxbow"))
-summary(Pots1)
-str(Pots1) #displays the structure of the object
-View(Pots1) #view the object in a separate window (e.g. as a table)
 
 # Summary data (means, SD, etc.) for each treatment and variable
 Pots1Mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean, na.rm=TRUE)
@@ -203,17 +197,9 @@ ggsave("OutliersOC.jpg", width=30, height=30, dpi=150)
 
 
 
-
-
-#Modelling data using simple linear model for CRD, no random intercept possible for my project & mixed model thus not possible
-#look at glmr and glmm - equivalent of GLMMIX
-#ANOVA model - this describes the response variable is influenced by the explanatory variables
-####P-VALUE INTERPRETATION: p >0.05, no significant difference, fail to reject null hypothesis
-#p-value for intercept <0.05
-#Plots to check residuals to be equally centered around 0, vertical lines are ok if centered around 0
-
-
-#### Yield ####
+# PLANT ANALYSIS ----
+    ### p-value interpretation: p >0.05, no significant difference, fail to reject null hypothesis
+## yield ----
 Pots1Yield_Mean <- summary_by(Yield~Treatment*Soil, data=Pots1, FUN=mean)
 Pots1Yield_Mean <- as.numeric(Pots1Yield_Mean$Yield)
 Pots1Yield_skew <- skewness(Pots1Yield_Mean,na.rm=TRUE)
@@ -235,31 +221,19 @@ leveneTest(sqrt(Yield) ~ Treatment*Soil, data=Pots1)  # data has unequal varianc
 hist((log(Pots1$Yield))) # severe right skew
 hist((log10(Pots1$Yield))) # severe right skew
 hist((sqrt(Pots1$Yield)))# severe right skew
-#Running models - tried lm & aov but these do not allow for random effects which must be included
-Mod1<-lm(Yield~Treatment*Soil,data=Pots1) #using a linear model as the best fit
-anova(Mod1) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
-summary(Mod1)
-shapiro.test(resid(Mod1)) ##S-W p value=0.1965; Data is considered normal
-#the residuals plot, qqnorm and shapiro.test all checks normality
-plot(fitted(Mod1),resid(Mod1),pch=16, abline(h=0, lty=2)) #plots the residuals vs the fitted values 
-#from a linear regression model, abline shows the linear horizontal line at 0
-plot(Mod1, which=1) #plots the residuals vs the actual values, the line is the regression line
-plot(Mod1, which=2) # different way to do the below qqnorm & qqline
-qqnorm(resid(Mod1)) # tails at either end not too hectic
-qqline(resid(Mod1))
-rsq(Mod1) #r=0.8945
-#Mod1a #The two-way anova appears to be a better fit for the dry weight data
-Mod1a <- aov(Yield~Treatment*Soil, data=Pots1) #Two-way anova for Dry weight - another way to do the same
-anova(Mod1a)
-summary(Mod1a)
-shapiro.test(resid(Mod1a)) #0.01965
-Mod1a_tidy <- tidy(Mod1a)
-Mod1a_tidy$sumsq[1] / (Mod1a_tidy$sumsq[1] + Mod1a_tidy$sumsq[2]) # 0.99
+#Running models - tried lm (mod1) & aov (mod1a) but these do not allow for random effects which must be included
 # Mod1b glmm
 Mod1b <- glmmTMB(Yield~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
-glmmTMB:::Anova.glmmTMB(Mod1b, type="III")# test.statistic ="F" is not currently available
+glmmTMB:::Anova.glmmTMB(Mod1b, type="III") # signficant differences
 summary(Mod1b)
-performance::r2(Mod1b) # 0.895
+performance::r2(Mod1b) # NA, singularity issue
+shapiro.test(resid(Mod1b)) # S-W p value= 0.1965; Data is considered normal
+plot(fitted(Mod1b),resid(Mod1b),pch=16, abline(h=0, lty=2)) #plots the residuals vs the fitted values 
+    #from a linear regression model, abline shows the linear horizontal line at 0
+plot(Mod1b, which=1) #plots the residuals vs the actual values, the line is the regression line
+plot(Mod1b, which=2) # different way to do the below qqnorm & qqline
+qqnorm(resid(Mod1b)) # small tails
+qqline(resid(Mod1b))
 # Mod1c Lmer
 Mod1c<-lmer(Yield~Treatment*Soil+(1|Soil),data=Pots1) #model failed to converge
 anova(Mod1c)
@@ -290,24 +264,17 @@ View(Mod1_tidy <- tidy(Mod1b))  #No tidy method for objects of class glmmTMB
 View(Mod1_tidy <- tidy(Mod1c))  # same for class lmerModLmerTest
 View(Mod1_tidy <- tidy(Mod1d))  # same for class lme
 
-#Run emmeans (the new lsmeans) - it creates a Tukey HSD pairwise comparison
-   #Mod1em <- emmeans(Mod1a,~Soil+Treatment) #a combined table by soil, but comparing all treatments per soil in one
-   #View(Mod1cld <- cld(Mod1em, Letters=trimws(letters))) #use Compact Letter Display (CLD) with a means test to show sig dif as letters
-
 #emmeans for each soil separately - # cld use directly in ggplot - make sure labels are correct in ggplot
-Mod1em_split <- emmeans(Mod1b,~Treatment|Soil, subset=(Pots1$Yield))
-#MUST use trimws to trim the white spaces around the cld letters to ensure proper alignment
-Mod1cld_split <- cld(Mod1em_split, Letters=trimws(letters), reversed=TRUE, by="Soil") #reversed=letters in correct order
-View(Mod1cld_split)
+(Mod1em_split <- emmeans(Mod1b,~Treatment|Soil, subset=(Pots1$Yield)))
+    #MUST use trimws to trim the white spaces around the cld letters to ensure proper alignment in plot
+(Mod1cld_split <- cld(Mod1em_split, Letters=trimws(letters), reversed=TRUE, by="Soil")) #reversed=letters in correct order
 write.xlsx(Mod1cld_split, file="Pots1_Yield.xlsx")
 
 ##Developing visualizations
 ##select specific treatments and use those in the graph - repeat for all subsets
 #Plotting dry weight using constant P and variable biochar rates
-Yield_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha",
-                  "TripleSuperPhosphate")
 Yield_subVar <- Mod1cld_split %>%
-  filter(Treatment %in% Yield_trtVar)
+  filter(Treatment %in% TrtVar)
 (Yield50kg <- ggplot(Yield_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
@@ -315,10 +282,10 @@ Yield_subVar <- Mod1cld_split %>%
                        labels=c("Haverhill", "Oxbow"))+
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
                 width=0.2, position=position_dodge(width=0.9)) +
-  #geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),
+  #geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),   ## FOR ITALIC LETTERS
            # size=6, position=position_dodge2(width=0.9), vjust=-0.5) + # change Oxbow to italics.
     #trim white spaces in Geom_text to align properly
-  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), 
+  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))),   # FOR UPPERCASE LETTERS
                 y=emmean + SE + 0.5), size=6, position=position_dodge(width=0.9))+
   labs(x="Treatments at 25mg P/pot", y="Biomass yield (g)")+
   scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
@@ -350,7 +317,7 @@ Yield_subCon <- Mod1cld_split %>%
                             "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", 
                             "TSP\nFertilizer"))+
   theme(legend.position="none", #legend.justification="center", legend.key.size=unit(10,"mm"), 
-        #legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
+        #legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18), # REMOVED FOR COMBINED PLOTS
         axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
         axis.text.y=element_text(size=18, face="bold", colour="black"),
         axis.title.x=element_text(size=22, face="bold", margin=margin(b=15)), 
@@ -366,13 +333,7 @@ ggsave(Yield10tha, file="Pots1_Yield_10tha.jpg", width=12, height=8, dpi=150)
 ggsave(Pots1Yield_plot, file="Pots1_Yield.jpg", height=16, width=12, dpi=150)
 
 
-
-#### Total N (Mod2) ----
-# only used to calculate N uptake and recovery, don't analyse
-
-
-#### N uptake ----
-#check kurtosis and skewness - the data is not too moderate to highly skewed with moderate/high kurtosis
+## N uptake ----
 Nup_Mean <- summary_by(Nuptake~Soil+Treatment, data=Pots1, FUN=mean) # calculate means of N recovery
 Nup_Mean <- as.numeric(Nup_Mean$Nuptake)
 Nup_skew <- skewness(Nup_Mean,na.rm=TRUE)
@@ -393,28 +354,7 @@ shapiro.test(sqrt(Pots1$Nuptake)) #p=1.471e-11
 hist(sqrt(Pots1$Nuptake)) # heavy right skew
 leveneTest(sqrt(Nuptake) ~ Treatment, data=Pots1) # p=0.0006209
 # transformations did not improve normality or variance
-# Mod3 - anova
-Mod3 <- aov(Nuptake~Treatment*Soil, data=Pots1)
-anova(Mod3)
-summary(Mod3)
-shapiro.test(resid(Mod3)) # p=0.0008813
-hist(resid(Mod3)) # heavily flattened tails
-qqnorm(resid(Mod3)) # heavy tails
-qqline(resid(Mod3))
-Mod3_tidy <- tidy(Mod3)
-View(Mod3_tidy) #tidu output of the summary stas
-Mod3sum_sq_reg <- Mod3_tidy$sumsq[1] #use summary stats to determine the sum squares regression
-Mod3sum_sq_resid <- Mod3_tidy$sumsq[2]  # use the summary stats to determine the sum squares residuals
-Mod3sum_sq_reg / (Mod3sum_sq_reg + Mod3sum_sq_resid) # 0.866
-#Mode3a1
-Mod3a1 <- lm(Nuptake~Treatment*Soil, data=Pots1)
-rsq(Mod3a1) # r sq=0.750
-summary(Mod3a1)$adj.r.squared # check adjusted R squared value: 0.639
-summary(Mod3a1)
-shapiro.test(resid(Mod3a1)) ##S-W p value 0.0007889; Data is considered non-normal and needs to be transformed
-plot(fitted(Mod3a1),resid(Mod3a1),pch=16) # not normally distributed
-qqnorm(resid(Mod3a1)) #not normally distributed
-qqline(resid(Mod3a1)) 
+# Models - mod3 (aov) & Mod3a1 (lm) were removed
 #Mod3a - N uptake (outliers removed)
 Mod3a <- lmer(Nuptake~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude,
               control=lmerControl(optCtrl=list(maxfun=1000000)))
@@ -425,7 +365,7 @@ shapiro.test(resid(Mod3a)) ##S-W p value 0.00544; Data is considered non-normal 
 plot(fitted(Mod3a),resid(Mod3a),pch=16) # cluster at right end is less severely compacted than for other models
 qqnorm(resid(Mod3a)) #not normally distributed
 qqline(resid(Mod3a)) 
-# Log-transforming Total N and checking normality of transformed data
+# Mod3b 
 Mod3b<-lmer(log(Nuptake)~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude, 
             control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
 anova(Mod3b)
@@ -530,10 +470,8 @@ View(Mod3cld)
 write_xlsx(Mod3cld, path="Pots1_Nuptake.xlsx")
 
 ## Visualizations
-Nuptake_trtVar <- c("Control1", "Control2","CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha",
-                  "TripleSuperPhosphate")
 Nuptake_subVar <- Mod3cld %>%
-  filter(Treatment %in% Nuptake_trtVar)
+  filter(Treatment %in% TrtVar)
 (Nup50kg <- ggplot(Nuptake_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
     geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
@@ -587,7 +525,7 @@ ggsave(Nup10tha, file="Pots1_Nuptake_10tha.jpg", width=12, height=8, dpi=150)
 
 
 
-#### N recovery ####
+## N recovery ----
 Nrec_Mean <- summary_by(Nrecovery~Soil+Treatment, data=Pots1, FUN=mean) # calculate means of N recovery
 Nrec_Mean <- as.numeric(Nrec_Mean$Nrecovery)
 Nrec_skew <- skewness(Nrec_Mean,na.rm=TRUE)
@@ -600,39 +538,9 @@ leveneTest(Nrecovery ~ Treatment*Soil, data=Pots1)  # data has unequal variance:
 Nrec_out <- Pots1[complete.cases(Pots1$Nrecovery),] #set up a subset removing the missing data only from column Nrecovery
 View(Nrec_out)
 leveneTest(Nrecovery ~ Treatment*Soil, data=Nrec_out)  # 6.39e-12; results are the same as for the whole dataset  
-# Mod4 ANOVA model - did not work ##S-W p value <0.005; Data is considered non-normal and needs to be transformed
-Mod4 <- aov(Nrecovery~Treatment*Soil, data=Pots1)
-anova(Mod4)
-summary(Mod4)
-shapiro.test(resid(Mod4)) #2.046e-06
-plot(fitted(Mod4),resid(Mod4),pch=16) #looks relatively normal
-qqnorm(resid(Mod4)) #long tails
-qqline(resid(Mod4))
-Mod4_tidy <- tidy(Mod4)
-Mod4_tidy
-View(Mod4_tidy) #tidu output of the summary stas
-Mod4sum_sq_reg <- Mod4_tidy$sumsq[1] #use summary stats to determine the sum squares regression
-Mod4sum_sq_resid <- Mod4_tidy$sumsq[2]  # use the summary stats to determine the sum squares residuals
-Mod4sum_sq_reg / (Mod4sum_sq_reg + Mod4sum_sq_resid) #calculate the R squared value: 0.753
-#trying out log transformation in aov - S-W result is much worse than for normal aov
-Mod4_aovlog <- aov(log(Nrecovery)~Treatment*Soil, data=Pots1)
-shapiro.test(resid(Mod4_aovlog)) # highly uneuqla variance p=1.297e-14
-leveneTest(log(Nrecovery) ~ Treatment*Soil, data=Nrec_out) #log transformation improved variance: p=1.507e-06
-leveneTest(log10(Nrecovery) ~ Treatment*Soil, data=Nrec_out) # variances improved compared to raw data p=1.507e-06
-leveneTest(sqrt(Nrecovery) ~ Treatment*Soil, data=Nrec_out) # not much improvement on variances p=8.751e-12
-summary((Mod4_aovlog))
-# linear model - did not work ##S-W p value <0.005; Data is considered non-normal and needs to be transformed
-Mod4a <- lm(Nrecovery~Soil*Treatment, data=Nrec)
-summary(Mod4a)$adj.r.squared # check adjusted R squared value: 0.682
-anova(Mod4a)
-summary(Mod4a)
-shapiro.test(resid(Mod4a)) # p=2.046e-06
-plot(fitted(Mod4a),resid(Mod4a),pch=16) #looks relatively normal
-qqnorm(resid(Mod4a)) #long tails
-qqline(resid(Mod4a))
-# lmer model - did not work  ##S-W p value <0.005; Data is considered non-normal and needs to be transformed
-Mod4b<-lmer(Nrecovery~Treatment*Soil+(1|Soil),data=Pots1) #model fitting process didn't reach stable solution
-# estimated parameter values may not be reliable
+# Models (aov and lm dmodels have been removed)
+# lmer model - model fitting process didn't reach stable solution, estimated parameter values may not be reliable
+Mod4b<-lmer(Nrecovery~Treatment*Soil+(1|Soil),data=Pots1) 
 anova(Mod4b)
 summary(Mod4b)
 shapiro.test(resid(Mod4b))  # p=2.046e-06
@@ -688,10 +596,7 @@ plot(fitted(Mod4g),resid(Mod4g),pch=16) # slight cluster to left
 qqnorm(resid(Mod4g)) # moderate tails
 qqline(resid(Mod4g))
 
-##since the S-W values for all models show non-normally distributed data, look at other options:
-   #Shapiro-Wilk values for the various models showed Mod4 to have the most normal data
-   #Levene test showed Mod4c&d to have the most equal variances of all the models, but still unequal p=1.507e-06
-   #AIC and BIC values - this indicated that Mod4d (lmer with log10 transform) was the best fit
+#AIC and BIC values - this indicated that Mod4d (lmer with log10 transform) was the best fit
 # Create a list of the models
 Nrec_modlist <- list(Mod4c, Mod4d, Mod4e, Mod4f, Mod4g)
 AIC_Nrec <- sapply(Nrec_modlist, AIC)
@@ -705,7 +610,6 @@ print(NrecAB)
 #3 Mod4e 239.5915 320.0554
 #4 Mod4f 701.5753 782.0392
 #5 Mod4g 658.4141 738.8780
-
 
 # R squared values - these were check for Mod4c=0.63, Mod4d=0.59, Mod4e=0.73, Mod4f=, Mod4g=0.76
 # considering that none of the models fit very well, Mod4g was chosen as it had decent AIC, high rsq and 
@@ -747,9 +651,8 @@ Nrec_subVar <- Mod4em_cld %>%
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Nrec50kg, file="Pots1_Nrec_50kg_ha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
-Nrec_charCon <- c("Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", 
-                   "CanolaMeal10thaTSP", "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", 
-                   "Willow10tha", "Willow10thaTSP")
+Nrec_charCon <- c("Control2","CanolaHull10tha", "CanolaHull10thaTSP", "CanolaMeal10tha", "CanolaMeal10thaTSP", 
+                  "Manure10tha", "Manure10thaTSP","TripleSuperPhosphate", "Willow10tha", "Willow10thaTSP")
 Nrec_subCon <- Mod4em_cld %>%
   filter(Treatment %in% Nrec_charCon)
 (Nrec10tha <- ggplot(Nrec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
@@ -777,16 +680,7 @@ Nrec_subCon <- Mod4em_cld %>%
 ggsave(Nrec10tha, file="Pots1_Nrec_10t_ha.jpg", width=12, height=8, dpi=150)
 
 
-
-
-
-#### Total P ####  No need to analyze - only used for P uptake & P recovery
-
-
-
-
-#### P uptake ####
-## Issues with identical SE values - investigate
+## P uptake ----
 Pup_Mean <- summary_by(Puptake~Soil+Treatment, data=Pots1, FUN=mean) 
 Pup_Mean <- as.numeric(Pup_Mean$Puptake)
 Pup_skew <- skewness(Pup_Mean,na.rm=TRUE)
@@ -796,32 +690,7 @@ cat("Kurtosis:", Pup_kur, "\n") ## data has low/moderate kurtosis @ -1.115
 shapiro.test(Pots1$Puptake)  # p=0.001144
 hist(Pots1$Puptake) # left skewed
 leveneTest(Puptake ~ Treatment*Soil, data=Pots1) # variances are equal; p=0.1601
-#Mod5 - P uptake
-Mod5 <- lm(Puptake~Soil*Treatment,data=Pots1) 
-anova(Mod5)
-summary(Mod5)
-shapiro.test(resid(Mod5))  ##S-W p value=0.1046; Data is considered normal
-plot(fitted(Mod4),resid(Mod4),pch=16) # slightly clustered to the left
-qqnorm(resid(Mod4)) #long tails
-qqline(resid(Mod4))
-rsq(Mod5) # 0.9428224
-## Run aov to compare
-Mod5a <- aov(Puptake~Treatment*Soil, data=Pots1)
-anova(Mod5a)
-summary(Mod5a)
-shapiro.test(resid(Mod5a)) #residuals are normally distributed: p=0.6237
-plot(fitted(Mod5a),resid(Mod5a),pch=16) # residuals normal distribution
-qqnorm(resid(Mod5a)) 
-qqline(resid(Mod5a))
-Mod5a_tidy <- tidy(Mod5a) 
-Mod5asum_sq_reg <- Mod5a_tidy$sumsq[1] 
-Mod5asum_sq_resid <- Mod5a_tidy$sumsq[2]  
-Mod5asum_sq_reg / (Mod5asum_sq_reg + Mod5asum_sq_resid) # 0.9950879
-# robust anova
-Mod5b <- lmrob(Puptake ~ Treatment * Soil, data=Pots1, method="MM")
-Mod5b_N <- length(residuals(Mod5b))
-Mod5b_P <- length(coefficients(Mod5b)) - 1  # Exclude the intercept
-(adj_rsq <- 1 - (1 - summary(Mod5b)$r.squared) * ((Mod5b_N - 1) / (Mod5b_N - Mod5b_P - 1))) # r=0.929
+#Mod5 (aov, robust aov and lm removed)
 # Mod5c glmm
 Mod5c <- glmmTMB(Puptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
 glmmTMB:::Anova.glmmTMB(Mod5c, type="III")
@@ -832,28 +701,14 @@ plot(fitted(Mod5c),resid(Mod5c),pch=16) # normal
 qqnorm(resid(Mod5c)) # almost no tails
 qqline(resid(Mod5c))
 
-#AIC and BIC values - the models were equal
-Pup_modlist <- list(Mod5c)
-AIC_values <- sapply(Pup_modlist, AIC)
-BIC_values <- sapply(Pup_modlist, BIC)
-PupAB <- data.frame(Model=c("Mod5c"), AIC_values, BIC_values)
-print(PupAB)
-#Model AIC_values BIC_values
-#1  Mod5   527.3229   613.2141
-#2  Mod5a   527.3229   613.2141
-#3  Mod5c   529.3229   617.9848
-## rsq values: Mod5=0.94 , Mod5a= 0.99, Mod5b=0.93, Mod5c= .094
-
-#Mod5c chosen as it is a mixed model with high rsq
+# emmeans
 Mod5em <- emmeans(Mod5c,~Treatment|Soil)
 Mod5em_cld <- cld(Mod5em, Letters=trimws(letters), reversed=TRUE, by="Soil", type="response")
 View(Mod5em_cld)
 write_xlsx(Mod5em_cld, path="Pots1_Puptake.xlsx")
 
 ## Visualizations
-Pup_trtVar <- c("Control1", "Control2","CanolaMeal50kgha","CanolaHull50kgha","Manure50kgha","Willow50kgha",
-                "TripleSuperPhosphate")
-Pup_subVar <- Mod5em_cld %>% filter(Treatment %in% Pup_trtVar)
+Pup_subVar <- Mod5em_cld %>% filter(Treatment %in% TrtVar)
 (Pup50kgha <- ggplot(Pup_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
   geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                    pattern_density=0.05, pattern_spacing=0.01)+
@@ -906,43 +761,21 @@ ggsave(Pup10tha, file="Pots1_Puptake_10t_ha.jpg", width=12, height=8, dpi=150)
                               labels = c('A', 'B'), label_size = 30, label_x = c(0.07,0.08)))  
 ggsave(Pots1Puptake_plot, file="Pots1_Puptake.jpg", height=16, width=12, dpi=150)
 
-#### P Recovery ####
+## P Recovery ----
 Prec_Mean <- summary_by(Precovery~Soil+Treatment, data=Pots1, FUN=mean) 
 Prec_Mean <- as.numeric(Prec_Mean$Precovery)
 Prec_skew <- skewness(Prec_Mean,na.rm=TRUE)
 Prec_kur <- kurtosis(Prec_Mean,na.rm=TRUE)
-cat("Skewness:", Prec_skew, "\n") ## data is mildly skewed @ 1.12
-cat("Kurtosis:", Prec_kur, "\n") ## data has low kurtosis @ 1.0798
+cat("Skewness:", Prec_skew, "\n") ## 1.12
+cat("Kurtosis:", Prec_kur, "\n") ##  1.0798
 hist(Pots1$Precovery) # moderately left skewed
 leveneTest(Precovery ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 1.631e-06
-## cannot log or sqrt transform as there are negative values in the dataset
-#cannot use glmer with gamma distribution due to negative values
-###Precovery has missing values for Control1 & Control2 - the subset removes these values
+    ## cannot log or sqrt transform as there are negative values in the dataset
+    #cannot use glmer with gamma distribution due to negative values
+## Precovery has missing values for Control1 & Control2 - the subset removes these values
 Prec <- Pots1[complete.cases(Pots1$Precovery),] #set up a subset removing the missing data only from column Precovery
 View(Prec)
-#Mod6 - ANOVA model - did not work Data is considered non-normal and needs to be transformed
-Mod6 <- aov(Precovery~Treatment*Soil, data=Pots1)
-anova(Mod6)
-summary(Mod6)
-shapiro.test(resid(Mod6)) #data is not normally distributed: p=3.472e-08
-Mod6_tidy <- tidy(Mod6) #checking R squared value
-Mod6_tidy
-View(Mod6_tidy) #tidu output of the summary stas
-Mod6sum_sq_reg <- Mod6_tidy$sumsq[1] #use summary stats to deteremine the sum squares regression
-Mod6sum_sq_resid <- Mod6_tidy$sumsq[2]  # use the summary stats to determine the sum squares residuals
-Mod6sum_sq_reg / (Mod6sum_sq_reg + Mod6sum_sq_resid) #calculate the R squared value: 0.9196
-plot(fitted(Mod6),resid(Mod6),pch=16) # moderately normal distribution
-qqnorm(resid(Mod6)) # tails severely off the line
-qqline(resid(Mod6))
-# Mod6a simple linear model
-Mod6a <- lm(Precovery~Soil*Treatment,data=Prec)
-summary(Mod6a)$adj.r.squared # check adjusted R squared value: 0.829
-anova(Mod6a)
-summary(Mod6a)
-shapiro.test(resid(Mod6a)) #data is not normally distributed: 3.472e-08
-plot(fitted(Mod6a),resid(Mod6a),pch=16) # left skewed but even distribution along the centre
-qqnorm(resid(Mod6a)) # heavy tails
-qqline(resid(Mod6a))
+#Mod6 (aov & lm removed)
 #Mod6b - applying Yeo-Johnson transformation
 Prec_YJ <- yjPower(Pots1$Precovery, 0.5,jacobian.adjusted=TRUE)
 Mod6b <- lmer(Prec_YJ ~ Treatment*Soil + (1|Soil), data=Pots1) # model failed to converge
@@ -954,7 +787,7 @@ shapiro.test(resid(Mod6b)) #data is not normally distributed: 3.853e-08
 plot(fitted(Mod6b),resid(Mod6b),pch=16) # moderately clustered in the middel fo the graph and slightly towards the top
 qqnorm(resid(Mod6b)) # heavy tails
 qqline(resid(Mod6b))
-# Mod 6c lmer model
+# Mod 6c
 Mod6c <- lme(Precovery ~ Treatment*Soil, random=~1|Soil, data=Prec)
 summary(Mod6c)
 anova(Mod6c)
@@ -964,7 +797,7 @@ qqnorm(resid(Mod6c)) # heavy  tails
 qqline(resid(Mod6c))
 rsq(Mod6c) # 0.88
 plot(ranef(Mod6c))
-# Mod6d glmm
+# Mod6d
 Mod6d <- glmmTMB(Precovery~Treatment*Soil+(1|Soil), data=Prec, family=gaussian(), na.action=na.exclude)
 glmmTMB:::Anova.glmmTMB(Mod6d, type="III")
 summary(Mod6d)
@@ -981,18 +814,15 @@ BIC_values <- sapply(Prec_modlist, BIC)
 PrecAB <- data.frame(Model=c("Mod6b","Mod6c", "Mod6d"), AIC_values, BIC_values)
 print(PrecAB)
 #Model AIC_values BIC_values
-#1 Mod6b   628.1842   701.1290
-#2 Mod6c   627.4533   691.9672
+#1 Mod6b   628.1842   701.1290 - df 122
+#2 Mod6c   627.4533   691.9672 - df 1 & 0 for soils
 #3 Mod6d   750.9711   823.9159
 
 #rsq values: Mod6b=0.84, Mod6c=0.88, Mod6d=0.87 (Mod6b failed to converge)
 
 #run emmeans on Mod6d - issues with Mods 6b & 6c
-Mod6Em<- emmeans(Mod6d,~Treatment|Soil, subset=(Prec$Precovery), type="response")
-Mod6Em_cld <- cld(Mod6Em, Letters=trimws(letters), reversed=TRUE, by="Soil") 
-#Mod6c resulted in Se values of 0 with df=0 and NaN for the upper and lower CIL
-View(Mod6Em_cld)
-print(Mod6Em_cld)
+(Mod6Em<- emmeans(Mod6d,~Treatment|Soil, subset=(Prec$Precovery), type="response"))
+(Mod6Em_cld <- cld(Mod6Em, Letters=trimws(letters), reversed=TRUE, by="Soil"))
 write_xlsx(Mod6Em_cld, path="Pots1_Precovery.xlsx")
 
 ##Developing visualizations
@@ -1055,9 +885,8 @@ ggsave(Prec10tha, file="Pots1_Prec_10t_ha.jpg", width=12, height=8, dpi=150)
 ggsave(Pots1Precovery_plot, file="Pots1_P recovery.jpg", height=16, width=12, dpi=150)
 
 
-
-####  Nutrient use efficiency  ####
-## Nitrogen
+## Nutrient use efficiency ----
+### NUE ----
 NUE_Mean <- summary_by(NUE~Soil+Treatment, data=Pots1, FUN=mean)
 NUE_Mean <- as.numeric(NUE_Mean$NUE)
 NUE_df <- subset(Pots1, select = c("Soil", "Treatment", "NUE"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
@@ -1084,16 +913,11 @@ View(NUEmod_cld)
 print(NUEmod_cld)
 write.csv(NUEmod_cld, file="Pots1_NUE.csv")
 
-## Phosphorus
+### PUE ----
 PUE_Mean <- summary_by(PUE~Soil+Treatment, data=Pots1, FUN=mean)
 PUE_Mean <- as.numeric(PUE_Mean$PUE)
 PUE_df <- subset(Pots1, select = c("Soil", "Treatment", "PUE"), na.action=function(x) x[, complete.cases(x)], na.rm=FALSE)
-PUE_df$Treatment <- factor(PUE_df$Treatment, levels=Pots1Trt_sub,
-                           labels=c("Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", 
-                                    "Manure 50kg P/ha", "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", 
-                                    "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
-                                    "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer"))
-levels(PUE_df$Treatment)
+PUE_df$Treatment <- factor(PUE_df$Treatment, levels=Pots1Trt_sub, labels=PotsLabel_Sub)
 print(PUE_df)
 PUE_skew <- skewness(PUE_Mean,na.rm=TRUE)
 PUE_kur <- kurtosis(PUE_Mean,na.rm=TRUE)
@@ -1121,82 +945,52 @@ print(PUEmod_cld)
 write.csv(PUEmod_cld, file="Pots1_PUE.csv")
 
 
-####   NO3   ####
+# SOIL ANALYSIS ----
+## Soil NO3 ----
 NO3_Mean <- summary_by(NO3~Soil+Treatment, data=Pots1, FUN=mean) 
 NO3_Mean <- as.numeric(NO3_Mean$NO3)
 NO3_skew <- skewness(NO3_Mean,na.rm=TRUE)
 NO3_kur <- kurtosis(NO3_Mean,na.rm=TRUE)
-cat("Skewness:", NO3_skew, "\n") ## data is mildly skewed @ 1.29
-cat("Kurtosis:", NO3_kur, "\n") ## data has very low kurtosis @ 0.2929
+cat("Skewness:", NO3_skew, "\n") ## 1.29
+cat("Kurtosis:", NO3_kur, "\n") ## 0.2929
+shapiro.test(Pots1$NO3) #1.02e-13
 hist(Pots1$NO3) #  left skewed
-leveneTest(NO3 ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 2.878e-11
-# Transform data
+leveneTest(NO3 ~ Treatment*Soil, data=Pots1)  # 2.878e-11
+# Transform data - log showed best transformation
+shapiro.test(log(Pots1$NO3)) # 3.3e-06
+shapiro.test(log10(Pots1$NO3)) # 3.3e-06
+shapiro.test(sqrt(Pots1$NO3)) # 2.6e-10
 leveneTest(log(NO3) ~ Treatment*Soil, data=Pots1)  # much improved variance: 0.003112
 leveneTest(log10(NO3) ~ Treatment*Soil, data=Pots1)  #  much improved variance: 0.003112
 leveneTest(sqrt(NO3) ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 6.088e-07
-hist((log(Pots1$NO3)))
-hist((log10(Pots1$NO3)))
-hist((sqrt(Pots1$NO3)))
-#Mod 7
-Mod7 <- aov(log10(NO3)~Treatment*Soil, data=Pots1)
-anova(Mod7)
-summary(Mod7)
-shapiro.test(resid(Mod7)) #not normally distributed: 0.04706
-plot(fitted(Mod7),resid(Mod7),pch=16) #slightly clustered to the left
-qqnorm(resid(Mod7)) # slim tails
-qqline(resid(Mod7))
-Mod7_tidy <- tidy(Mod7) # checking R squared value
-Mod7_tidy
-View(Mod7_tidy) 
-Mod7sum_sq_reg <- Mod7_tidy$sumsq[1] 
-Mod7sum_sq_resid <- Mod7_tidy$sumsq[2]  
-Mod7sum_sq_reg / (Mod7sum_sq_reg + Mod7sum_sq_resid) # 0.9784
-# Mod7a lm
-Mod7a <- lm(log10(NO3)~Treatment*Soil,data=Pots1)
-anova(Mod7a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
-summary(Mod7a)
-summary(Mod7a)$adj.r.squared  # 0.6804
-shapiro.test(resid(Mod7a)) # p=0.04706
-plot(fitted(Mod7a),resid(Mod7a),pch=16) # somewhat clustered to the left
-qqnorm(resid(Mod7a)) # medium tails
-qqline(resid(Mod7a))
+hist((log(Pots1$NO3))) # left skewed
+hist((log10(Pots1$NO3))) # left skewed
+hist((sqrt(Pots1$NO3))) # left skewed
+#Mod 7 - aov & lm models removed
 # Mod7b glmm
-Mod7b <- glmmTMB(NO3~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+Mod7b <- glmmTMB(log(NO3)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
 glmmTMB:::Anova.glmmTMB(Mod7b, type="III")
 summary(Mod7b)
-performance::r2(Mod7b) # 0.767
-shapiro.test(resid(Mod7b)) # p= 1.408e-09
-plot(fitted(Mod7b),resid(Mod7b),pch=16) # clustered to left, equal around 0
+performance::r2(Mod7b) # NA - singularity issue
+shapiro.test(resid(Mod7b)) # p= 0.047
+plot(fitted(Mod7b),resid(Mod7b),pch=16) # clustered to left, slightly above zero
 qqnorm(resid(Mod7b)) # heavy  tails
 qqline(resid(Mod7b))
 
-#AIC and BIC values - this indicated that Mod7 was the best fit
-NO3_modlist <- list(Mod7, Mod7a, Mod7b)
-AIC_values <- sapply(NO3_modlist, AIC)
-BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod7", "Mod7a", "Mod7b"), AIC_values, BIC_values)
-print(NO3AB)
-#  Model AIC_values BIC_values
-#1  Mod7  -85.68761  -1.972715
-#2 Mod7a  -85.68761  -1.972715
-#3 Mod7b  575.15162 661.566995
-
-#run emmeans on Mod7b - aov and lm doesn't work
-Mod7em<- emmeans(Mod7b,~Treatment|Soil, subset=(Pots1$NO3), type="response")
-Mod7em_cld <- cld(Mod7em, Letters=trimws(letters), reversed=TRUE, by="Soil") 
-View(Mod7em_cld)
-write.csv(Mod7em_cld, file="Pots1_NO3.csv")
+#run emmeans on Mod7b
+(Mod7em<- emmeans(Mod7b,~Treatment|Soil, subset=(Pots1$NO3), type="response"))
+(Mod7em_cld <- cld(Mod7em, Letters=trimws(letters), reversed=TRUE, by="Soil"))
+Mod7em_cld <- Mod7em_cld %>% dplyr::rename(emmean="response")
+write_xlsx(Mod7em_cld, path="Pots1_NO3.csv")
 
 
-
-
-####   NH4    ####
+## Soil NH4 ----
 NH4_Mean <- summary_by(NH4~Soil+Treatment, data=Pots1, FUN=mean) 
 NH4_Mean <- as.numeric(NH4_Mean$NH4)
 NH4_skew <- skewness(NH4_Mean,na.rm=TRUE)
 NH4_kur <- kurtosis(NH4_Mean,na.rm=TRUE)
-cat("Skewness:", NH4_skew, "\n") ## data is mildly skewed @ 0.8415
-cat("Kurtosis:", NH4_kur, "\n") ## data has low kurtosis @ 0.8102
+cat("Skewness:", NH4_skew, "\n") ## 0.8415
+cat("Kurtosis:", NH4_kur, "\n") ## 0.8102
 shapiro.test(Pots1$NH4) # p=3.14e-05
 hist(Pots1$NH4) #  left skewed
 leveneTest(NH4 ~ Treatment*Soil, data=Pots1)  # data has unequal variance: 2.37e-07
@@ -1210,58 +1004,28 @@ shapiro.test(sqrt(Pots1$NH4)) # p=0.01667 data normally distributed
 hist((log(Pots1$NH4)))
 hist((log10(Pots1$NH4)))
 hist((sqrt(Pots1$NH4)))
-# Mod 8
-Mod8 <- aov(sqrt(NH4)~Treatment*Soil, data=Pots1)
-anova(Mod8)
-summary(Mod8)
-shapiro.test(resid(Mod8)) # p=0.002862
-plot(fitted(Mod8),resid(Mod8),pch=16) # looks normal
-qqnorm(resid(Mod8)) # medium tails
-qqline(resid(Mod8))
-Mod8_tidy <- tidy(Mod8) # checking R squared value
-Mod8sum_sq_reg <- Mod8_tidy$sumsq[1] 
-Mod8sum_sq_resid <- Mod8_tidy$sumsq[2]  
-Mod8sum_sq_reg / (Mod8sum_sq_reg + Mod8sum_sq_resid) # 0.997
-# Mod8a lm
-Mod8a <- lm(sqrt(NH4)~Treatment*Soil,data=Pots1)
-anova(Mod8a) #note that residuals=error in summary table, and that total SS is not printed (but can be calculated)
-summary(Mod8a)
-summary(Mod8a)$adj.r.squared  # 0.8599
-shapiro.test(resid(Mod8a)) # p=0.002862
-plot(fitted(Mod8a),resid(Mod8a),pch=16) # looks normal, starting to cluster in vertical lines
-qqnorm(resid(Mod8a)) # medium tails
-qqline(resid(Mod8a))
+# Mod 8 - aov & lm removed
 # Mod8b glmm
-Mod8b <- glmmTMB(NH4~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+Mod8b <- glmmTMB(sqrt(NH4)~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
 glmmTMB:::Anova.glmmTMB(Mod8b, type="III")
 summary(Mod8b)
-performance::r2(Mod8b) # 0.864
-shapiro.test(resid(Mod8b)) # p= 1.249e-06
+performance::r2(Mod8b) # NA singulariity issue
+shapiro.test(resid(Mod8b)) # p= 0.00286
 plot(fitted(Mod8b),resid(Mod8b),pch=16) # clustered to left, equal around 0
-qqnorm(resid(Mod8b)) # moderate-heavy  tails
+qqnorm(resid(Mod8b)) # moderate  tails
 qqline(resid(Mod8b))
-
-#AIC and BIC values - this indicated that Mod8 was the best fit
-NO3_modlist <- list(Mod8, Mod8a, Mod8b)
-AIC_values <- sapply(NO3_modlist, AIC)
-BIC_values <- sapply(NO3_modlist, BIC)
-NO3AB <- data.frame(Model=c("Mod8", "Mod8a", "Mod8b"), AIC_values, BIC_values)
-print(NO3AB)
-#  Model AIC_values BIC_values
-#1  Mod8    39.4422   123.1571
-#2  Mod8a   39.4422   123.1571
-#3  Mod8b   473.6601  560.0755
 
 #run emmeans on Mod8b - aov and lm shouldn't be used
 Mod8em<- emmeans(Mod8b,~Treatment|Soil, subset=(Pots1$NH4), type="response")
 Mod8em_cld <- cld(Mod8em, Letters=trimws(letters), reversed=TRUE, by="Soil") 
-View(Mod8em_cld)
+Mod7em_cld <- Mod7em_cld %>% dplyr::rename(emmean="response")
+
 write.csv(Mod8em_cld, file="Pots1_NH4.csv")
 
 
 
 
-#### PO4  ####
+## Soil PO4 ----
 PO4_Mean <- summary_by(PO4~Soil+Treatment, data=Pots1, FUN=mean) 
 PO4_Mean <- as.numeric(PO4_Mean$PO4)
 PO4_skew <- skewness(PO4_Mean,na.rm=TRUE)
@@ -1393,7 +1157,7 @@ write.csv(Mod9cld, file="Pots1_PO4.csv")
 
 
 
-####   Resin P    ####
+## Soil Resin P ----
 ResinP_Mean <- summary_by(ResinP~Soil+Treatment, data=Pots1, FUN=mean) 
 ResinP_Mean <- as.numeric(ResinP_Mean$ResinP)
 ResinP_skew <- skewness(ResinP_Mean,na.rm=TRUE)
@@ -1464,7 +1228,7 @@ write.csv(Mod10em_cld, file="Pots1_ResinP.csv")
 
 
 
-####   WaterSolP    ####
+## Soil WaterSolP ----
 WaterSolP_Mean <- summary_by(WaterSolP~Soil+Treatment, data=Pots1, FUN=mean) 
 WaterSolP_Mean <- as.numeric(WaterSolP_Mean$WaterSolP)
 WaterSolP_skew <- skewness(WaterSolP_Mean,na.rm=TRUE)
@@ -1534,7 +1298,8 @@ write.csv(Mod11em_cld, file="Pots1_WaterSolP.csv")
 
 
 
-####   Totalp2    ####
+## Soil Total P ----
+# DO NOT NEED TO REPORT ON
 TotalP2_Mean <- summary_by(TotalP2~Soil+Treatment, data=Pots1, FUN=mean) 
 TotalP2_Mean <- as.numeric(TotalP2_Mean$TotalP2)
 TotalP2_skew <- skewness(TotalP2_Mean,na.rm=TRUE)
@@ -1606,7 +1371,7 @@ write.csv(Mod12em_cld, file="Pots1_TotalP2.csv")
 
 
 
-####   pH   ####
+## Soil pH ----
 pH_Mean <- summary_by(pH~Soil+Treatment, data=Pots1, FUN=mean) 
 pH_Mean <- as.numeric(pH_Mean$pH)
 pH_skew <- skewness(pH_Mean,na.rm=TRUE)
@@ -1705,7 +1470,7 @@ write.csv(Mod13em_cld, file="Pots1_pH.csv")
 
 
 
-####  EC   ####
+## Soil EC ----
 EC_Mean <- summary_by(EC~Soil+Treatment, data=Pots1, FUN=mean) 
 EC_Mean <- as.numeric(EC_Mean$EC)
 EC_skew <- skewness(EC_Mean,na.rm=TRUE)
@@ -1776,7 +1541,7 @@ write.csv(Mod14em_cld, file="Pots1_EC.csv")
 
 
 
-####   OC   ####
+## Soil Organic carbon ----
 OC_Mean <- summary_by(OC~Soil+Treatment, data=Pots1, FUN=mean) 
 OC_Mean <- as.numeric(OC_Mean$OC)
 OC_skew <- skewness(OC_Mean,na.rm=TRUE)
@@ -1894,7 +1659,7 @@ write.csv(Mod15em_cld, file="Pots1_OC.csv")
 
 
 
-####   Water holding capacity  ####
+# WATER HOLDING CAPACITY ----
 # no reps, couldn't fit to a model
 WHC <- data.frame(
   Soil=factor(rep(c("Haverhill", "Oxbow"), each=5)),
