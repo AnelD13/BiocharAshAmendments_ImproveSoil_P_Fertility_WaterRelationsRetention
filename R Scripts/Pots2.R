@@ -1,7 +1,7 @@
 # Loading data in to R & Summaries ----
-Pots2<-read.csv("Pots2.csv", fileEncoding="UTF-8-BOM")
+Pots2<-read.csv("Data/Pots2.csv", fileEncoding="UTF-8-BOM")
 View(Pots2)
-Pots2Raw<-read.csv("Pots2raw.csv", fileEncoding="UTF-8-BOM")
+Pots2Raw<-read.csv("Data/Pots2raw.csv", fileEncoding="UTF-8-BOM")
 
 ## Loading libraries ----
 library(lme4)

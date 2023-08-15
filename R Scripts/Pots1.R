@@ -1,6 +1,6 @@
 # Loading data in to R & Summaries ----
-Pots1<-read.csv("Pots1.csv", fileEncoding="UTF-8-BOM")
-PotsRaw<-read.csv("Pots1raw.csv", fileEncoding="UTF-8-BOM") # used for checking outliers
+Pots1<-read.csv("Data/Pots1.csv", fileEncoding="UTF-8-BOM")
+PotsRaw<-read.csv("Data/Pots1raw.csv", fileEncoding="UTF-8-BOM") # used for checking outliers
 
 ## Loading libraries ----
 library(summarytools) # more concise summaries 

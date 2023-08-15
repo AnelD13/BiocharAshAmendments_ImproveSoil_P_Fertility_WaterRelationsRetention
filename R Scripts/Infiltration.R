@@ -1,9 +1,9 @@
 # Loading data in to R& Summaries ----
-  Infil<-read.csv("Infiltration.csv", fileEncoding="UTF-8-BOM") # full dataset with 8-10 observations per plot
-  Infiltrationraw<-read.csv("Infiltrationraw.csv", fileEncoding="UTF-8-BOM")
-  Infilsub <- read.csv("Infil.csv", fileEncoding="UTF-8-BOM") # #combined data with 24 observations total
-  Infilsubraw <- read.csv("Infilraw.csv", fileEncoding="UTF-8-BOM")
-  Field<-read.csv("Field.csv", fileEncoding="UTF-8-BOM")
+  Infil<-read.csv("Data/Infiltration.csv", fileEncoding="UTF-8-BOM") # full dataset with 8-10 observations per plot
+  Infiltrationraw<-read.csv("Data/Infiltrationraw.csv", fileEncoding="UTF-8-BOM")
+  Infilsub <- read.csv("Data/Infil.csv", fileEncoding="UTF-8-BOM") # #combined data with 24 observations total
+  Infilsubraw <- read.csv("Data/Infilraw.csv", fileEncoding="UTF-8-BOM")
+  Field<-read.csv("Data/Field.csv", fileEncoding="UTF-8-BOM")
 
   ## Loading libraries ----
   library(summarytools)

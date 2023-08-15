@@ -1,7 +1,7 @@
 # Loading data in to R & Summaries ----
-Rows<-read.csv("Rows.csv", fileEncoding="UTF-8-BOM")
+Rows<-read.csv("Data/Rows.csv", fileEncoding="UTF-8-BOM")
 View(Rows)
-Rowsraw<-read.csv("Rowsraw.csv", fileEncoding="UTF-8-BOM")
+Rowsraw<-read.csv("Data/Rowsraw.csv", fileEncoding="UTF-8-BOM")
 
 ## Loading libraries ----
 library(lme4)

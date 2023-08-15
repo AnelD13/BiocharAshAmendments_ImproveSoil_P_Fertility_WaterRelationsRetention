@@ -1,8 +1,8 @@
 # Loading data in to R  & Summaries ----
-  Field<-read.csv("Field.csv", fileEncoding="UTF-8-BOM") 
+  Field<-read.csv("Data/Field.csv", fileEncoding="UTF-8-BOM") 
   View(Field)
   #Fieldsplitraw<-read.csv("FieldSplitRaw.csv", fileEncoding="UTF-8-BOM") # to combine residuals if necessary
-  Fieldraw <- read.csv("Fieldraw.csv", fileEncoding="UTF-8-BOM") # includes split data
+  Fieldraw <- read.csv("Data/Fieldraw.csv", fileEncoding="UTF-8-BOM") # includes split data
   
 ## Loading libraries ----
   library(summarytools) # get the mean, media, skewness, SD, Min/Max, CV, etc. for a dataset
