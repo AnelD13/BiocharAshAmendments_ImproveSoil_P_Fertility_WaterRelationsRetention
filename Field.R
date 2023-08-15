@@ -1348,7 +1348,7 @@
     scale_x_discrete(limits=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
                      labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                               "TSP\nFertilizer"))+
-    labs(x = "", y = bquote(bold("Resin P (ug/cm)"))) +
+    labs(x = "", y = bquote(bold("Resin P (µg/cm"^2*~")"))) +
       theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
             legend.title = element_blank(), legend.text=element_text(size=16),
             axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -1660,6 +1660,8 @@
      
 
 # SNOWMELT ----
+Snowmelt_labels <- factor(unique(Field$Treatment), levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
+                             labels=c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP","TSP\nFertilizer"))
 ##  NO3 load    ----
     print(LNO3_stats <- Field_stats(Field, "LNO3"))
           #skewness kurtosis
@@ -1719,7 +1721,9 @@
     #kruskal.test(LNO3 ~ Treatment, data = Field)
     pwpm(ModFieldemLNO3)
     pwpp(ModFieldemLNO3)
-    (LNO3plot <- ggplot(ModFieldemLNO3_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+    (LNO3plot <- ggplot(ModFieldemLNO3_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE))+
+        labs(x="", y=bquote(bold("Resin NO"[3]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
+        theme(axis.title = element_text(size=18), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black")))
     pairs(ModFieldemLNO3)
     comparison.plot(ModFieldemLNO3)
     write_xlsx(ModFieldemLNO3_cld, path ="Field_NO3Load.xlsx")
@@ -1787,12 +1791,14 @@
         #2 ModFieldLNH4b   82.71708   89.38278
         #3 ModFieldLNH4c   88.40730   97.49126
 # emmeans 
-  (ModFieldemLNH4 <- emmeans(ModFieldLNH4c, ~Treatment, alpha=0.1,infer = TRUE))
-  (ModFieldemLNH4_cld <- cld(ModFieldemLNH4, Letters=trimws(letters), reversed=TRUE, type="response"))
-  ModFieldemLNH4_cld <- ModFieldemLNH4_cld %>% rename(emmean="response")
+  (ModFieldemLNH4 <- emmeans(ModFieldLNH4c, ~Treatment, alpha=0.1, infer = TRUE, type="response"))
+  (ModFieldemLNH4_cld <- cld(ModFieldemLNH4, Letters=trimws(letters), reversed=TRUE))
+  ModFieldemLNH4_cld <- ModFieldemLNH4_cld %>% dplyr::rename(emmean="response")
   pwpm(ModFieldemLNH4) # pairwise p-value mean
   pwpp(ModFieldemLNH4) # pairwise p-value plot
-  (LNH4plot <- ggplot(ModFieldemLNH4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+  (LNH4plot <- ggplot(ModFieldemLNH4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE))+
+      labs(x="", y=bquote(bold("Resin NH"[4]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
+      theme(axis.title = element_text(size=18), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black")))
   pairs(ModFieldemLNH4)
   emmip(ModFieldLNH4c, ~Treatment)
   write_xlsx(ModFieldemLNH4_cld, path="Field_LNH4.xlsx")
@@ -1855,18 +1861,22 @@
         ##2 ModFieldResNO3b   63.10933   69.77504
         ##3 ModFieldResNO3c   61.91946   71.00342
   #emmeans 
-    (ModFieldResNO3em <- emmeans(ModFieldResNO3a,~Treatment,infer = TRUE, alpha=0.1))
-    (ModFieldResNO3em_cld <- cld(ModFieldResNO3em, Letters=trimws(letters), type="response") )
-    ModFieldResNO3em_cld <- ModFieldResNO3em_cld %>% rename(emmean="response")
+    (ModFieldResNO3em <- emmeans(ModFieldResNO3a,~Treatment,infer = TRUE, alpha=0.1, type="response"))
+    (ModFieldResNO3em_cld <- cld(ModFieldResNO3em, Letters=trimws(letters)) )
+    ModFieldResNO3em_cld <- ModFieldResNO3em_cld %>% dplyr::rename(emmean="response")
     pwpm(ModFieldResNO3em) # pairwise p-value mean
     pwpp(ModFieldResNO3em) # pairwise p-value plot
-    (ResNO3plot <- ggplot(ModFieldResNO3em_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
+    (ResNO3plot <- ggplot(ModFieldResNO3em_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE))+
+        labs(x="", y=bquote(bold("Resin NO"[3]~" load (µg/cm"^2*~")")))+ scale_x_discrete(labels=Snowmelt_labels)+
+        theme(axis.title = element_text(size=18), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black")))
     pairs(ModFieldResNO3em)
     emmip(ModFieldResNO3em, ~Treatment)
     write_xlsx(ModFieldResNO3em_cld, path="Field_ResinNO3.xlsx")
   
   # To combine multiple ggplots in one use cowplot
-    plot_grid(LNO3plot, LNH4plot, ResNO3plot, labels = c('NO3', 'NH4', 'ResNO3'), label_size = 12)
+    (SnowN_plot <- plot_grid(LNO3plot, LNH4plot, ResNO3plot, labels = c('A', 'B', 'C'), label_size = 22, ncol=3))
+    (SnowN_label <- ggdraw()+draw_plot(SnowN_plot)+ draw_label("Treatment", y=0.02, size=20, fontface="bold"))
+    ggsave("Nitrogen in snowmelt.jpg", height=6, width=12, dpi=150)
     
 
 ##  PO4 load ----
@@ -1890,33 +1900,33 @@
     summary(ModFieldLPO4a)
     print(coef(summary(ModFieldLPO4a))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
     hist(resid(ModFieldLPO4a)) # normal
-    shapiro.test(resid(ModFieldLPO4a))  #0.886
+    shapiro.test(resid(ModFieldLPO4a))  #0.88
     plot(fitted(ModFieldLPO4a),resid(ModFieldLPO4a),pch=16)   # normal
     qqnorm(resid(ModFieldLPO4a)) # small tails
     qqline(resid(ModFieldLPO4a))
-    rsq(ModFieldLPO4a) # 0.297
+    rsq(ModFieldLPO4a) # 0.49
   # ModFieldLPO4b
     ModFieldLPO4b <- lme(log(LPO4)~Treatment,random=~1|Block, data=Field, na.action=na.omit)
     ranef(ModFieldLPO4b)
     Anova(ModFieldLPO4b, type="III")  # no significant differences
     summary(ModFieldLPO4b)
     hist(resid(ModFieldLPO4b))  # normal
-    shapiro.test(resid(ModFieldLPO4b))  #0.886
+    shapiro.test(resid(ModFieldLPO4b))  #0.88
     plot(fitted(ModFieldLPO4b),resid(ModFieldLPO4b),pch=16)    # normal
     qqnorm(resid(ModFieldLPO4b)) # small tails
     qqline(resid(ModFieldLPO4b))
-    rsq(ModFieldLPO4b) # 0.269
+    rsq(ModFieldLPO4b) # 0.41
   # ModFieldLPO4c 
     ModFieldLPO4c <- glmmTMB(log(LPO4)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
     ranef(ModFieldLPO4c)
     glmmTMB:::Anova.glmmTMB(ModFieldLPO4c, type="III") # no significant differences
     summary(ModFieldLPO4c)
     hist(resid(ModFieldLPO4c))  # normal
-    shapiro.test(resid(ModFieldLPO4c))  #0.888
+    shapiro.test(resid(ModFieldLPO4c))  #0.89
     plot(fitted(ModFieldLPO4c),resid(ModFieldLPO4c),pch=16)    # normal
     qqnorm(resid(ModFieldLPO4c)) # small tails
     qqline(resid(ModFieldLPO4c))
-    performance::r2(ModFieldLPO4c) # 0.359
+    performance::r2(ModFieldLPO4c) # 0.61
   # one-way Kruskal-Wallis
     LPO4_subset <- subset(Field, !is.na(LPO4))
     LPO4_subset$LPO4 <- as.numeric(LPO4_subset$LPO4)
@@ -1931,13 +1941,13 @@
     FLPO4AB <- data.frame(Model=c("ModFieldLPO4a", "ModFieldLPO4b", "ModFieldLPO4c"), AIC_values, BIC_values)
     print(FLPO4AB)
             ##Model AIC_values BIC_values
-            ##1 ModFieldLPO4a    91.6988  100.78276
-            ##2 ModFieldLPO4b    91.6988   98.36451
-            ##3 ModFieldLPO4c   100.5754  109.65934
+            ##1 ModFieldLPO4a   73.76205   81.72791
+            #2 ModFieldLPO4b   73.76205   78.87451
+            #3 ModFieldLPO4c   80.92018   88.88604
   # emmeans 
-    (ModFieldLPO4em <- emmeans(ModFieldLPO4a,~Treatment,infer = TRUE, type="response"))
+    (ModFieldLPO4em <- emmeans(ModFieldLPO4c,~Treatment,infer = TRUE, type="response"))
     (ModFieldLPO4em_cld <- cld(ModFieldLPO4em, Letters=trimws(letters), reversed=TRUE))
-    ModFieldLPO4em_cld <- ModFieldLPO4em_cld %>% rename(emmean="response")
+    ModFieldLPO4em_cld <- ModFieldLPO4em_cld %>% dplyr::rename(emmean="response")
     pwpm(ModFieldLPO4em) # pairwise p-value mean
     pwpp(ModFieldLPO4em) # pairwise p-value plot
     (LPO4plot <- ggplot(ModFieldLPO4em_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
@@ -1949,12 +1959,11 @@
     (LPO4plot <- ggplot(ModFieldLPO4em_cld, aes(x=Treatment, y=emmean)) +
         geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
                          pattern_density=0.05, pattern_spacing=0.01, width=0.65)+
-        scale_y_continuous(limits=c(-0.001, 0.03)) +
+        scale_y_continuous(limits=c(-0.001, 0.07)) +
         geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
         geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
         labs(x="", y=bquote(bold("PO"[4] ~ " load in snowmelt runoff (kg/ha)"))) +
-        scale_x_discrete(labels=c("Control1", "Control2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                  "TSP\nFertilizer"))+
+        scale_x_discrete(labels=Snowmelt_labels)+
         theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
               strip.text.x.top=element_text(size=20, face="bold"), strip.background = element_blank(),
               plot.title=element_blank(),
@@ -1996,7 +2005,7 @@
   plot(fitted(ModFieldResPO4a),resid(ModFieldResPO4a),pch=16)  # normal
   qqnorm(resid(ModFieldResPO4a)) # very large tails
   qqline(resid(ModFieldResPO4a))
-  rsq(ModFieldResPO4a) # 0.455
+  rsq(ModFieldResPO4a) # 0.366
   # ModFieldResPO4b
   ModFieldResPO4b <- lme(log(ResinPO4)~Treatment,random=~1|Block, data=Field, na.action=na.omit)
   ranef(ModFieldResPO4b) 
@@ -2007,7 +2016,7 @@
   plot(fitted(ModFieldResPO4b),resid(ModFieldResPO4b),pch=16)  # normal
   qqnorm(resid(ModFieldResPO4b)) # very large tails
   qqline(resid(ModFieldResPO4b))
-  rsq(ModFieldResPO4b) # 0.455
+  rsq(ModFieldResPO4b) # 0.201
   # ModFieldResPO4c
   ModFieldResPO4c <- glmmTMB(log(ResinPO4)~Treatment+(1|Block), data=Field, family=gaussian(), na.action=na.omit)
   ranef(ModFieldResPO4c)
@@ -2018,7 +2027,7 @@
   plot(fitted(ModFieldResPO4c),resid(ModFieldResPO4c),pch=16) # normal
   qqnorm(resid(ModFieldResPO4c)) # very large tails
   qqline(resid(ModFieldResPO4c))
-  performance::r2(ModFieldResPO4c) # 0.499
+  performance::r2(ModFieldResPO4c) # 0.477
   # compare models  
   # Rsq = mod b
   # AIC& BIC
@@ -2028,13 +2037,13 @@
   FResPO4AB <- data.frame(Model=c("ModFieldResPO4a", "ModFieldResPO4b", "ModFieldResPO4c"), AIC_values, BIC_values)
   print(FResPO4AB)
           ##Model AIC_values BIC_values
-          ##1 ModFieldResPO4a    56.75125   66.17568
-          ##2 ModFieldResPO4b    56.75125   63.87423
-          ##3 ModFieldResPO4c    52.34028   61.76471 - highest r2, best AIC/BIC
+          ##1 ModFieldResPO4a   51.76749   59.73335
+          #2 ModFieldResPO4b   51.76749   56.87995
+          #3 ModFieldResPO4c   49.65268   57.61854 - highest r2, best AIC/BIC
   # emmeans 
     (ModFieldemResPO4 <- emmeans(ModFieldResPO4c,~Treatment,infer = TRUE, type="response"))
     (ModFieldemResPO4_cld <- cld(ModFieldemResPO4, Letters=trimws(letters), reversed=TRUE))
-    ModFieldemResPO4_cld <- ModFieldemResPO4_cld %>% rename(emmean="response")
+    ModFieldemResPO4_cld <- ModFieldemResPO4_cld %>% dplyr::rename(emmean="response")
     pwpm(ModFieldemResPO4) # pairwise p-value mean
     pwpp(ModFieldemResPO4) # pairwise p-value plot
     (LPO4plot <- ggplot(ModFieldemResPO4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
@@ -2049,9 +2058,8 @@
         scale_y_continuous(limit = c(-0.01, 0.8)) +
         geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
         geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
-        labs(x="", y="Resin P load in snowmelt runoff (kg/ha)") +
-        scale_x_discrete(labels=c("Control1", "Control2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                  "TSP\nFertilizer"))+
+        labs(x="", y=bquote(bold("Resin PO"[4]~" load (µg/cm"^2*~")")))+
+        scale_x_discrete(labels=Snowmelt_labels)+
         theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
               strip.text.x.top=element_text(size=20, face="bold"), strip.background = element_blank(),
               plot.title=element_blank(),
@@ -2080,8 +2088,7 @@
       geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
       geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
       labs(x="Treatment", y="Nutrient load in snowmelt runoff (kg/ha)") +
-      scale_x_discrete(labels=c("Control1", "Control2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "TSP\nFertilizer"))+
+      scale_x_discrete(labels=Snowmelt_labels)+
       theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
             strip.text.x.top=element_text(size=20, face="bold"), strip.background = element_blank(),
             plot.title=element_blank(),
@@ -2094,7 +2101,7 @@
     ggsave(Snowmeltplot, file="Field_Snowmelt.jpg", width=12, height=8, dpi=150)
 
     # Combined plot using cowplot
-    (Snowmeltplot <- plot_grid(LPO4plot, ResinPO4PPlot, ncol=2, labels = c("A", "B"), label_size = 20, label_x = c(0.2,0.15)))
+    (Snowmeltplot <- plot_grid(LPO4plot, ResinPO4PPlot, ncol=2, labels = c("A", "B"), label_size = 20, label_x = c(0.16,0.15)))
     (SnowPlot_label <- ggdraw()+draw_plot(Snowmeltplot)+ draw_label("Treatment", y=0.02, size=25, fontface="bold"))
     ggsave("Field_Snowmelt.jpg", height=8, width=12, dpi=150)
 
@@ -2338,19 +2345,13 @@
       facet_wrap(~Treatment, nrow=2) +
       scale_fill_gradientn(colors=brewer.pal(9, "BuPu")) +
       labs(x="% N Recovery", y="% P Recovery", fill="Yield\n(kg/ha)") +
-      theme(legend.title=element_text(size=25, face="bold"),
-            legend.key.size=unit(15, "mm"),
+      theme(legend.title=element_text(size=25, face="bold"), legend.key.size=unit(15, "mm"),
             legend.text=element_text(size=20),
-            strip.text=element_text(size=25, face="bold"),
-            strip.placement="outside",
-            strip.background=element_blank(),
-            strip.text.x=element_text(vjust=1),
-            axis.text.x=element_text(size=20),
-            axis.text.y=element_text(size=20),
-            axis.title.x=element_text(size=30, face="bold"),
-            axis.title.y=element_text(size=30, face="bold"),
+            strip.text=element_text(size=30, face="bold"), strip.placement="outside",
+            strip.background=element_blank(), strip.text.x=element_text(vjust=1),
+            axis.text=element_text(size=30), axis.title=element_text(size=35, face="bold"),
             panel.spacing=unit(0.5, "cm")))
-  ggsave(FieldContours, file="Field_YieldContour.jpg", width=15, height=15, dpi=150)
+  ggsave(FieldContours, file="Field_YieldContour.jpg", width=18, height=21, dpi=150)
 
   
   

@@ -26,7 +26,6 @@ library(emmeans)
 library(lsmeans)
 library(e1071)
 library(rsq)
-library(mum)
 library(writexl)
 library(glmmTMB)
 library(corrplot)
@@ -1218,19 +1217,14 @@ View(RowsContour_grid)
     facet_wrap(~Treatment, nrow = 5) +
     scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
     labs(x = "% N Recovery", y = "% P Recovery", fill = "Yield\n(kg/ha)") +
-    theme(legend.title = element_text(size = 25, face = "bold"),
-          legend.key.size = unit(15, "mm"),
-          legend.text = element_text(size = 20),
-          strip.text = element_text(size = 25, face = "bold"),
-          strip.placement = "outside",
-          strip.background = element_blank(),
-          strip.text.x = element_text(vjust = 1),
-          axis.text.x=element_text(size=15),
-          axis.text.y=element_text(size=15),
-          axis.title.x=element_text(size=30, face="bold"),
-          axis.title.y=element_text(size=30, face="bold"),
-          panel.spacing = unit(0.5, "cm")))
-ggsave(RowsContours, file="Rows_YieldContour.jpg", width=20, height=20, dpi=150)
+    theme(legend.title=element_text(size=25, face="bold"), legend.key.size=unit(15, "mm"),
+          legend.text=element_text(size=20),
+          strip.text=element_text(size=30, face="bold"), strip.placement="outside",
+          strip.background=element_blank(), strip.text.x=element_text(vjust=1),
+          axis.text=element_text(size=30), axis.title=element_text(size=35, face="bold"),
+          panel.spacing=unit(0.5, "cm")))
+ggsave(RowsContours, file="Rows_YieldContour.jpg", width=15, height=18, dpi=150)
+
 
 
 

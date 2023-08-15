@@ -2021,11 +2021,11 @@ write.csv(YieldCovHav_dfAll, file="Pots1_Haverhill_YieldCov.csv")
   geom_tile() +
   scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-1.5, 3.7), breaks=seq(-1.5, 3.7, by=1)) +
     #specify colour palette and limits specifies the upper and lower cov values, breaks specify legend details
-  facet_wrap(~ treatment, nrow=4, ncol=3, scales="fixed") + #works better than facet grid to show separate treatments
+  facet_wrap(~ treatment, nrow=3, ncol=4, scales="fixed") + #works better than facet grid to show separate treatments
   geom_text(aes(label=sprintf("%.2f", Covariance), color=ifelse(Covariance > 2, "white", "black")), size=3.5)+ # adds cov values within each block
   scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+ #specify colour of text using if-else statement
   theme(legend.title=element_text(size=18, face="bold"), legend.key.size=unit(12,"mm"),
-        legend.text=element_text(size=18), 
+        legend.text=element_text(size=18),
         strip.text=element_text(size=24, face="bold"), # strip=treatment labels at the top of each panel
         strip.placement="outside", # if not specified, then the label is immediately adjacent
         strip.background=element_blank(), # if not specified then it's grey
@@ -2036,36 +2036,7 @@ write.csv(YieldCovHav_dfAll, file="Pots1_Haverhill_YieldCov.csv")
         axis.text.y.left=element_text(size=15, angle=45, colour = "black", face = "bold"), #place vertical labels only along the left panel
         panel.spacing.x=unit(0.5, "cm"))+ # places a wider space between panels
   labs(x="", y=""))
-ggsave(YieldCovHavHeat, file="Pots1_YieldCovHavHeat.jpg", width=15, height=18, dpi=150)
-
-## Develop PCA for Haverhill Yield
-# this uses the setup from the 'Split and scale data' section above
-#HavYield_PCA <- princomp(YieldCov_Hav, cor=FALSE)
-#HavYield_PCA <- prcomp(HavCovScaleYieldSplit[,], center=TRUE, scale.=TRUE) - issues with data not in a matrix
-#HavYield_PCA <- lapply(YieldCovHav_dfAll, function(x) princomp(x))
-# Extract covariance matrices from each data frame in the list
-#HavYieldCov_matrices <- lapply(YieldCovHav_df3, function(df) {
-#  df_mat <- as.matrix(df[, 3])
-#  dimnames(df_mat) <- list(df$Var1, df$Var2)
-#  return(df_mat)
-#})
-# Perform PCA on each covariance matrix
-#HavYield_PCA_list <- lapply(HavYieldCov_matrices, prcomp, center=TRUE, scale.=TRUE)
-# Get summary information for each PCA
-#HavYield_PCA_Summary <- lapply(HavYield_PCA_list, summary)
-# Get the proportion of variance explained by each PC for each treatment
-#HavYield_PCA_output <- lapply(HavYield_PCA_list, function(pca) {
-#  var_prop <- pca$sdev^2 / sum(pca$sdev^2)
-#  return(var_prop)
-#})
-# Plot PCA scores separately for each treatment
-#ggplot(augment(pca), aes(PC1, PC2, color=Treatment)) +
-#  geom_point() +
-#  facet_wrap(~ Treatment) +
-#  labs(x=paste0("PC1 (", round(summary(pca)$importance[2, 1]*100, 2), "%)"),
-#       y=paste0("PC2 (", round(summary(pca)$importance[2, 2]*100, 2), "%)"),
-#       title="PCA scores for Haverhill soil")
-
+ggsave(YieldCovHavHeat, file="Pots1_YieldCovHavHeat.jpg", width=18, height=12, dpi=150)
 
 
 ######  P uptake  ######
@@ -2119,7 +2090,7 @@ write.csv(UptakeCovHav_dfAll, file="Pots1_Haverhill_UptakeCov.csv")
 (UptakeCovHavHeat <- ggplot(UptakeCovHav_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
-    facet_wrap(~ treatment, nrow=4, ncol=3, scales="fixed") +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=3.5) +
     scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+ 
     theme(legend.title=element_text(size=18, face="bold"), legend.key.size=unit(12,"mm"),
@@ -2134,7 +2105,7 @@ write.csv(UptakeCovHav_dfAll, file="Pots1_Haverhill_UptakeCov.csv")
           axis.text.y.left=element_text(size=15, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(0.5, "cm"))+ 
     labs(x="", y=""))
-ggsave(UptakeCovHavHeat, file="Pots1_UptakeCovHavHeat.jpg", width=15, height=18, dpi=150)
+ggsave(UptakeCovHavHeat, file="Pots1_UptakeCovHavHeat.jpg", width=18, height=12, dpi=150)
 
 ######   P Recovery  #######
 RecoveryCovVar <- c("Precovery", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
@@ -2189,7 +2160,7 @@ write.csv(RecoveryCovHav_dfAll, file="Pots1_Haverhill_RecoveryCov.csv")
 (RecoveryCovHavHeat <- ggplot(RecoveryCovHav_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
-    facet_wrap(~ treatment, nrow=4, ncol=3, scales="fixed") +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=3.5) +
     scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+ 
     theme(legend.title=element_text(size=18, face="bold"), legend.key.size=unit(12,"mm"),
@@ -2204,7 +2175,7 @@ write.csv(RecoveryCovHav_dfAll, file="Pots1_Haverhill_RecoveryCov.csv")
           axis.text.y.left=element_text(size=15, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(0.5, "cm"))+ 
         labs(x="", y=""))
-ggsave(RecoveryCovHavHeat, file="Pots1_RecoveryCovHavHeat.jpg", width=15, height=18, dpi=150)
+ggsave(RecoveryCovHavHeat, file="Pots1_RecoveryCovHavHeat.jpg", width=18, height=12, dpi=150)
 
 
 
@@ -2259,7 +2230,7 @@ write.csv(YieldCovOx_dfAll, file="Pots1_Oxbow_YieldCov.csv")
 (YieldCovOxHeat <- ggplot(YieldCovOx_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlGnBu"), limits=c(-0.9, 2.7), breaks=seq(-0.9, 2.7, by=0.5)) +
-    facet_wrap(~ treatment, nrow=4, ncol=3, scales="fixed") +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=3.5) +
     scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+ 
     theme(legend.title=element_text(size=18, face="bold"), legend.key.size=unit(12,"mm"),
@@ -2274,7 +2245,7 @@ write.csv(YieldCovOx_dfAll, file="Pots1_Oxbow_YieldCov.csv")
           axis.text.y.left=element_text(size=15, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(0.5, "cm"))+ 
     labs(x="", y=""))
-ggsave(YieldCovOxHeat, file="Pots1_YieldCovOxHeat.jpg", width=15, height=18, dpi=150)
+ggsave(YieldCovOxHeat, file="Pots1_YieldCovOxHeat.jpg", width=18, height=12, dpi=150)
 
 
 
@@ -2329,7 +2300,7 @@ write.csv(UptakeCovOx_dfAll, file="Pots1_Oxbow_UptakeCov.csv")
 (UptakeCovOxHeat <- ggplot(UptakeCovOx_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "PuBuGn"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
-    facet_wrap(~ treatment, nrow=4, ncol=3, scales="fixed") +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=3.5) +
     scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+ 
     theme(legend.title=element_text(size=18, face="bold"), legend.key.size=unit(12,"mm"),
@@ -2344,7 +2315,7 @@ write.csv(UptakeCovOx_dfAll, file="Pots1_Oxbow_UptakeCov.csv")
           axis.text.y.left=element_text(size=15, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(0.5, "cm"))+ 
     labs(x="", y=""))
-ggsave(UptakeCovOxHeat, file="Pots1_UptakeCovOxHeat.jpg", width=15, height=18, dpi=150)
+ggsave(UptakeCovOxHeat, file="Pots1_UptakeCovOxHeat.jpg", width=18, height=12, dpi=150)
 
 ######   P Recovery  #######
 RecoveryCovVar <- c("Precovery", "NO3", "NH4", "PO4", "ResinP", "WaterSolP", "TotalP2", "pH", "EC", "OC")
@@ -2399,7 +2370,7 @@ write.csv(RecoveryCovOx_dfAll, file="Pots1_Oxbow_RecoveryCov.csv")
 (RecoveryCovOxHeat <- ggplot(RecoveryCovOx_dfAll, aes(x=Var1, y=variable, fill=Covariance)) +
     geom_tile() +
     scale_fill_gradientn(colors=brewer.pal(9, "YlOrRd"), limits=c(-1.2, 3.7), breaks=seq(-1.2, 3.7, by=0.5)) +
-    facet_wrap(~ treatment, nrow=4, ncol=3, scales="fixed") +
+    facet_wrap(~ treatment, nrow=3, scales="fixed") +
     geom_text(aes(label=sprintf("%.2f", Covariance), color = ifelse(Covariance > 2, "white", "black")), size=3.5) +
     scale_color_manual(values=c("black", "white"), guide=FALSE, labels=NULL)+ 
     theme(legend.title=element_text(size=18, face="bold"), legend.key.size=unit(12,"mm"),
@@ -2414,7 +2385,7 @@ write.csv(RecoveryCovOx_dfAll, file="Pots1_Oxbow_RecoveryCov.csv")
           axis.text.y.left=element_text(size=15, angle=45, colour = "black", face = "bold"),
           panel.spacing.x=unit(0.5, "cm"))+ 
     labs(x="", y=""))
-ggsave(RecoveryCovOxHeat, file="Pots1_RecoveryCovOxHeat.jpg", width=15, height=18, dpi=150)
+ggsave(RecoveryCovOxHeat, file="Pots1_RecoveryCovOxHeat.jpg", width=18, height=12, dpi=150)
 
 
 
@@ -2484,41 +2455,34 @@ View(OxContour_df)
   geom_contour(aes(z=Yield), color='gray30', binwidth=1) + 
   facet_wrap(~Treatment, nrow=4) + # specify by treatment, if rows specified, don't specify columns
   scale_fill_gradientn(colors=brewer.pal(9, "BuPu")) +
-  labs(x="% N Recovery", y="% P Recovery", fill="Yield (g)") +
-  theme(legend.title=element_text(size=25, face="bold"),
-        legend.key.size=unit(15, "mm"),
-        legend.text=element_text(size=20),
-        strip.text=element_text(size=23, face="bold"),
-        strip.placement="outside",
-        strip.background=element_blank(),
-        strip.text.x=element_text(vjust=1),
-        axis.text.x=element_text(size=15),
-        axis.text.y=element_text(size=15),
-        axis.title.x=element_text(size=30, face="bold"),
-        axis.title.y=element_text(size=30, face="bold"),
-        panel.spacing=unit(0.5, "cm")))
-ggsave(HavContours, file="Pots1_YieldContour_Haverhill.jpg", width=15, height=15, dpi=150)
+  labs(x="% N Recovery", y="% P Recovery", fill="Yield (g)", title = "Haverhill") +
+    theme(legend.title=element_text(size=25, face="bold"), legend.key.size=unit(15, "mm"),
+          legend.text=element_text(size=20),
+          strip.text=element_text(size=23, face="bold"), strip.placement="outside",
+          strip.background=element_blank(), strip.text.x=element_text(size=20,vjust=1),
+          axis.text=element_text(size=20, face="bold"), axis.title=element_text(size=25, face="bold", hjust=0.5),
+          panel.spacing=unit(0.5, "cm"),
+          plot.title=element_text(size=25, face="bold", hjust = 0.5)))
+#ggsave(HavContours, file="Pots1_YieldContour_Haverhill.jpg", width=15, height=15, dpi=150)
 
 (OxContours <- ggplot(OxContour_df, aes(x=Nuptake, y=Puptake, z=Yield)) +
     geom_raster(aes(fill=Yield)) + 
     geom_contour(aes(z=Yield), color='gray30', binwidth=1) + 
     facet_wrap(~Treatment, nrow=4) +
     scale_fill_gradientn(colors=brewer.pal(9, "BuPu")) +
-    labs(x="%N Recovery", y="%P Recovery", fill="Yield (g)") +
-    theme(legend.title=element_text(size=25, face="bold"),
-          legend.key.size=unit(15, "mm"),
+    labs(x="%N Recovery", y="%P Recovery", fill="Yield (g)", title = "Oxbow") +
+    theme(legend.title=element_text(size=25, face="bold"), legend.key.size=unit(15, "mm"),
           legend.text=element_text(size=20),
-          strip.text=element_text(size=23, face="bold"),
-          strip.placement="outside",
-          strip.background=element_blank(),
-          strip.text.x=element_text(vjust=1),
-          axis.text.x=element_text(size=15),
-          axis.text.y=element_text(size=15),
-          axis.title.x=element_text(size=30, face="bold"),
-          axis.title.y=element_text(size=30, face="bold"),
-          panel.spacing=unit(0.5, "cm")))
-ggsave(OxContours, file="Pots1_YieldContour_Oxbow.jpg", width=15, height=15, dpi=150)
+          strip.text=element_text(size=23, face="bold"), strip.placement="outside",
+          strip.background=element_blank(), strip.text.x=element_text(size=20,vjust=1),
+          axis.text=element_text(size=20, face="bold"), axis.title=element_text(size=25, face="bold", hjust=0.5),
+          panel.spacing=unit(0.5, "cm"),
+          plot.title=element_text(size=25, face="bold", hjust = 0.5)))
+#ggsave(OxContours, file="Pots1_YieldContour_Oxbow.jpg", width=15, height=15, dpi=150)
 
+
+(HavOxControur <- plot_grid(HavContours, OxContours, labels = c("A", "B"), label_size = 30, label_x = c(0.05,0.05)))
+ggsave(HavOxControur, file="Pots1 Combined Contour.jpg", height=12, width=24)
 
 #### Correlation & eigenvalues  ####
 ## for all treatments and both soils

@@ -1735,8 +1735,8 @@ ggsave(UptakeCovPots2Heat, file="Pots2_UptakeCovHeat.jpg", width=20, height=20, 
 # use uptake for Pots 2 as recovery can't be calculated due to soil coming from the field & added urea
 Pots2$Treatment <- as.factor(Pots2$Treatment)
 Pots2$Biomass <- as.numeric(Pots2$Biomass)
-Pots2$Nrecovery <- as.numeric(Pots2$Nrecovery)
-Pots2$Precovery <- as.numeric(Pots2$Precovery)
+Pots2$Nuptake <- as.numeric(Pots2$Nuptake)
+Pots2$Puptake <- as.numeric(Pots2$Puptake)
 Pots2ContourSub <- subset(Pots2, select = c(Block, Treatment, Biomass, Nuptake, Puptake))
 View(Pots2ContourSub)
 Pots2ContourSub$Treatment <- factor(Pots2ContourSub$Treatment, levels=c("Control1", "Control2", "CanolaMeal", 
@@ -1769,19 +1769,13 @@ View(Pots2Contour_grid)
     facet_wrap(~Treatment, nrow = 5) +
     scale_fill_gradientn(colors = brewer.pal(9, "BuPu")) +
     labs(x = "% N Uptake", y = "% P Uptake", fill = "Yield (g)") +
-    theme(legend.title = element_text(size = 25, face = "bold"),
-          legend.key.size = unit(15, "mm"),
-          legend.text = element_text(size = 20),
-          strip.text = element_text(size = 25, face = "bold"),
-          strip.placement = "outside",
-          strip.background = element_blank(),
-          strip.text.x = element_text(vjust = 1),
-          axis.text.x=element_text(size=15),
-          axis.text.y=element_text(size=15),
-          axis.title.x=element_text(size=30, face="bold"),
-          axis.title.y=element_text(size=30, face="bold"),
-          panel.spacing = unit(0.5, "cm")))
-ggsave(Pots2Contours, file="Pots2_YieldContour.jpg", width=20, height=20, dpi=150)
+    theme(legend.title=element_text(size=25, face="bold"), legend.key.size=unit(15, "mm"),
+          legend.text=element_text(size=20),
+          strip.text=element_text(size=30, face="bold"), strip.placement="outside",
+          strip.background=element_blank(), strip.text.x=element_text(vjust=1),
+          axis.text=element_text(size=30), axis.title=element_text(size=35, face="bold"),
+          panel.spacing=unit(0.5, "cm")))
+ggsave(Pots2Contours, file="Pots2_YieldContour.jpg", width=18, height=21, dpi=150)
 
 
 
