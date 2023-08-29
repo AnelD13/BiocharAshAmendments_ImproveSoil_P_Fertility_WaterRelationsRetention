@@ -1813,7 +1813,7 @@ write.csv(YieldCovHav_dfAll, file="Pots1_Haverhill_YieldCov.csv")
         strip.background=element_blank(), # if not specified then it's grey
         strip.text.y=element_text(angle=0, vjust=0.5, size=18),
         strip.text.x=element_text(vjust=1, size=18),
-        axis.line=element_blank(), # this is to remove x- and y-axes labels from the individual panels
+        axis.line=element_blank(), 
         axis.text.x.bottom=element_text(size=15, angle=45, hjust=1, colour = "black", face = "bold"),#place horizontal labels only along the bottom
         axis.text.y.left=element_text(size=15, angle=45, colour = "black", face = "bold"), #place vertical labels only along the left panel
         panel.spacing.x=unit(0.5, "cm"))+ # places a wider space between panels

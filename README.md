@@ -11,21 +11,26 @@ This repo was set up to make the data available to other researchers and for met
 ## Software
 Code runs on RStudio 2022.12.0 Build 353 "Elsbeth Geranium" Release (7d165dcf, 2022-12-03) for Windows.  
 Packages to be loaded are included at the front of each script.  
-Code set up to run in a R Project (no setwd or getwd). Pull repo and set up a project, data to be read from Data folder (already included in scripts).  
+Code set up to run in a R Project (NO `setwd` or `getwd`). Pull repo and set up a project, data to be read from Data folder (already included in scripts).  
+`sessionInfo()`:  
+![SessionInfo](https://github.com/AnelD13/BiocharAshAmendments_ImproveSoil_P_Fertility_WaterRelationsRetention/assets/126522316/58e9e84d-fc49-45bc-8c8f-8dbcf143f48d)  
+
 
 ## Build status
 As of 15 August 2023 the code still has to be cleaned up. Further changes may occur before the thesis is finalised.  
 Versions were saved on local drive and only committed and pushed at a later date.  As of 14 August 2023, changes will be done directly within the repo. Previous version commits contain trial and error code for reference. Unused code sections have been removed from latest versions. Comments within scripts indicate reasoning.  
 
 ## Code
-Data files are stored as Excel csv files. Initial data processing and cleaning done witin Excel.  
+Data files are stored as Excel csv files. Initial data processing and cleaning done witin Excel (.xlsx).  
   
-**Pots1** - associated data files: Pots1, Pots1raw.  
-**RowStudy** - associated data files: Rows, Rowsraw.  
-**Pots2** - associated data files: Pots2, Pots2raw.  
-**Field** - associated data files: Field, Fieldraw, Fieldsplitraw.  
-**Infiltration** - associated data files: Infil, Infilraw, Infiltration, Infiltrationraw, Field.  
-**Soilsncropsv1** - outdated first attempt, absorbed into other files.  
+**Pots1.R** - associated data files: Pots1.csv, Pots1raw.csv.  
+**RowStudy.R** - associated data files: Rows.csv, Rowsraw.csv.  
+**Pots2.R** - associated data files: Pots2.csv, Pots2raw.csv.  
+**Field.R** - associated data files: Field.csv, Fieldraw.csv, Fieldsplitraw.csv.  
+**Infiltration.R** - associated data files: Infil.csv, Infilraw.csv, Infiltration.csv, Infiltrationraw.csv, Field.csv.  
+**Soilsncropsv1.R** - outdated first attempt, absorbed into other files.  
+  
+All code set up to be `Run` either as individual lines or blocks of code (select multiple and `Run`). For models, check which model is included in emmeans to run correct model.  
 
 ## Analysis summary
 - Most analysis was done at alpha level 0.05 or 5%, except where natural soil variation was excessive, in which case these variables were assessed at alpha level 0.1 or 10%.
