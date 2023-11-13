@@ -16,11 +16,13 @@ library(glmmTMB)
 library(doBy) # working with grouped data, specifically the do and by functions
 library(ggplot2)
 library(ggpattern)
+library(ggtext) # for fixing markdown text in ggplot
 library(ggforce) # specialized plots
 library(ggrepel) # repel labels on plots (WHC)
 library(ggExtra) # add marginal layers to plot
 library(ggcorrplot) # correlations plots
 library(ggh4x) # customize ggplot facets
+library(lemon) # for facet_rep_wrap
 library(plotrix) # various plot options, I used it for ablines
 library(cowplot) # combine ggplot output into a single graph
 library(patchwork) #similar to cowplot
@@ -81,7 +83,7 @@ Reduced_charcon <- as.factor(c("CanolaMeal10tha", "CanolaHull10tha", "Manure10th
 
     
 # used for 'labels'
-PotsLabel_Main <- as.factor(c("Control", "Canola Meal 50kg P/ha", "Canola Hull 50kg P/ha", 
+PotsLabel_Main <- as.factor(c("Control", "Canola Meal 25mg P/ha", "Canola Hull 50kg P/ha", 
                     "Manure 50kg P/ha", "Willow 50kg P/ha", "Canola Meal 10t/ha", "Canola Hull 10t/ha", 
                     "Manure 10t/ha", "Willow 10t/ha", "Canola Meal 10t/ha & TSP", "Canola Hull 10t/ha & TSP", 
                     "Manure 10t/ha & TSP", "Willow 10t/ha & TSP", "TSP Fertilizer")) # everything included
@@ -156,6 +158,7 @@ BIC_values <- sapply(PotsYield_modlist, BIC)
 #emmeans for each soil separately
 (ModPots1em_Yield <- emmeans(Pots1YieldMod2,~Treatment|Soil, infer = TRUE))
 (ModPots1cld_Yield <- cld(ModPots1em_Yield, Letters=trimws(letters), reversed=TRUE, by="Soil", alpha=0.001))
+write_xlsx(ModPots1cld_Yield, path="Pots1_Yield.xlsx")
 
 ##Developing visualizations
 ##select specific treatments and use those in the graph - repeat for all subsets
@@ -169,19 +172,19 @@ Yield_subVar <- ModPots1cld_Yield %>%
                   width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean + SE + 0.5),
                   size=5, position=position_dodge(width=0.9))+
-    labs(x="Treatments at 25mg P/pot", y="Biomass yield (g)")+
+    labs(x="", y="Biomass yield (g)")+
     scale_x_discrete(limits = as.character(TrtVar), labels=PotsTrtVar)+
     scale_y_continuous(limits =  c(0,15))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=24, face="bold"), legend.text=element_text(size=22),
-          axis.text.x=element_blank(), #_text(angle=65, hjust=1, size=17, face="bold", colour="black"),
+          axis.text.x=element_text(angle=65, hjust=1, size=17, face="bold", colour="black"),
           axis.text.y=element_text(size=17, face="bold", colour="black"),
           axis.title.x=element_blank(), #text(size=22, face="bold", margin=margin(b=15)), 
           axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
           panel.background=element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black"),
-          plot.margin = unit(c(0.4,0.4,0.4,0.4), "cm")))
+          plot.margin = unit(c(0.4,0.4,0.4,0.7), "cm")))
 #Plotting constant biochar rates with var P rates
 Yield_subCon <- ModPots1cld_Yield %>%
   filter(Treatment %in% CharCon)
@@ -192,12 +195,12 @@ Yield_subCon <- ModPots1cld_Yield %>%
                   width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean + SE + 0.5),
               size=5, position=position_dodge(width=0.9))+
-    labs(x="Treatments at 5g char/pot", y="Biomass yield (g)") +
+    labs(x="", y="Biomass yield (g)") +
     scale_x_discrete(limits=as.character(CharCon), labels=PotsCharCon)+
     scale_y_continuous(limits =  c(0,15))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=24, face="bold"), legend.text=element_text(size=22),
-          axis.text.x=element_blank(), #_text(angle=65, hjust=1, size=17, face="bold", colour="black"),
+          axis.text.x=element_text(angle=65, hjust=1, size=17, face="bold", colour="black"),
           axis.text.y=element_blank(), #text(size=18, face="bold", colour="black"),
           axis.title.x=element_blank(), #text(size=22, face="bold", margin=margin(b=15)), 
           axis.title.y=element_blank(), #text(size=22, face="bold", margin=margin(r=15)),
@@ -251,6 +254,7 @@ BIC_values <- sapply(PotsPup_modlist , BIC)
 # emmeans
 (ModPots1em_Pup <- emmeans(Pots1PupMod1,~Treatment|Soil, infer = TRUE))
 (ModPots1cld_Pup <- cld(ModPots1em_Pup, Letters=trimws(letters), reversed=TRUE, by="Soil", alpha=0.001))
+write_xlsx(ModPots1cld_Pup, path="Pots1_P_uptake.xlsx")
 
 ## Visualizations
 Pup_subVar <- ModPots1cld_Pup %>% filter(Treatment %in% TrtVar)
@@ -260,7 +264,7 @@ Pup_subVar <- ModPots1cld_Pup %>% filter(Treatment %in% TrtVar)
   geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
   geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+0.8),
             size=5, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 25mg P/pot", y="Phosphorus uptake (mg/kg soil)") +
+  labs(x="", y=bquote(bold("Phosphorus uptake (mg kg"^-1*~"soil)"))) +
   scale_x_discrete(limits = as.character(TrtVar), labels=PotsTrtVar)+
     scale_y_continuous(limits =  c(0,30))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
@@ -282,7 +286,7 @@ Pup_subCon <- ModPots1cld_Pup %>% filter(Treatment %in% CharCon)
                  width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+1.5),
               size=5, position=position_dodge(width=0.9))+
-    labs(x="Treatments at 5g char/pot", y="Phosphorus uptake (mg/kg soil)") +
+    labs(x="", y=bquote(bold("Phosphorus uptake (mg kg"^-1*~"soil)")))+
     scale_x_discrete(limits = as.character(CharCon), labels=PotsCharCon)+
     scale_y_continuous(limits =  c(0,30))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
@@ -338,7 +342,7 @@ BIC_values <- sapply(Pots1Prec_modlist, BIC)
 #run emmeans
 (ModPots1em_Prec<- emmeans(Pots1PrecMod3,~Treatment|Soil, infer = TRUE))
 (ModPots1cld_Prec <- cld(ModPots1em_Prec, Letters=trimws(letters), reversed=TRUE, by="Soil", alpha=0.001))
-
+write_xlsx(ModPots1cld_Prec, path="Pots1_P_recovery.xlsx")
 ##Developing visualizations
 Prec_subVar <- ModPots1cld_Prec %>%
   filter(Treatment %in% Reduced_trtVar)
@@ -349,19 +353,19 @@ Prec_subVar <- ModPots1cld_Prec %>%
                   width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+5),
               size=5, position=position_dodge(width=0.9))+
-    labs(x="", y="Phosphorus recovery (%)") +
+    labs(x=bquote(bold("Treatments at 50kg P ha"^-1)), y="Phosphorus recovery (%)") +
     scale_x_discrete(limits=as.character(Reduced_trtVar), labels=PotsRedTrtVar)+
     scale_y_continuous(limits =  c(0,105))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=24, face="bold"), legend.text=element_text(size=22),
-          axis.text.x=element_blank(),
+          axis.text.x=element_text(angle=65, hjust=1, size=17, face="bold", colour="black"),
           axis.text.y=element_text(size=18, face="bold", colour="black"),
           axis.title.x=element_text(size=22, face="bold", margin=margin(t=5)), 
           axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
           panel.background=element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black"),
-          plot.margin = unit(c(0.4,0.4,0.4,0.4), "cm")))
+          plot.margin = unit(c(0.4,0.4,0.4,0.7), "cm")))
 #Plotting constant biochar rates with var P rates
 Prec_charCon <- 
 Prec_subCon <- ModPots1cld_Prec %>%
@@ -373,19 +377,30 @@ Prec_subCon <- ModPots1cld_Prec %>%
                   width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+5),
                   size=5, position=position_dodge(width=0.9))+
-    labs(x="", y="Phosphorus recovery (%)") +
+    labs(x=bquote(bold("Treatments at 10t biochar ha"^-1)), y="Phosphorus recovery (%)") +
     scale_x_discrete(limits=as.character(Reduced_charcon),labels=PotsRedCarcon)+
     scale_y_continuous(limits =  c(0,105))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=24, face="bold"), legend.text=element_text(size=22),
-          axis.text.x=element_blank(),
+          axis.text.x=element_text(angle=65, hjust=1, size=17, face="bold", colour="black"),
           axis.text.y=element_blank(), #text(size=18, face="bold", colour="black"),
-          axis.title.x=element_text(size=22, face="bold", margin=margin(t=5)), 
+          axis.title.x=element_text(size=22, face="bold", margin=margin(t=5)),
           axis.title.y=element_blank(), #text(size=22, face="bold", margin=margin(r=15)),
           panel.background=element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black"),
           plot.margin = unit(c(0.4,0.4,0.4,0.4), "cm")))
+
+
+### Combined plots ----
+(PotsPlant_plot <- ggarrange(Yield50kg, Yield10tha, Pup50kgha, Pup10tha, Prec50kg, Prec10tha, nrow=3, ncol=2, 
+                             common.legend=TRUE, legend="top",
+                             labels = "AUTO", label.x = c(0.16, 0.03, 0.17, 0.03, 0.18, 0.03),
+                             font.label=list(size=24, face="bold")))
+ggsave(PotsPlant_plot, file="Fig1.Chamber_Plants.jpg", height=16, width=14, dpi=250)
+ggsave(PotsPlant_plot, file="Fig1.Chamber_Plants.tiff", height=16, width=14, dpi=150)
+
+
 
 
 ### Phosphorus use efficiency ----
@@ -435,7 +450,7 @@ PUE_subVar <- ModPots1cld_PUE %>%
                   width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+25),
               size=5, position=position_dodge(width=0.9))+
-    labs(x="Treatments at 25mg P/pot", y="Phosphorus Use Efficiency (g/g)")+
+    labs(x=bquote(bold("Treatments at 25mg P kg"^-1)), y=bquote(bold("Phosphorus Use Efficiency (g g"^-1*")")))+
     scale_x_discrete(limits=as.character(Reduced_trtVar), labels=PotsRedTrtVar)+
     scale_y_continuous(limits =  c(0,630))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
@@ -458,7 +473,7 @@ PUE_subCon <- ModPots1cld_PUE %>%
                   width=0.2, position=position_dodge(width=0.9)) +
     geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+25),
               size=5, position=position_dodge(width=0.9))+
-    labs(x="Treatments at 5g char/pot", y="Phosphorus Use Efficiency (/g)") +
+    labs(x=bquote(bold("Treatments at 10t biochar ha"^-1)), y="") +
     scale_x_discrete(limits=as.character(Reduced_charcon),labels=PotsRedCarcon)+
     scale_y_continuous(limits =  c(0,630))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
@@ -473,13 +488,6 @@ PUE_subCon <- ModPots1cld_PUE %>%
           plot.margin = unit(c(0.6,0.4,0.4,0.4), "cm")))
 
 
-
-### Combined plots ----
-(PotsPlant_plot <- ggarrange(Yield50kg, Yield10tha, Pup50kgha, Pup10tha, Prec50kg, Prec10tha, PUE50kg, PUE10tha,
-                             nrow=4, ncol=2, heights = c(1.1,1.4,1.1,1.4), common.legend=TRUE, legend="top",
-                             labels = "AUTO", label.x = c(0.15, 0.03, 0.15, 0.03, 0.16, 0.03, 0.16, 0.03),
-                             font.label=list(size=22, face="bold")))
-ggsave(PotsPlant_plot, file="Chamber_Plants.jpg", height=21, width=14, dpi=250)
 
 
 ## SOIL ANALYSIS ----
@@ -851,7 +859,7 @@ Pots1CharCor <- Pots1CharPdf %>%
   filter(complete.cases(CharPerc, PO4, CharPRate)) %>%
   summarize(Correlation=weighted_cor(CharPerc, PO4, CharPRate), .groups="drop")
 Pots1CharCor$Treatment <- factor(Pots1CharCor$Treatment, levels=Pots1Trt_sub, labels=PotsLabDash_sub)
-print(Pots1CharCor)
+View(Pots1CharCor)
 # visualize correlation using heatmap
 (Pots1CharHeatPlot <- ggplot(Pots1CharCor, aes(x=Treatment, y=Soil, fill=Correlation)) +
     geom_point(data=Pots1CharCor, aes(size=abs(Correlation)*20), shape=21) + #set size of correlation circles
@@ -940,7 +948,11 @@ print(Pots1PrecPO4Cor)
     geom_text(aes(label=sprintf("%.2f", Correlation), color = ifelse(Correlation < 0, "white", "black")), size=5.5)+
     scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
     scale_y_discrete(limits=rev(as.character(c("Haverhill", "Oxbow"))))+
-    scale_x_discrete(position="bottom")+
+    scale_x_discrete(labels=(c("Canola Meal<br>50kg P ha<sup>-1</sup>", "Canola Hull<br>50kg P ha<sup>-1</sup>", 
+                               "Manure<br>50kg P ha<sup>-1</sup>", "Willow<br>50kg P ha<sup>-1</sup>", "Canola Meal<br>10t ha<sup>-1</sup>",
+                               "Canola Hull<br>10t ha<sup>-1</sup>", "Manure<br>10t h<sup>-1</sup>", "Willow<br>10t ha<sup>-1</sup>",
+                               "Canola Meal<br>10t ha<sup>-1</sup> & TSP", "Canola Hull<br>10t ha<sup>-1</sup> & TSP",
+                               "Manure<br>10t ha<sup>-1</sup> & TSP", "Willow<br>10t ha<sup>-1</sup> & TSP", "TSP<br>Fertilizer")))+
     guides(size="none")+
     labs(x="", y="", title=expression(bold("Percentage P Recovery - Soil residual PO"[4])))+
     theme(plot.title=element_text(hjust=0.5, face="bold", size=20),
@@ -948,7 +960,7 @@ print(Pots1PrecPO4Cor)
           legend.key.siz=unit(15,"mm"),
           axis.title=element_blank(),
           axis.text.y=element_text(size=16, colour="black", face="bold"),
-          axis.text.x=element_text(angle=45, size=16, colour="black", hjust=1, face="bold"),
+          axis.text.x=element_markdown(angle=45, size=16, colour="black", hjust=0.95, face="bold"),
           axis.ticks=element_blank(),
           panel.background=element_blank(),
           panel.spacing.x=unit(1, "cm"), plot.margin=margin(5,5,5,10)))
@@ -1881,13 +1893,17 @@ print(FieldCharCor)
     scale_fill_viridis(option = "magma", limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.2f", Correlation), color = ifelse(Correlation < 0, "white", "black")), size=5.5)+
     scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
+    scale_x_discrete(labels = c("Biochar<br>25kg P ha<sup>-1</sup>",
+                                "Biochar<br>10t ha<sup>-1</sup>",
+                                "Biochar<br>10t ha<sup>-1</sup>",
+                                "TSP<br>Fertilizer"))+
     labs(x="", y="", title=expression(bold("% P in Treatment - Soil PO"[4])))+
     guides(size = "none")+
     theme(plot.title = element_text(size=18, face="bold", hjust=0.5),
           legend.text=element_text(size=14), legend.title=element_text(size=16, face="bold"), legend.key.siz=unit(15,"mm"),
           axis.title=element_blank(),
           axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=16, colour="black", face="bold"),
+          axis.text.x=element_markdown(angle=45, size=16, colour="black", face="bold", vjust=1, hjust=0.5),
           axis.ticks=element_blank(), panel.background=element_blank(),
           panel.spacing.x=unit(1, "cm"), plot.margin=margin(15, 15, 5, 5)))
 
@@ -1908,6 +1924,10 @@ print(FieldRecCor)
     scale_fill_viridis(option = "magma", limits=c(-1, 1), breaks=seq(-1, 1, by=0.5)) + 
     geom_text(aes(label=sprintf("%.2f", Correlation), color = ifelse(Correlation < 0, "white", "black")), size=5.5)+
     scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
+    scale_x_discrete(labels = c("Biochar<br>25kg P ha<sup>-1</sup>",
+                                "Biochar<br>10t ha<sup>-1</sup>",
+                                "Biochar<br>10t ha<sup>-1</sup>",
+                                "TSP<br>Fertilizer"))+
     labs(x="", y="", title="% P in Treatment - % P Recovery")+
     guides(size = "none")+
     theme(plot.title = element_text(size=18, face="bold", hjust=0.5),
@@ -1915,7 +1935,7 @@ print(FieldRecCor)
           #legend.position = "none",
           axis.title=element_blank(),
           axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=16, colour="black", face="bold"),
+          axis.text.x=element_markdown(angle=45, size=16, colour="black", face="bold", vjust=1, hjust=0.5),
           axis.ticks=element_blank(), panel.background=element_blank(),
           panel.spacing.x=unit(1, "cm"), plot.margin=margin(15,5,5,5)))
 
@@ -1937,27 +1957,34 @@ print(FieldPO4Cor)
     geom_text(aes(label=sprintf("%.2f", Correlation), color = ifelse(Correlation < 0, "white", "black")), size=5.5)+
     scale_color_manual(values=c("black", "white"), guide="none", labels=NULL)+
     labs(x="", y="", title=expression(bold("% P Recovery - Soil PO"[4])))+
-    scale_y_discrete(expand = c(5,5))+ #limits=c(-1,1), 
+    scale_x_discrete(labels = c("Biochar<br>25kg P ha<sup>-1</sup>",
+                                "Biochar<br>10t ha<sup>-1</sup>",
+                                "Biochar<br>10t ha<sup>-1</sup>",
+                                "TSP<br>Fertilizer")) +
     guides(size = "none")+
     theme(plot.title = element_text(size=18, face="bold", hjust=0.5),
           legend.text=element_text(size=14), legend.title=element_text(size=16, face="bold"), legend.key.size=unit(15,"mm"),
-          #legend.position = "none",
+          legend.position = "none",
           axis.title=element_blank(),
           axis.text.y=element_blank(),
-          axis.text.x=element_text(angle=45, size=16, colour="black", face="bold"),
+          axis.text.x = element_markdown(angle=45, size=16, colour="black", face="bold", vjust = 1, hjust=0.5),  #debug = TRUE,
           axis.ticks=element_blank(), panel.background=element_blank(),
           plot.margin=margin(15,5,5,15)))
-
+ggsave(FieldPO4HeatPlot, file="test_plot.jpg", width=6, height=3.22, dpi=150)
 
 ## combined plot - combined legend and ggarrange uses ggpubr package, set legend in individual plots
 (FieldCharRecPO4_plot <-ggarrange(FieldCharHeatPlot, FieldRecHeatPlot, FieldPO4HeatPlot, ncol=3, common.legend = TRUE, legend="none"))
 (FieldCharAnnotate <- annotate_figure(FieldCharRecPO4_plot, top=text_grob("Field study with willow biochar", size=24, face="bold")))
-ggsave(file="Field_CharPO4Prec_combined.jpg", width=15, height=4, dpi=150)
+ggsave(file="Field_CharPO4Prec_combined.jpg", width=15, height=5, dpi=150)
 
 
-(TotalCharPlot <- ggarrange(PotsCharAnnotate, FieldCharAnnotate, nrow=2, heights = c(0.9,0.3)))
-ggsave(TotalCharPlot, file="Total_CharPO4Prec.jpg", width=13, height=14, dpi=150)
-
+(TotalCharPlot <- ggarrange(PotsCharAnnotate, FieldCharAnnotate, nrow=2, heights = c(0.9,0.3),
+                            labels = "AUTO", font.label = list(size=30, face="bold")))
+ggsave(TotalCharPlot, file="Fig2.Total_CharPO4Prec.jpg", width=13, height=14, dpi=150)
+ggsave(TotalCharPlot, file="Figure2.eps", width=13, height=14, dpi=150)
+postscript("Figure2.eps", horizontal=FALSE, onefile=FALSE, paper = "special")
+plot(1:10)
+dev.off()
 
 
 
@@ -2072,12 +2099,6 @@ BIC_values <- sapply(FResPO4_modlist, BIC)
 (ModFieldemResPO4 <- emmeans(ModFieldResPO4c,~Treatment,infer = TRUE, type="response"))
 (ModFieldemResPO4_cld <- cld(ModFieldemResPO4, Letters=trimws(letters), reversed=TRUE, alpha=0.1))
 ModFieldemResPO4_cld <- ModFieldemResPO4_cld %>% dplyr::rename(emmean="response")
-pwpm(ModFieldemResPO4) # pairwise p-value mean
-pwpp(ModFieldemResPO4) # pairwise p-value plot
-(ResPO4plot <- ggplot(ModFieldemResPO4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
-pairs(ModFieldemResPO4)
-emmip(ModFieldemResPO4, ~Treatment)
-View(ModFieldemResPO4_cld)
 write_xlsx(ModFieldemResPO4_cld, path="Field_snowResinPO4.xlsx")
 # Vizualization
 (ResinPO4PPlot <- ggplot(ModFieldemResPO4_cld, aes(x=Treatment, y=emmean)) +
@@ -2157,31 +2178,41 @@ write_xlsx(InfilCombined, path="Predicted infiltration data.xlsx")
 InfilReady <- filter(InfilCombined, Time <= 2)
 InfilReady_long <- InfilReady%>%
   pivot_longer(cols = c(CI, PredictedCI, Infiltration),
-               names_to = "Variable", values_to = "Value")
-View(InfilReady_long)
-color_palette <- c("darkred", "steelblue", "green4")
-#transparent_palette <- alpha(color_palette, alpha = 0.8)  # Adjust the alpha value as needed (0 = fully transparent, 1 = fully opaque)
-InfilLegend <- c("Cumulative infiltration (CI)", "Measured infiltration", "Predicted CI")
+               names_to = "Variable", values_to = "Value") # run every time an update is made to the treatment labels below
 InfilReady_long$Treatment <- factor(InfilReady_long$Treatment,
-                                    levels=FieldTrt_order, labels=FieldLabDash_Main)
+                                    levels=c("Control", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"), 
+                                     labels=c("bold(Control)", expression("bold('Biochar 25kg P'^-1)"), expression("bold('Biochar 10t ha'^-1)"),
+                                              expression("bold('Biochar 10t ha'^-1*' & TSP')"), expression("bold(TSP~Fertilizer)")))
+View(InfilReady_long)
+  ## To get mathematical notations in the strip text of facet wrap use a combination of expression within the label functions and the `label_parsed`
+  # argument in facet_wrap. Do NOT use the `labeller(type-label_parsed)` function in facet_wrap. Any space specified in a label not listed with
+  # expression MUST have a ~ instead of a space. If `expression(bold(...` is specified, the parsing does not work with the notations. Specifying bold
+  # within the strip text also doesn't work. I didn't bother looking further
 
-(InfilPlot <- ggplot(InfilReady_long, aes(x=Time, y=Value, color=Variable)) +
-    facet_rep_wrap(~ Treatment, scales="free_y", nrow=5)+ # keeps tick lines on plots
+color_palette <- c("black", "cyan", "darkorange4")
+(InfilPlot <- ggplot(InfilReady_long, aes(x=Time, y=Value, color=Variable, lty=Variable))+
+    facet_rep_wrap(~ Treatment, scales="fixed", ncol=5, labeller=label_parsed)+ # facet_rep keeps tick lines on plots with free scales
     coord_capped_cart(bottom = "both")+
-    geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1, aes(fill=Variable)) + 
-    scale_color_manual(values = color_palette, labels = InfilLegend, guide="none") + # sets the colour of the lines
+    geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1, aes(color=Variable, fill=Variable))+
+    #scale_color_manual(values = color_palette)+ # sets the colours of the lines
+    #scale_fill_manual(values = color_palette, aesthetics = "fill")+ # set the SE colours
+    scale_color_manual(values=c('black', 'grey35', 'grey75'))+
+    scale_linetype_manual(values=c(2,1,1))+ # need to specify both this and lte in ggplot aes
+    scale_fill_manual(values=c('black', 'grey35', 'grey75'), aesthetics = "fill")+
     scale_y_continuous(limits=c(0,12))+
     labs(x = "Time (hours)", y = "Infiltration (cm)")+
-    theme(strip.text.x = element_text(size = 16, face="bold"), strip.background = element_blank(), 
-          legend.position = "bottom", legend.key.size=unit(8,"mm"), 
-          legend.text=element_text(size=11, face="bold"), legend.title = element_blank(),
+    theme(strip.text.x = element_text(size = 15, face="bold"), 
+          strip.background = element_blank(), 
+          legend.position = "bottom", legend.key.size=unit(7,"mm"), 
+          legend.text=element_text(size=10, face="bold"), legend.title = element_blank(),
           axis.title.x = element_text(size=20, face="bold", margin = margin(0.5,0,0,0, unit="cm")),
           axis.title.y = element_text(size=20, face="bold", margin = margin(0,0.5,0,0, unit="cm")),
           axis.text = element_text(size=14, face="bold", colour = "black"),
           panel.border = element_blank(), panel.grid=element_blank(), panel.background = element_blank(),
           axis.line=element_line(colour="black")))
-ggsave(InfilPlot, file="Infiltration curves.jpg", width=4, height=12, dpi=150)
+ggsave(InfilPlot, file="Fig2.Infiltration_color.tiff", width=15, height=4, dpi=200)
 # warning related to blank outlier data for CI & I
+ggsave(InfilPlot, file="Fig2.Infiltration_b&w.tiff", width=15, height=4, dpi=200)
 
 
 ### Model significant differences ----
