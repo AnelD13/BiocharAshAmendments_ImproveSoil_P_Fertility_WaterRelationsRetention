@@ -1,6 +1,5 @@
 # Loading data in to R  & Summaries ----
-  Field<-read.csv("Data/Field.csv", fileEncoding="UTF-8-BOM") 
-  View(Field)
+  Field<-read.csv("Data/Field.csv", fileEncoding="UTF-8-BOM")
   #Fieldsplitraw<-read.csv("FieldSplitRaw.csv", fileEncoding="UTF-8-BOM") # to combine residuals if necessary
   Fieldraw <- read.csv("Data/Fieldraw.csv", fileEncoding="UTF-8-BOM") # includes split data
   
@@ -15,6 +14,7 @@
   library(ggpattern)
   library(statsExpressions) # needed to run ggstatsplot
   library(ggstatsplot) #combo violin plots
+  library(ggpubr)
   library(plotrix)
   library(car)
   library(afex)
@@ -74,28 +74,32 @@
     missing <- colSums(is.na(Field[,]))
     missing <- colSums(is.na(Fieldraw[,]))
     print(missing)
-  #Change columns in a dataframe to factors/categorical values, str displays 
-    FieldTrt_order <- c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus")
-    Field$Block <- factor(Field$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
-    Field$Treatment <- factor(Field$Treatment,levels=FieldTrt_order)
-    Field$LNO3 <- as.numeric(Field$LNO3)
-    Field$LNH4 <- as.numeric(Field$LNH4)
-    Field$LPO4 <- as.numeric(Field$LPO4)
     summary(Field)
     str(Field) #displays the structure of the object
+    #Change columns in a dataframe to factors/categorical values, str displays 
+    Field$Block <- factor(Field$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
+    FieldTrt_order <- as.factor(c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"))
+    FieldTrtSub <- as.factor(c("Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"))
+    
+    # for labels
+    FieldLab_Main <- as.factor(c("Control 1", "Control 2","Biochar 25kg P/ha", "Biochar 10t/ha", "Biochar 10t/ha & TSP", "TSP Fertilizer"))
+    FieldLab_Sub <- as.factor(c("Biochar 25kg P/ha", "Biochar 10t/ha", "Biochar 10t/ha & TSP", "TSP Fertilizer"))
+    FieldLabDash_Main <- as.factor(c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP", "TSP\nFertilizer"))
+    FieldLabDash_sub <- as.factor(c("Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP", "TSP\nFertilizer"))
+    
   # Summary data (means, SD, etc.) for each treatment and variable
     FieldMean <- summary_by(.~Treatment, data=Field, FUN=function(x) mean(x, na.rm=TRUE)) #overall means for the data set
-    View(FieldMean)
+    print(FieldMean)
     FieldSD <- summary_by(.~Treatment, data=Field,  FUN=function(x) sd(x, na.rm=TRUE)) #overall SD for the dataset
-    View(FieldSD)
+    print(FieldSD)
     StrawF_summary <- Field %>% #summary data specifically for Straw variable
       group_by(Treatment) %>%
       summarize(Mean=mean(FStraw), SD=sd(FStraw), SE=sd(FStraw)/sqrt(n()))
-    View(StrawF_summary) #summary data specifically for Grain variable
+    print(StrawF_summary) #summary data specifically for Grain variable
     GrainF_summary <- Field %>%
       group_by(Treatment) %>%
       summarize(Mean=mean(FGrain), SD=sd(FGrain), SE=sd(FGrain)/sqrt(n()))
-    View(GrainF_summary)
+    print(GrainF_summary)
     Field_stats <- function(data, variable_names) { #uses 'moments' instead of 'e1071' which results in much higher kurtosis
       stats <- data %>%
         summarise_at(vars(all_of(variable_names)), list(skewness = ~ skewness(., na.rm = TRUE), kurtosis = ~ kurtosis(., na.rm = TRUE)))
@@ -900,26 +904,25 @@
   (ModFieldPrecem_cld <- cld(ModFieldPrecem, Letters=letters, type="response") )
   write_xlsx(ModFieldPrecem_cld, path="Field_Precovery.xlsx")
 # Visualizations
-  (FieldPrecPlot <- ggplot(ModFieldPrecem_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
-    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                     pattern_density=0.05, pattern_spacing=0.01, width = 0.65)+
-    geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-                  width=0.2, position=position_dodge(width=0.9)) +
-    geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1) +
-    labs(x="Treatments", y="Canola phosphorus recovery (%)") +
-    scale_x_discrete(limits=c("Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
-                     labels=c("Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
-                                "TSP\nFertilizer"))+
-      scale_y_continuous(limits = c(-4,5))+
-    theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
-          legend.title = element_blank(), legend.text=element_text(size=18),
-          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
-          axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
-          axis.title.x=element_blank(), 
-          axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
-          panel.background = element_blank(),
-          panel.border=element_blank(), panel.grid.major=element_blank(),
-          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  (FieldPrecPlot <- ggplot(ModFieldPrecem_cld, aes(x=Treatment, y=emmean, fill=Treatment))+
+      #geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
+      #                 pattern_density=0.05, pattern_spacing=0.01, width = 0.65)+
+      geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", width=0.7)+
+      scale_fill_manual(limits=FieldTrtSub, values=c('darkred', 'darkred', 'darkred', 'darkblue'), guide="none")+
+      geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9))+
+      geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
+      labs(x="Treatments", y="Canola phosphorus recovery (%)") +
+      scale_x_discrete(limits=FieldTrtSub, labels=FieldLabDash_sub)+
+      scale_y_continuous(limits = c(-4,6))+
+      theme(legend.position = "top", legend.key.size=unit(10,"mm"), 
+            legend.title = element_blank(), legend.text=element_text(size=18),
+            axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+            axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+            axis.title.x=element_blank(), 
+            axis.title.y=element_text(size=26, face="bold", margin=margin(r=15)),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
   ggsave(FieldPrecPlot, file="Field_Precovery.jpg", width=8, height=8, dpi=150)
 
   
@@ -968,7 +971,6 @@
 
 # SOIL ANALYSIS ----
   ### Soils at 3 different depths will be analysed for differences as well as auto-correlated
-  SoilResidue_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP","TSP\nFertilizer")
 ## Soil NO3   ----
   # Calculating skewness and kurtosis
   NO3var_names <- c("NO3_10", "NO3_20", "NO3_30") # Specify the variable names to calculate stats for
@@ -988,48 +990,50 @@
 # Change data to long format
   NO3_long <- Field |>
     gather(key="Depth", value="NO3", matches("^NO3_"))
-  #ModFieldSNO31
-  ModFieldSNO31 <- lmer(NO3~Treatment*Depth + (1|Block), data=NO3_long)
-  Anova(ModFieldSNO31, alpha=0.1) # significant differences
-  summary(ModFieldSNO31, alpha=0.1)
-  print(coef(summary(ModFieldSNO31))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
-  hist(resid(ModFieldSNO31)) #left skew
-  shapiro.test(resid(ModFieldSNO31))  # 4.4e-05
-  plot(fitted(ModFieldSNO31),resid(ModFieldSNO31),pch=16)   # clustered below 0
-  qqnorm(resid(ModFieldSNO31)) # moderate tails, both above line
-  qqline(resid(ModFieldSNO31))
-  rsq(ModFieldSNO31) # 0.436
-# ModFieldSNO32 - model is singular
-  ModFieldSNO32 <- glmer(NO3~Treatment*Depth+(1|Block),data=NO3_long,family=gaussian(link="log"), na.action=na.omit)
-  Anova(ModFieldSNO32, type = "III") # no significant differences
-  summary(ModFieldSNO32)
-  shapiro.test(resid(ModFieldSNO32)) # p=7.83e-05
-  rsq(ModFieldSNO32) #p=0.4
-  # ModFieldSNO33
-  ModFieldSNO33 <- glmmTMB(NO3~Treatment*Depth+(1|Block), data=NO3_long, family=gaussian(), na.action=na.exclude)
-  glmmTMB:::Anova.glmmTMB(ModFieldSNO33, type="III") # significant differences
-  summary(ModFieldSNO33)
-  performance::r2(ModFieldSNO33) # 0.45
-  # ModFieldSNO34
-  ModFieldSNO34 <- lme(NO3~Treatment*Depth,random=~1|Block, data=NO3_long, na.action=na.exclude)
-  anova(ModFieldSNO34)  # significant differences
-  summary(ModFieldSNO34)
-  rsq(ModFieldSNO34) # 0.436
-#Comparing models
-  # Rsq = ModFieldNup3 is highest of the measured rsq
+# lmer
+  ModFieldSNO3a <- lmer(NO3~Treatment*Depth + (1|Block), data=NO3_long)
+  Anova(ModFieldSNO3a, alpha=0.1, type='III') # significant differences
+  summary(ModFieldSNO3a, alpha=0.1)
+  print(coef(summary(ModFieldSNO3a))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+  hist(resid(ModFieldSNO3a)) # normal
+  shapiro.test(resid(ModFieldSNO3a))  # 0.002
+  plot(fitted(ModFieldSNO3a),resid(ModFieldSNO3a),pch=16)   # normal
+  qqnorm(resid(ModFieldSNO3a)) # moderate right tail
+  qqline(resid(ModFieldSNO3a))
+  rsq(ModFieldSNO31) # 0.63
+  performance::r2(ModFieldSNO3a) # 0.57
+# lme
+  ModFieldSNO3b <- lme(NO3~Treatment*Depth,random=~1|Block, data=NO3_long, na.action=na.omit)
+  Anova(ModFieldSNO3b, type='III')  # significant differences
+  summary(ModFieldSNO3b)
+  rsq(ModFieldSNO3b) # 0.57
+  performance::r2(ModFieldSNO3b) # 0.57
+# glmer
+  ModFieldSNO3c <- glmer(NO3~Treatment*Depth+(1|Block),data=NO3_long, family=gaussian(link="log"), na.action=na.omit,
+                         control = glmerControl(optimizer = "bobyqa", optCtrl=list(maxfun=1000000)))
+  Anova(ModFieldSNO3c, type = "III") # significant differences
+  summary(ModFieldSNO3c)
+  shapiro.test(resid(ModFieldSNO3c)) # p=7.83e-05
+  rsq(ModFieldSNO3c) # NA
+  performance::r2(ModFieldSNO3c) # 0.057
+  # glmm
+  ModFieldSNO3d <- glmmTMB(NO3~Treatment*Depth+(1|Block), data=NO3_long, family=gaussian(), na.action=na.exclude)
+  glmmTMB:::Anova.glmmTMB(ModFieldSNO3d, type="III") # significant differences
+  summary(ModFieldSNO3d)
+  performance::r2(ModFieldSNO3d) # 0.64
   # AIC & BIC
-  FNO3_modlist <- list(ModFieldSNO31, ModFieldSNO32, ModFieldSNO33, ModFieldSNO34)
+  FNO3_modlist <- list(ModFieldSNO3a, ModFieldSNO3b, ModFieldSNO3c, ModFieldSNO3d)
   AIC_values <- sapply(FNO3_modlist, AIC)
   BIC_values <- sapply(FNO3_modlist, BIC)
-  N_AB <- data.frame(Model=c("ModFieldSNO31", "ModFieldSNO32", "ModFieldSNO33", "ModFieldSNO34"), AIC_values, BIC_values)
-  print(N_AB)
+  (N_AB <- data.frame(Model=c("ModFieldSNO3a", "ModFieldSNO3b", "ModFieldSNO3c", "ModFieldSNO3d"), AIC_values, BIC_values))
       #  Model AIC_values BIC_values
-      #1 ModFieldSNO31   377.0192   422.5525 - 48 df
-      #2 ModFieldSNO32   439.8942   485.4275 - Inf df
-      #3 ModFieldSNO33   435.3747   480.9080 - 52 df
-      #4 ModFieldSNO34   377.0192   416.7988 - 3 df
-#emmeans - ModFieldSNO33 chosen as best mod based on rsq and it's response in the emmeans function
-  (ModFieldemSNO3 <- emmeans(ModFieldSNO33,~Treatment|Depth, alpha=0.1, infer=TRUE))
+      #1 ModFieldSNO31   318        362 - 41.8 or 41.5 df
+      #2 ModFieldSNO32   318        356 - 3 df
+      #3 ModFieldSNO33   369        413 - Inf df
+      #4 ModFieldSNO34   367        411 - 47 df, highest rsq, chosen as best model
+  
+# emmeans
+  (ModFieldemSNO3 <- emmeans(ModFieldSNO3d,~Treatment|Depth, alpha=0.1, infer=TRUE))
   (ModFieldemSNO3_cld <- cld(ModFieldemSNO3, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
   #(ModFieldemSNO3a <- emmeans(ModFieldSNO33,~Depth|Treatment, alpha=0.1)) - not different from the first option
   #(ModFieldemSNO3_clda <- cld(ModFieldemSNO3a, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
@@ -1040,8 +1044,8 @@
       geom_point(size = 8, color="black", aes(fill=Treatment)) +
       scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
       scale_shape_manual(values = c(21,24,22)) +
-      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
-      scale_x_discrete(labels=SoilResidue_labels)+
+      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5, check_overlap = TRUE)+
+      scale_x_discrete(labels=FieldLabDash_Main)+
       labs(x = "Treatment", y = bquote(bold("NO"[3]~" (mg/kg)"))) +
       theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
             legend.title = element_blank(), legend.text=element_text(size=16),
@@ -1122,23 +1126,44 @@
                                      labels = c("0-10cm", "10-20cm", "20-30cm"))
   write_xlsx(ModFieldemSPO4_cld, path="Field_SoilPO4.xlsx")
 # Visualizations
-  (FieldPO4Plot <- ggplot(ModFieldemSPO4_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
-      geom_point(size = 8, color="black", aes(fill=Treatment)) +
-      scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+  (FieldPO4Plot <- ggplot(ModFieldemSPO4_cld, aes(x=factor(Treatment, levels=FieldTrt_order), y = emmean, fill=Depth, shape = Depth)) +
+      geom_point(size = 8, color="black", aes(fill=Depth)) +
+      scale_fill_manual(values = c("green3", "purple2", "darkred"), guide = "none")+
       scale_shape_manual(values = c(21,24,22)) +
-      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
-      scale_x_discrete(labels=SoilResidue_labels)+
+      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.4, check_overlap = TRUE) +
+      scale_x_discrete(labels=FieldLabDash_Main)+
       labs(x = "", y = bquote(bold("MK-P (mg/kg)"))) +
       theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
             legend.title = element_blank(), legend.text=element_text(size=16),
-            axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+            axis.text.x=element_blank(), #text(angle=45, hjust=1, size=18, face="bold", colour="black"),
             axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
-            axis.title.x=element_blank(),
+            axis.title.x=element_text(size = 28, face = "bold", colour = "black"),
             axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
             panel.background = element_blank(),
             panel.border=element_blank(), panel.grid.major=element_blank(),
-            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))+
+      guides(shape = guide_legend(override.aes = list(size=6)), fill = guide_legend(size = 6)))
   ggsave(FieldPO4Plot, file="Field_soilPO4.jpg", height=8, width = 11, dpi=150)
+  # For defence presentation
+  (FieldPO4Plot_bar <- ggplot(subset(ModFieldemSPO4_cld, Depth %in% 'PO4_10'), aes(x=Treatment, y=emmean, fill=Treatment)) +
+      geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", width=0.65)+
+      scale_fill_manual(values=c('grey45', 'grey45', 'darkred', 'darkred', 'darkred', 'darkblue'), guide="none")+
+      scale_y_continuous(limits=c(0, 25)) +
+      geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
+      geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
+      labs(x="", y="Soil phosphorus (mg/kg)")+
+      scale_x_discrete(labels=FieldLabDash_Main)+
+      theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
+            strip.text.x.top=element_text(size=20, face="bold"), strip.background = element_blank(),
+            plot.title=element_blank(),
+            axis.text.x=element_text(angle=45, vjust=1, hjust=1, size=16, face="bold", colour="black"),
+            axis.text.y=element_text(size=16, face="bold", colour="black"),
+            axis.title=element_text(size=20, face="bold"),
+            panel.background = element_blank(),
+            panel.border=element_blank(), panel.grid.major=element_blank(),
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(FieldPO4Plot_bar, file="Field_soilPO4_Bar.jpg", height=8, width = 8, dpi=150)
+  
 ### PO4 autocorrelation ----
   # This method is not really applicable as I have only 3 depths, need more data for autocorrelation
   ## option 1 - more related to time series with lags, see explanation in word document in Thesis folder
@@ -1254,36 +1279,36 @@
 # Models - anovas indicate coefficients have arithmetic operators in their names
   # ModFieldWSP1
   ModFieldWSP1 <-   lmer(sqrt(WSP)~Treatment*Depth + (1|Block), data=WSP_long_sub)
-  Anova(ModFieldWSP1, alpha=0.1) # no significant differences
+  Anova(ModFieldWSP1, alpha=0.1)
   summary(ModFieldWSP1, alpha=0.1)
   print(coef(summary(ModFieldWSP1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
   hist(resid(ModFieldWSP1)) # slight right skew
-  shapiro.test(resid(ModFieldWSP1))  # 0.261
+  shapiro.test(resid(ModFieldWSP1))  # 0.5
   plot(fitted(ModFieldWSP1),resid(ModFieldWSP1),pch=16)   # two clusters, equal around 0
   qqnorm(resid(ModFieldWSP1)) # slight tails
   qqline(resid(ModFieldWSP1))
-  rsq(ModFieldWSP1) # 0.805
+  rsq(ModFieldWSP1) # 0.82
   # ModFieldWSP2
   ModFieldWSP2 <- lme(sqrt(WSP)~Treatment*Depth,random=~1|Block, data=WSP_long_sub)
   Anova(ModFieldWSP2, type="III")  # no significant differences
   summary(ModFieldWSP2)
-  rsq(ModFieldWSP2) # 0.805
+  rsq(ModFieldWSP2) # 0.82
   # ModFieldWSP3 
   ModFieldWSP3 <- glmmTMB(sqrt(WSP)~Treatment*Depth+(1|Block), data=WSP_long_sub, family=gaussian())
   glmmTMB:::Anova.glmmTMB(ModFieldWSP3, type="III") # no significant differences
   summary(ModFieldWSP3)
-  performance::r2(ModFieldWSP3) # 0.818
+  performance::r2(ModFieldWSP3) # 0.84
   #Comparing models
   # Rsq = mod3
   # AIC & BIC
     FWSP_modlist <- list(ModFieldWSP1, ModFieldWSP2, ModFieldWSP3)
     AIC_values <- sapply(FWSP_modlist, AIC)
     BIC_values <- sapply(FWSP_modlist, BIC)
-    (N_AB <- data.frame(Model=c("ModFieldWSP1", "ModFieldWSP2", "ModFieldWSP3"), AIC_values, BIC_values))
+    (FWSP_AB <- data.frame(Model=c("ModFieldWSP1", "ModFieldWSP2", "ModFieldWSP3"), AIC_values, BIC_values))
           #Model AIC_values BIC_values
-          #1 ModFieldWSP1   123.48041   169.0137
-          #2 ModFieldWSP2  123.48041   163.2601
-          #3 ModFieldWSP3   97.32305   142.8564 - best fit plus best rsq
+          #1 ModFieldWSP1   116.7   161
+          #2 ModFieldWSP2   116.7   155
+          #3 ModFieldWSP3    90.3   135 - highest rsq, chosen as best model
 #emmeans 
     (ModFieldemWSP <- emmeans(ModFieldWSP3,~Treatment|Depth, alpha=0.1, infer=TRUE, alpha=0.1, type="response"))
     (ModFieldemWSP_cld <- cld(ModFieldemWSP,Letters=trimws(letters), reversed=TRUE, by = "Depth"))
@@ -1291,26 +1316,28 @@
     (ModFieldemWSP_cld <- ModFieldemWSP_cld %>% dplyr::rename(emmean="response"))
     write_xlsx(ModFieldemWSP_cld, path="Field_SoilWSP.xlsx")
 # Visualizations
-    (FieldWSPPlot <- ggplot(ModFieldemWSP_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
-        geom_point(size = 8, color="black", aes(fill=Treatment)) +
-        scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
-        scale_shape_manual(values = c(21,24,22)) +
-        geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
-        scale_x_discrete(labels=SoilResidue_labels)+
-        labs(x = "", y = bquote(bold("Water soluble P (mg/kg)"))) +
+    (FieldWSPPlot <- ggplot(ModFieldemWSP_cld, aes(x=factor(Treatment, levels=FieldTrt_order), y = emmean, fill=Depth, shape = Depth)) +
+        geom_point(size = 8, color="black", aes(fill=Depth))+
+        scale_fill_manual(values = c("green3", "purple2", "darkred"), guide = "none")+
+        scale_shape_manual(values = c(21,24,22))+
+        geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5, check_overlap = TRUE)+
+        scale_x_discrete(labels=FieldLabDash_Main)+
+        labs(x = "", y = bquote(bold("Water soluble P (mg/kg)")))+
         theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
               legend.title = element_blank(), legend.text=element_text(size=16),
-              axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+              axis.text.x=element_blank(),#text(angle=45, hjust=1, size=18, face="bold", colour="black"),
               axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
-              axis.title.x=element_blank(),
+              axis.title.x=element_text(size = 28, face = "bold", colour = "black"),
               axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
               panel.background = element_blank(),
               panel.border=element_blank(), panel.grid.major=element_blank(),
-              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))+
+        guides(shape = guide_legend(override.aes = list(size=6)), fill = guide_legend(size = 6)))
     ggsave(FieldWSPPlot, file="Field_soilWSP.jpg", height=8, width = 11, dpi=150)
 
 
-
+    
+    
 ## Soil resin P   ----
   # Skewness and kurtosis
     ResP_VarNames <- c("ResinP_10", "ResinP_20", "ResinP_30") 
@@ -1351,63 +1378,166 @@
     ResP_long_sub$ResP<- as.numeric(ResP_long_sub$ResP)
     print(ResP_long_sub)
 # Models
-  # ModFieldResP1 
+  # lmer
   ModFieldResP1 <- lmer(ResP~Treatment*Depth + (1|Block), data=ResP_long_sub)
-  Anova(ModFieldResP1, alpha=0.1) # no significant differences
+  Anova(ModFieldResP1, alpha=0.1)
   summary(ModFieldResP1, alpha=0.1)
   print(coef(summary(ModFieldResP1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
   hist(resid(ModFieldResP1)) # normal
-  shapiro.test(resid(ModFieldResP1))  # 0.217
+  shapiro.test(resid(ModFieldResP1))  # 1e-4
   plot(fitted(ModFieldResP1),resid(ModFieldResP1),pch=16)   # apprx equal around 0
-  qqnorm(resid(ModFieldResP1)) # small no tails
+  qqnorm(resid(ModFieldResP1)) # large tails
   qqline(resid(ModFieldResP1))
-  rsq(ModFieldResP1) # 0.817
+  rsq(ModFieldResP1) # 0.84
   # ModFieldResP2 
   ModFieldResP2 <- lme(ResP~Treatment*Depth,random=~1|Block, data=ResP_long_sub)
-  Anova(ModFieldResP2, type="III")  # no significant differences
+  Anova(ModFieldResP2, type="III")
   summary(ModFieldResP2)
-  rsq(ModFieldResP2) # 0.817
+  rsq(ModFieldResP2) # 0.84
   # ModFieldResP3
   ModFieldResP3 <- glmmTMB(ResP~Treatment*Depth+(1|Block), data=ResP_long_sub, family=gaussian())
-  glmmTMB:::Anova.glmmTMB(ModFieldResP3, type="III") # no significant differences
+  glmmTMB:::Anova.glmmTMB(ModFieldResP3, type="III")
   summary(ModFieldResP3)
-  performance::r2(ModFieldResP3) # 0.832
-  #Comparing models
-  # Rsq = mod3
+  performance::r2(ModFieldResP3) # 0.85
   # AIC & BIC - mod3
   FResP_modlist <- list(ModFieldResP1, ModFieldResP2, ModFieldResP3)
   AIC_values <- sapply(FResP_modlist, AIC)
   BIC_values <- sapply(FResP_modlist, BIC)
-  (N_AB <- data.frame(Model=c("ModFieldResP1", "ModFieldResP2", "ModFieldResP3"), AIC_values, BIC_values))
+  (FResP_AB <- data.frame(Model=c("ModFieldResP1", "ModFieldResP2", "ModFieldResP3"), AIC_values, BIC_values))
         #Model AIC_values BIC_values
-        #1 ModFieldResP1  -14.29453   31.23879 - df 29.1
-        #2 ModFieldResP2  -14.29453   25.48515 - df 3
-        #3 ModFieldResP3  -86.37688  -40.84356 - df 52
+        #1 ModFieldResP1  -15.9  28.5 - df 40.1 & 40.8, chosen as best model
+        #2 ModFieldResP2  -15.9  22.4 - df 3
+        #3 ModFieldResP3  -89.3  -44.9 - df 48
 # emmeans 
-  (ModFieldemResP <- emmeans(ModFieldResP3,~Treatment|Depth, alpha=0.1, infer=TRUE))
+  (ModFieldemResP <- emmeans(ModFieldResP1,~Treatment|Depth, alpha=0.1, infer=TRUE))
   (ModFieldemResP_cld <- cld(ModFieldemResP,Letters=trimws(letters), reversed=TRUE, by = "Depth"))
   write_xlsx(ModFieldemResP_cld, path="Field_SoilResinP.xlsx")
 # Visualizations
-  (FieldResPPlot <- ggplot(ModFieldemResP_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
-      geom_point(size = 8, color="black", aes(fill=Treatment)) +
-    scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
-    scale_shape_manual(values = c(21,24,22)) +
-    geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
-      scale_x_discrete(labels=SoilResidue_labels)+
-    labs(x = "", y = bquote(bold("Resin P (µg/cm"^2*~")"))) +
-      theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
-            legend.title = element_blank(), legend.text=element_text(size=16),
-            axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
-            axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
-            axis.title.x=element_blank(),
-            axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
-            panel.background = element_blank(),
-            panel.border=element_blank(), panel.grid.major=element_blank(),
-            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  (FieldResPPlot <- ggplot(ModFieldemResP_cld, aes(x=factor(Treatment, levels=FieldTrt_order), y = emmean, fill=Depth, shape = Depth)) +
+        geom_point(size = 8, color="black", aes(fill=Depth))+
+      scale_fill_manual(values = c("green3", "purple2", "darkred"), guide = "none")+
+        scale_shape_manual(values = c(21,24,22))+
+        geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.45, check_overlap = TRUE)+
+        scale_x_discrete(labels=FieldLabDash_Main)+
+        labs(x = "", y = bquote(bold("Resin P (µg/cm"^2*~")")))+
+        theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
+              legend.title = element_blank(), legend.text=element_text(size=16),
+              axis.text.x=element_blank(), #text(angle=45, hjust=1, size=18, face="bold", colour="black"),
+              axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+              axis.title.x=element_text(size = 28, face = "bold", colour = "black"),
+              axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))+
+      guides(shape = guide_legend(override.aes = list(size=6)), fill = guide_legend(size = 6)))
   ggsave(FieldResPPlot, file="Field_soilResP.jpg", height=8, width = 11, dpi=150)    
 
+  ### COMBINED P PLOTS FOR DEFENSE PRESENTATION
+  (Field_P_Plot <- ggarrange(FieldPO4Plot, FieldResPPlot, FieldWSPPlot, nrow=3, common.legend=TRUE, legend="right", heights = c(0.7,0.7,0.9),
+                             labels = 'AUTO', font.label=list(size=25, face="bold"), label.x = c(0.2,0.2,0.2)))
+    (FresidPlot_label <- ggdraw()+draw_plot(Field_P_Plot)+ draw_label("Treatment", y=0.01, size=30, fontface="bold"))
+    ggsave("FieldResidualP.jpg", height=16, width=7, dpi=150)
 
 
+    
+    
+## Soil Organic carbon ----
+    # Skewness and kurtosis
+    OC_VarNames <- c("OC_10", "OC_20", "OC_30")
+    (OC_stats_all <- Field_stats(Field, OC_VarNames))
+    #OC_10_skewness OC_20_skewness OC_30_skewness OC_10_kurtosis OC_20_kurtosis OC_30_kurtosis
+    #1      -1.564607     0.03953182       2.100573       8.029364        1.95518       9.324128
+    # Normality and equality of variance
+    shapiro.test(Field$OC_10) # p=0.0017
+    hist(Field$OC_10) #  severe right skew
+    leveneTest(OC_10~Treatment, data=Field)  # P=0.539
+    shapiro.test(Field$OC_20) # p=0.422
+    hist(Field$OC_20) #  normalish
+    leveneTest(OC_20~as.factor(Treatment), data=Field)  # P=0.849
+    shapiro.test(Field$OC_30) # p=0.00019
+    hist(Field$OC_30) #  ;eft skew
+    leveneTest(OC_30~as.factor(Treatment), data=Field)  # P=0.569
+    # transform - transformaions made it worse, didn't use
+    shapiro.test(log(Field$OC_10))  # p=3.9e-06
+    leveneTest(log(OC_10)~Treatment, data=Field)  # p= 0.427
+    shapiro.test(log(Field$OC_20))  # p=0.36
+    leveneTest(log(OC_20)~Treatment, data=Field)  # p= 0.955
+    shapiro.test(log(Field$OC_30))  # p=0.036
+    leveneTest(log(OC_30)~Treatment, data=Field)  # p=0.7564
+    shapiro.test(sqrt(Field$OC_10))  # p=7.9e-05
+    leveneTest(sqrt(OC_10)~Treatment, data=Field)  # p= 0.47
+    shapiro.test(sqrt(Field$OC_20))  # p=0.42
+    leveneTest(sqrt(OC_20)~Treatment, data=Field)  # p= 0.915
+    shapiro.test(sqrt(Field$OC_30))  # p=0.0033
+    leveneTest(sqrt(OC_30)~Treatment, data=Field)  # p=0.66
+    # Change data to long format
+    OC_long <- Field |>
+      gather(key="Depth", value="OC", matches("OC_"))
+    OC_long_sub <- subset(OC_long, select=c(Block, Treatment, Depth, OC))
+    OC_long_sub <- OC_long_sub[complete.cases(OC_long_sub[, c("Block", "Treatment", "Depth", "OC")]), ]
+    OC_long_sub$Depth <- factor(OC_long_sub$Depth,
+                                levels = c("OC_10", "OC_20", "OC_30"),
+                                labels = c("0-10cm", "10-20cm", "20-30cm"))
+    OC_long_sub$OC<- as.numeric(OC_long_sub$OC)
+    print(OC_long_sub)
+    #lmer
+    ModFieldOC1 <- lmer(OC~Treatment*Depth + (1|Block), data=OC_long_sub)
+    Anova(ModFieldOC1, alpha=0.1)
+    summary(ModFieldOC1, alpha=0.1)
+    print(coef(summary(ModFieldOC1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
+    hist(resid(ModFieldOC1)) # normal
+    shapiro.test(resid(ModFieldOC1))  # 0.5
+    plot(fitted(ModFieldOC1),resid(ModFieldOC1),pch=16)   # equal around 0
+    qqnorm(resid(ModFieldOC1)) # slight tails
+    qqline(resid(ModFieldOC1))
+    rsq(ModFieldOC1) # 0.94
+    # lme
+    ModFieldOC2 <- lme(OC~Treatment*Depth,random=~1|Block, data=OC_long_sub)
+    Anova(ModFieldOC2, type="III")
+    summary(ModFieldOC2)
+    rsq(ModFieldOC2) # 0.94
+    # glmm
+    ModFieldOC3 <- glmmTMB(OC~Treatment*Depth+(1|Block), data=OC_long_sub, family=gaussian())
+    glmmTMB:::Anova.glmmTMB(ModFieldOC3, type="III")
+    summary(ModFieldOC3)
+    performance::r2(ModFieldOC3) # 0.95
+    #Comparing models
+    # Rsq = Mod3
+    # AIC & BIC
+    FOC_modlist <- list(ModFieldOC1, ModFieldOC2, ModFieldOC3)
+    AIC_values <- sapply(FOC_modlist, AIC)
+    BIC_values <- sapply(FOC_modlist, BIC)
+    (FOC_AB <- data.frame(Model=c("ModFieldOC1", "ModFieldOC2", "ModFieldOC3"), AIC_values, BIC_values))
+    #Model AIC_values BIC_values
+    #1 ModFieldOC1    6.26   50.6 - 7.9 & 10.3 df
+    #2 ModFieldOC2    6.26   44.5 - 3 df
+    #3 ModFieldOC3   -59.35  -15.0 - 48 df, highest rsq, chosen as best model
+    # emmeans 
+    (ModFieldemOC <- emmeans(ModFieldOC3,~Treatment|Depth, type="response",infer = TRUE, alpha=0.1))
+    (ModFieldemOC_cld <- cld(ModFieldemOC, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
+    write_xlsx(ModFieldemOC_cld, path="Field_soilOC.xlsx")
+    # Visualizations
+    (FieldOCPlot <- ggplot(ModFieldemOC_cld, aes(x=factor(Treatment, levels=FieldTrt_order), y = emmean, fill=Depth, shape = Depth)) +
+        geom_point(size = 8, color="black", aes(fill=Depth)) +
+        scale_fill_manual(values = c("green3", "purple2", "darkred"), guide = "none")+
+        scale_shape_manual(values = c(21,24,22)) +
+        geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5, check_overlap = TRUE)+
+        scale_x_discrete(labels=FieldLabDash_Main)+
+        labs(x = "", y = bquote(bold("Organic carbon (%)"))) +
+        theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
+              legend.title = element_blank(), legend.text=element_text(size=16),
+              axis.text.x=element_blank(),#text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+              axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
+              axis.title.x=element_text(size = 28, face = "bold", colour = "black"),
+              axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
+              panel.background = element_blank(),
+              panel.border=element_blank(), panel.grid.major=element_blank(),
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))+
+        guides(shape = guide_legend(override.aes = list(size=6)), fill = guide_legend(size = 6)))
+    ggsave(FieldOCPlot, file="Field_soilOC.jpg", height=8, width = 11, dpi=150)
+
+    
+    
 ## Soil pH ----
   # Skewness and kurtosis
     pH_VarNames <- c("pH_10", "pH_20", "pH_30") 
@@ -1437,25 +1567,25 @@
   # Models
   # ModFieldpH1 
     ModFieldpH1 <- lmer(pH~Treatment*Depth + (1|Block), data=pH_long_sub)
-    Anova(ModFieldpH1, alpha=0.1, type="III") # no significant differences
+    Anova(ModFieldpH1, alpha=0.1, type="III")
     summary(ModFieldpH1, alpha=0.1)
     print(coef(summary(ModFieldpH1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
     hist(resid(ModFieldpH1)) # normal
-    shapiro.test(resid(ModFieldpH1))  # 0.809
+    shapiro.test(resid(ModFieldpH1))  # 0.9
     plot(fitted(ModFieldpH1),resid(ModFieldpH1),pch=16)   # normal
     qqnorm(resid(ModFieldpH1)) # almost no tails
     qqline(resid(ModFieldpH1))
-    rsq(ModFieldpH1) # 0.512
+    rsq(ModFieldpH1) # 0.51
   # ModFieldpH2 
     ModFieldpH2 <- lme(pH~Treatment*Depth,random=~1|Block, data=pH_long_sub)
-    Anova(ModFieldpH2, type="III")   # no significant differences
+    Anova(ModFieldpH2, type="III")
     summary(ModFieldpH2)
-    rsq(ModFieldpH2) # 0.512
+    rsq(ModFieldpH2) # 0.51
   # ModFieldpH3
     ModFieldpH3 <- glmmTMB(pH~Treatment*Depth+(1|Block), data=pH_long_sub, family=gaussian())
-    glmmTMB:::Anova.glmmTMB(ModFieldpH3, type="III") # no significant differences
+    glmmTMB:::Anova.glmmTMB(ModFieldpH3, type="III")
     summary(ModFieldpH3)
-    performance::r2(ModFieldpH3) # 0.552
+    performance::r2(ModFieldpH3) # 0.55
   #Comparing models
   # Rsq = Mo3 slightly better
   # AIC & BIC
@@ -1464,20 +1594,20 @@
     BIC_values <- sapply(FpH_modlist, BIC)
     (N_AB <- data.frame(Model=c("ModFieldpH1", "ModFieldpH2", "ModFieldpH3"), AIC_values, BIC_values))
         #Model AIC_values BIC_values
-        #1 ModFieldpH1  63.57132  109.10465
-        #2 ModFieldpH2   63.57132  103.35100
-        #3 ModFieldpH3   17.44426   62.97758 - best model
+        #1 ModFieldpH1  62.3      107.3
+        #2 ModFieldpH2  62.3      101.4
+        #3 ModFieldpH3  16.4       61.4 - highest rsq,chosen as best model
   # emmeans 
     (ModFieldempH <- emmeans(ModFieldpH3,~Treatment|Depth, infer = TRUE, alpha=0.1))
     (ModFieldempH_cld <- cld(ModFieldempH, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
     write_xlsx(ModFieldempH_cld, path="Field_soilpH.xlsx")
   # Visualizations
-    (FieldpHPlot <- ggplot(ModFieldempH_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
-        geom_point(size = 8, color="black", aes(fill=Treatment)) +
-      scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
+    (FieldpHPlot <- ggplot(ModFieldempH_cld, aes(x=factor(Treatment, levels=FieldTrt_order), y = emmean, fill=Depth, shape = Depth)) +
+        geom_point(size = 8, color="black", aes(fill=Depth)) +
+        scale_fill_manual(values = c("green3", "purple2", "darkred"), guide = "none")+
       scale_shape_manual(values = c(21,24,22)) +
-      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
-        scale_x_discrete(labels=SoilResidue_labels)+
+      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5, check_overlap = TRUE) +
+        scale_x_discrete(labels=FieldLabDash_Main)+
       labs(x = "", y = bquote(bold("pH"))) +
       theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
             legend.title = element_blank(), legend.text=element_text(size=16),
@@ -1487,7 +1617,8 @@
             axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
             panel.background = element_blank(),
             panel.border=element_blank(), panel.grid.major=element_blank(),
-            panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+            panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))+
+        guides(shape = guide_legend(override.aes = list(size=6)), fill = guide_legend(size = 6)))
     ggsave(FieldpHPlot, file="Field_soilpH.jpg", height=8, width = 11, dpi=150)
 
 
@@ -1531,52 +1662,50 @@
                                 labels = c("0-10cm", "10-20cm", "20-30cm"))
     EC_long_sub$EC<- as.numeric(EC_long_sub$EC)
     print(EC_long_sub)
-    # Models
-    # ModFieldEC1 
-    ModFieldEC1 <- lmer(log(EC)~Treatment*Depth + (1|Block), data=EC_long_sub)
-    Anova(ModFieldEC1, alpha=0.1, type="III") # no significant differences
+    # lmer
+    ModFieldEC1 <- lmer(log(EC)~Treatment*Depth + (1|Block), data=EC_long_sub) # singularity
+    Anova(ModFieldEC1, alpha=0.1, type="III")
     summary(ModFieldEC1, alpha=0.1)
     print(coef(summary(ModFieldEC1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
     hist(resid(ModFieldEC1)) # normal
-    shapiro.test(resid(ModFieldEC1))  # 0.00013
+    shapiro.test(resid(ModFieldEC1))  # 0.007
     plot(fitted(ModFieldEC1),resid(ModFieldEC1),pch=16)   # equal around 0
     qqnorm(resid(ModFieldEC1)) # moderate tails
     qqline(resid(ModFieldEC1))
-    rsq(ModFieldEC1) # 0.379
-    # ModFieldEC2 
+    rsq(ModFieldEC1) # 0.47
+    # lme
     ModFieldEC2 <- lme(log(EC)~Treatment*Depth,random=~1|Block, data=EC_long_sub)
-    Anova(ModFieldEC2, type="III")  # no significant differences
+    Anova(ModFieldEC2, type="III")
     summary(ModFieldEC2)
-    rsq(ModFieldEC2) # 0.379
-    # ModFieldEC3 - singularity picked up in rsq
-    ModFieldEC3 <- glmmTMB(log(EC)~Treatment*Depth+(1|Block), data=EC_long_sub, family=gaussian())
-    glmmTMB:::Anova.glmmTMB(ModFieldEC3, type="III") # no significant differences
+    rsq(ModFieldEC2) # 0.47
+    # glmm
+    ModFieldEC3 <- glmmTMB(log(EC)~Treatment*Depth+(1|Block), data=EC_long_sub, family=gaussian(), # singularity
+                           control = glmmTMBControl(optimizer = optim, optArgs=list(method='BFGS')))
+    glmmTMB:::Anova.glmmTMB(ModFieldEC3, type="III")
     summary(ModFieldEC3)
-    performance::r2(ModFieldEC3) # NA 
-    #Comparing models
-    # Rsq = ??
+    performance::r2(ModFieldEC3) # NA, marginal=0.47 
     # AIC & BIC
     FEC_modlist <- list(ModFieldEC1, ModFieldEC2, ModFieldEC3)
     AIC_values <- sapply(FEC_modlist, AIC)
     BIC_values <- sapply(FEC_modlist, BIC)
-    (N_AB <- data.frame(Model=c("ModFieldEC1", "ModFieldEC2", "ModFieldEC3"), AIC_values, BIC_values))
+    (FEC_AB <- data.frame(Model=c("ModFieldEC1", "ModFieldEC2", "ModFieldEC3"), AIC_values, BIC_values))
           #Model AIC_values BIC_values
-          #1 ModFieldEC1   206.0727   251.6061 - 54 df, preferred model
-          #2 ModFieldEC2   206.0727   245.8524 - 3 df
-          #3 ModFieldEC3   207.4461   252.9795 - 52 df 
+          #1 ModFieldEC1   150        194 - 48 df, preferred model
+          #2 ModFieldEC2   150        188 - 3 df
+          #3 ModFieldEC3   139        182 - 46 df 
     # emmeans 
     (ModFieldemEC <- emmeans(ModFieldEC1,~Treatment|Depth, type="response",infer = TRUE, alpha=0.1))
     (ModFieldemEC_cld <- cld(ModFieldemEC, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
     ModFieldemEC_cld <- ModFieldemEC_cld %>% dplyr::rename(emmean="response")
     write_xlsx(ModFieldemEC_cld, path="Field_soilEC.xlsx")
     # Visualizations
-    (FieldECPlot <- ggplot(ModFieldemEC_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
-        geom_point(size = 8, color="black", aes(fill=Treatment)) +
-      scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
-      scale_shape_manual(values = c(21,24,22)) +
-      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
-        scale_x_discrete(labels=SoilResidue_labels)+
-      labs(x = "", y = bquote(bold("Electric conductivity (mS/cm)"))) +
+    (FieldECPlot <- ggplot(ModFieldemEC_cld, aes(x=factor(Treatment, levels=FieldTrt_order), y = emmean, fill=Depth, shape = Depth))+
+        geom_point(size = 8, color="black", aes(fill=Depth)) +
+        scale_fill_manual(values = c("green3", "purple2", "darkred"), guide = "none")+
+        scale_shape_manual(values = c(21,24,22)) +
+      geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5, check_overlap = TRUE)+
+        scale_x_discrete(labels=FieldLabDash_Main)+
+      labs(x = "", y = bquote(bold("Electric conductivity (mS/cm)")))+
         theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
               legend.title = element_blank(), legend.text=element_text(size=16),
               axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -1585,116 +1714,22 @@
               axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
               panel.background = element_blank(),
               panel.border=element_blank(), panel.grid.major=element_blank(),
-              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+              panel.grid.minor=element_blank(), axis.line=element_line(colour="black"))+
+        guides(shape = guide_legend(override.aes = list(size=6)), fill = guide_legend(size = 6)))
     ggsave(FieldECPlot, file="Field_soilEC.jpg", height=8, width = 11, dpi=150)    
 
 
-
-## Soil Organic carbon ----
-  # Skewness and kurtosis
-    OC_VarNames <- c("OC_10", "OC_20", "OC_30")
-    (OC_stats_all <- Field_stats(Field, OC_VarNames))
-            #OC_10_skewness OC_20_skewness OC_30_skewness OC_10_kurtosis OC_20_kurtosis OC_30_kurtosis
-            #1      -1.564607     0.03953182       2.100573       8.029364        1.95518       9.324128
-  # Normality and equality of variance
-      shapiro.test(Field$OC_10) # p=0.0017
-      hist(Field$OC_10) #  severe right skew
-      leveneTest(OC_10~Treatment, data=Field)  # P=0.539
-      shapiro.test(Field$OC_20) # p=0.422
-      hist(Field$OC_20) #  normalish
-      leveneTest(OC_20~as.factor(Treatment), data=Field)  # P=0.849
-      shapiro.test(Field$OC_30) # p=0.00019
-      hist(Field$OC_30) #  ;eft skew
-      leveneTest(OC_30~as.factor(Treatment), data=Field)  # P=0.569
-  # transform - transformaions made it worse, didn't use
-      shapiro.test(log(Field$OC_10))  # p=3.9e-06
-      leveneTest(log(OC_10)~Treatment, data=Field)  # p= 0.427
-      shapiro.test(log(Field$OC_20))  # p=0.36
-      leveneTest(log(OC_20)~Treatment, data=Field)  # p= 0.955
-      shapiro.test(log(Field$OC_30))  # p=0.036
-      leveneTest(log(OC_30)~Treatment, data=Field)  # p=0.7564
-      shapiro.test(sqrt(Field$OC_10))  # p=7.9e-05
-      leveneTest(sqrt(OC_10)~Treatment, data=Field)  # p= 0.47
-      shapiro.test(sqrt(Field$OC_20))  # p=0.42
-      leveneTest(sqrt(OC_20)~Treatment, data=Field)  # p= 0.915
-      shapiro.test(sqrt(Field$OC_30))  # p=0.0033
-      leveneTest(sqrt(OC_30)~Treatment, data=Field)  # p=0.66
-  # Change data to long format
-    OC_long <- Field |>
-      gather(key="Depth", value="OC", matches("OC_"))
-    OC_long_sub <- subset(OC_long, select=c(Block, Treatment, Depth, OC))
-    OC_long_sub <- OC_long_sub[complete.cases(OC_long_sub[, c("Block", "Treatment", "Depth", "OC")]), ]
-    OC_long_sub$Depth <- factor(OC_long_sub$Depth,
-                                levels = c("OC_10", "OC_20", "OC_30"),
-                                labels = c("0-10cm", "10-20cm", "20-30cm"))
-    OC_long_sub$OC<- as.numeric(OC_long_sub$OC)
-    print(OC_long_sub)
-  # Models
-  # ModFieldOC1  - issues with arithmentic operators in name
-    ModFieldOC1 <- lmer(OC~Treatment*Depth + (1|Block), data=OC_long_sub)
-    Anova(ModFieldOC1, alpha=0.1) # significant differences
-    summary(ModFieldOC1, alpha=0.1)
-    print(coef(summary(ModFieldOC1))[, "Pr(>|t|)"], pvalues = TRUE, significance_level = 0.1)
-    hist(resid(ModFieldOC1)) # normal
-    shapiro.test(resid(ModFieldOC1))  # 3.8e-05
-    plot(fitted(ModFieldOC1),resid(ModFieldOC1),pch=16)   # equal around 0
-    qqnorm(resid(ModFieldOC1)) # moderate tails
-    qqline(resid(ModFieldOC1))
-    rsq(ModFieldOC1) # 0.831
-  # ModFieldOC2 
-    ModFieldOC2 <- lme(OC~Treatment*Depth,random=~1|Block, data=OC_long_sub)
-    Anova(ModFieldOC2, type="III")  # significant differences
-    summary(ModFieldOC2)
-    rsq(ModFieldOC2) # 0.831
-  # ModFieldOC3 
-    ModFieldOC3 <- glmmTMB(OC~Treatment*Depth+(1|Block), data=OC_long_sub, family=gaussian())
-    glmmTMB:::Anova.glmmTMB(ModFieldOC3, type="III") # significant differences
-    summary(ModFieldOC3)
-    performance::r2(ModFieldOC3) # 0.849
-  #Comparing models
-    # Rsq = Mod3
-    # AIC & BIC
-    FOC_modlist <- list(ModFieldOC1, ModFieldOC2, ModFieldOC3)
-    AIC_values <- sapply(FOC_modlist, AIC)
-    BIC_values <- sapply(FOC_modlist, BIC)
-    (N_AB <- data.frame(Model=c("ModFieldOC1", "ModFieldOC2", "ModFieldOC3"), AIC_values, BIC_values))
-      #Model AIC_values BIC_values
-      #1 59.05338  104.58671
-      #2 ModFieldOC2   59.05338   98.83306
-      #3 ModFieldOC3   11.42034   56.95366 Best model AIC/BIC & rsq
-  # emmeans 
-    (ModFieldemOC <- emmeans(ModFieldOC3,~Treatment|Depth, type="response",infer = TRUE, alpha=0.1))
-    (ModFieldemOC_cld <- cld(ModFieldemOC, Letters=trimws(letters), reversed=TRUE, by = "Depth"))
-    write_xlsx(ModFieldemOC_cld, path="Field_soilOC.xlsx")
-  # Visualizations
-    (FieldOCPlot <- ggplot(ModFieldemOC_cld, aes(x = Treatment, y = emmean, shape = Depth)) +
-        geom_point(size = 8, color="black", aes(fill=Treatment)) +
-        scale_fill_manual(values = brewer.pal(6, name = "Dark2"), guide = "none") +
-        scale_shape_manual(values = c(21,24,22)) +
-        geom_text(aes(label = trimws(.group)), size = 7, nudge_x = 0.5) +  # Add this line for geom_text
-        scale_x_discrete(labels=SoilResidue_labels)+
-        labs(x = "", y = bquote(bold("Organic carbon (%)"))) +
-        theme(legend.position = "right", legend.key.size=unit(11,"mm"), legend.key = element_blank(),
-              legend.title = element_blank(), legend.text=element_text(size=16),
-              axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
-              axis.text.y = element_text(size = 20, face = "bold", colour = "black"),
-              axis.title.x=element_blank(),
-              axis.title.y=element_text(size=28, face="bold", margin=margin(r=15)),
-              panel.background = element_blank(),
-              panel.border=element_blank(), panel.grid.major=element_blank(),
-              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-     ggsave(FieldOCPlot, file="Field_soilOC.jpg", height=8, width = 11, dpi=150)    
   
 ## combined residual plots ----
-     (FresidPlot <- plot_grid(FieldPO4Plot, FieldWSPPlot, FieldResPPlot, FieldOCPlot, FieldpHPlot, FieldECPlot, nrow=3, ncol=2,
-               labels = c("A", "B", "C", "D", "E", "F"), label_size = 35, label_x = c(0.11,0.1,0.13,0.12,0.12,0.14)))
+     (FresidPlot <- ggarrange(FieldPO4Plot, FieldWSPPlot, FieldResPPlot, FieldOCPlot, FieldpHPlot, FieldECPlot,
+                              nrow=3, ncol=2, common.legend=TRUE, legend="right", heights = c(0.7,0.7,0.9),
+                              labels = 'AUTO', font.label=list(size=25, face="bold"), label.x= c(0.15,0.13,0.16,0.17,0.17,0.17)))
      (FresidPlot_label <- ggdraw()+draw_plot(FresidPlot)+ draw_label("Treatment", y=0.02, size=30, fontface="bold"))
-     ggsave("Combined residual soil.jpg", height=20, width=18, dpi=150)
+     ggsave("Combined residual soil.jpg", height=18, width=16, dpi=150)
      
      
 
 # SNOWMELT ----
-Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP","TSP\nFertilizer")
 ## NO3 load ----
     print(LNO3_stats <- Field_stats(Field, "LNO3"))
           #skewness kurtosis
@@ -1759,7 +1794,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
         geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.2)+
         scale_y_continuous(limits = c(0,7.5))+
         geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
-        labs(x="", y=bquote(bold("NO"[3]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
+        labs(x="", y=bquote(bold("NO"[3]~" load (kg/ha)")))+scale_x_discrete(labels=FieldLabDash_Main)+
         theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
               panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
               panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
@@ -1840,7 +1875,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
       geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.2)+
       scale_y_continuous(limits = c(0,0.13))+
       geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
-      labs(x="", y=bquote(bold("NH"[4]~" load (kg/ha)")))+scale_x_discrete(labels=Snowmelt_labels)+
+      labs(x="", y=bquote(bold("NH"[4]~" load (kg/ha)")))+scale_x_discrete(labels=FieldLabDash_Main)+
       theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
             panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
             panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
@@ -1916,7 +1951,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
         geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
         scale_y_continuous(limits = c(0,13))+
         geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
-        labs(x="", y=bquote(bold("Resin NO"[3]~" load (µg/cm"^2*~")")))+ scale_x_discrete(labels=Snowmelt_labels)+
+        labs(x="", y=bquote(bold("Resin NO"[3]~" load (µg/cm"^2*~")")))+ scale_x_discrete(labels=FieldLabDash_Main)+
         theme(axis.title = element_text(size=16), axis.text=element_text(size=14, face="bold", angle=45, hjust=1, color="black"),
               panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
               panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
@@ -2008,14 +2043,14 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
     View(ModFieldLPO4em_cld)
     write_xlsx(ModFieldLPO4em_cld, path="Field_snowPO4.xlsx")
     # Vizualization
-    (LPO4plot <- ggplot(ModFieldLPO4em_cld, aes(x=Treatment, y=emmean)) +
-        geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                         pattern_density=0.05, pattern_spacing=0.01, width=0.65)+
+    (LPO4plot <- ggplot(ModFieldLPO4em_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
+        geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", width=0.65)+
+        scale_fill_manual(values=c('grey45', 'grey45', 'darkred', 'darkred', 'darkred', 'darkblue'), guide="none")+
         scale_y_continuous(limits=c(-0.001, 0.07)) +
         geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
-        geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
-        labs(x="", y="Snowmelt runoff soluble reactive P load (kg/ha)")+
-        scale_x_discrete(labels=Snowmelt_labels)+
+        geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
+        labs(x="", y="Soluble reactive P load (kg/ha)")+
+        scale_x_discrete(labels=FieldLabDash_Main)+
         theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
               strip.text.x.top=element_text(size=20, face="bold"), strip.background = element_blank(),
               plot.title=element_blank(),
@@ -2025,6 +2060,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
               panel.background = element_blank(),
               panel.border=element_blank(), panel.grid.major=element_blank(),
               panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    ggsave(LPO4plot, file='Field_LeachatePO4.jpg', height=8, width=8, dpi=200)
     
     ## ggbetweenstats
     (LPO4statsplot <- ggbetweenstats(LPO4_subset, x=Treatment, y=LPO4, #need to used dataset with no missing values
@@ -2033,6 +2069,12 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
                                      ggtheme = ggplot2::theme_gray(), # change theme & look of plot
                                      title=bquote(bold("Leachate PO"[4] ~ "-" ~ " in snowmelt runoff")))) # bquote used for subscript within text
     ggsave(LPO4statsplot, file="Field_snowPO4_curiosity plot.jpg", width=12, height=8, dpi=150)
+    
+    ## Snowplot with soil P & snow P
+    (SnowPPlot <- ggarrange(FieldPO4Plot_bar, LPO4plot, nrow=1, labels = 'AUTO', font.label = list(size=30, face='bold'),
+                            label.x = c(0.13, 0.15)))
+    (SnowPPlot_label <- ggdraw() + draw_plot(SnowPPlot) + draw_label('Treatment', y=0.03, size = 25, fontface = 'bold'))
+    ggsave(SnowPPlot_label, file='SnowP_Plot.jpg', height=6, width=12, dpi=150)
     
     
 ## Resin PO4 load ----
@@ -2101,17 +2143,16 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
     (ResPO4plot <- ggplot(ModFieldemResPO4_cld,aes(x=Treatment,y=emmean))+geom_point()+geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE)))
     pairs(ModFieldemResPO4)
     emmip(ModFieldemResPO4, ~Treatment)
-    View(ModFieldemResPO4_cld)
     write_xlsx(ModFieldemResPO4_cld, path="Field_snowResinPO4.xlsx")
     # Vizualization
-    (ResinPO4PPlot <- ggplot(ModFieldemResPO4_cld, aes(x=Treatment, y=emmean)) +
-        geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                         pattern_density=0.05, pattern_spacing=0.01, width=0.65)+
+    (ResinPO4PPlot <- ggplot(ModFieldemResPO4_cld, aes(x=Treatment, y=emmean, fill=Treatment)) +
+        geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", width=0.65)+
+        scale_fill_manual(values=c('grey45', 'grey45', 'darkred', 'darkred', 'darkred', 'darkblue'), guide="none")+
         scale_y_continuous(limit = c(-0.01, 0.8)) +
         geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
         geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
         labs(x="", y=bquote(bold("Resin PO"[4]~" load (µg/cm"^2*~")")))+
-        scale_x_discrete(labels=Snowmelt_labels)+
+        scale_x_discrete(labels=FieldLabDash_Main)+
         theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
               strip.text.x.top=element_text(size=20, face="bold"), strip.background = element_blank(),
               plot.title=element_blank(),
@@ -2126,8 +2167,8 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
 ## Plotting Snowmelt load ----
   # OPtion 1 Combined plot using cowplot
     (Snowmeltplot <- plot_grid(LPO4plot, ResinPO4PPlot, ncol=2, labels = c("A", "B"), label_size = 20, label_x = c(0.16,0.15)))
-    (SnowPlot_label <- ggdraw()+draw_plot(Snowmeltplot)+ draw_label("Treatment", y=0.02, size=25, fontface="bold"))
-    ggsave("Field_Snowmelt.jpg", height=8, width=12, dpi=150)    
+    (SnowPlot_label <- ggdraw()+draw_plot(Snowmeltplot)+ draw_label("Treatment", y=0.03, size=25, fontface="bold"))
+    ggsave("Field_Snowmelt.jpg", height=6, width=12, dpi=150)    
     
 # OPtion 2 create and combine data frames for the emmeans functions (nots used)
   emPO4 <- as.data.frame(ModFieldLPO4em_cld)
@@ -2145,7 +2186,7 @@ Snowmelt_labels <- c("Control 1", "Control 2", "Biochar\n25kgP/ha", "Biochar\n10
       geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=0.25)+
       geom_text(aes(label=trimws(.group), y=emmean+SE), size=8, vjust=-1)+
       labs(x="Treatment", y="Nutrient load in snowmelt runoff (kg/ha)") +
-      scale_x_discrete(labels=Snowmelt_labels)+
+      scale_x_discrete(labels=FieldLabDash_Main)+
       theme(legend.title=element_blank() , legend.key=element_blank(), legend.text=element_blank(),
             strip.text.x.top=element_text(size=20, face="bold"), strip.background = element_blank(),
             plot.title=element_blank(),

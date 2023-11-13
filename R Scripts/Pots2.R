@@ -1,6 +1,5 @@
 # Loading data in to R & Summaries ----
 Pots2<-read.csv("Data/Pots2.csv", fileEncoding="UTF-8-BOM")
-View(Pots2)
 Pots2Raw<-read.csv("Data/Pots2raw.csv", fileEncoding="UTF-8-BOM")
 
 ## Loading libraries ----
@@ -16,6 +15,7 @@ library(afex)
 library(onewaytests)
 library(multcomp)
 library(dplyr)
+library(plyr)
 library(tidyr)
 library(magrittr)
 library(readr)
@@ -36,42 +36,53 @@ library(glmmTMB)
 library(viridis)
 library(RColorBrewer)
 library(corrplot)
+library(corrr) # for PCA analysis
+library(FactoMineR) # for PCA analysis
 library(glmmTMB)
 library(writexl)
 library(openxlsx)
+library(reshape2) # for the melt function
+library(fmsb)
 
 
 ## Summary and ordering of data   ----
-#Check for missing values in a specific field
+# Check for missing values in a specific field
 missing <- colSums(is.na(Pots2[,]))
 print(missing)
 
+### Labels ----
 #Change columns in a dataframe to factors/categorical values, str displays 
 Pots2$Block <- factor(Pots2$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
-Pots2Trt_order <- c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus")
-Pots2$Treatment <- factor(Pots2$Treatment, levels = Pots2Trt_order)
-Pots2$Grain <- as.numeric(as.character(Pots2$Grain))
-Pots2$Straw <- as.numeric(as.character(Pots2$Straw))
-summary(Pots2)
-str(Pots2) #displays the structure of the object
+Pots2Trt_order <- as.factor(c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"))
+Pots2TrtSub <- as.factor(c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"))
 
-# Summary data (means, SD, etc.) for each treatment and variable
-Pots2Mean <- summary_by(.~Soil+Treatment, data=Pots2, FUN=mean) #overall means for the data set
-Pots2SD <- summary_by(.~Soil+Treatment, data=Pots2, FUN=sd) #overall SD for the dataset
-View(Pots2Mean)
-View(Pots2SD)
-Straw_summary <- Pots2 %>% #summary data specifically for Straw variable
+# for labels
+Pots2Lab_Main <- as.factor(c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "MBMA Coarse", "MBMA Fine", "TSP Fertilizer"))
+Pots2Lab_Sub <- as.factor(c("Canola Meal", "Manure", "Willow", "MBMA Coarse", "MBMA Fine", "TSP Fertilizer"))
+Pots2LabDash_Main <- as.factor(c("Control 1", "Control 2", "Canola\nMeal", "Manure", "Willow", "MBMA\nCoarse", "MBMA\nFine", "TSP\nFertilizer"))
+Pots2LabDash_sub <- as.factor(c("Canola\nMeal", "Manure", "Willow", "MBMA\nCoarse", "MBMA\nFine", "TSP\nFertilizer"))
+
+fillCol <- c('grey45', 'grey45', 'darkred', 'darkred', 'darkred', 'darkred', 'darkred', 'darkblue')
+
+### Summary data ----
+summary(Pots2)
+str(Pots2)
+Pots2Mean <- summary_by(.~Treatment, data=Pots2, FUN=mean) #overall means for the data set
+print(Pots2Mean)
+Pots2SD <- summary_by(.~Treatment, data=Pots2, FUN=sd) #overall SD for the dataset
+print(Pots2SD)
+Straw_summary <- Pots2 %>%
   group_by(Treatment) %>%
   summarize(Mean=mean(Straw),
             SD=sd(Straw),
-            SE=sd(Straw)/sqrt(n()))
-View(Straw_summary) #summary data specifically for Grain variable
+            SE=sd(Straw)/sqrt(n))
+print(Straw_summary)
 Grain_summary <- Pots2 %>%
   group_by(Treatment) %>%
   summarize(Mean=mean(Grain),
             SD=sd(Grain),
-            SE=sd(Grain)/sqrt(n()))
-View(Grain_summary)
+            SE=sd(Grain)/sqrt(n))
+print(Grain_summary)
 
 
 ##  Check for outliers   ----
@@ -624,102 +635,81 @@ Pots2Pup_Mean <- summary_by(Puptake~Treatment+Block, data=Pots2, FUN=mean)
 Pots2Pup_Mean <- as.numeric(Pots2Pup_Mean$Puptake)
 Pots2Pup_skew <- skewness(Pots2Pup_Mean,na.rm=TRUE)
 Pots2Pup_kur <- kurtosis(Pots2Pup_Mean,na.rm=TRUE)
-cat("Skewness:", Pots2Pup_skew, "\n") # -0.1449922 
-cat("Kurtosis:", Pots2Pup_kur, "\n") # -0.8374298
-shapiro.test(Pots2$Puptake) # p=0.5904
-hist(Pots2$Puptake) 
-leveneTest(Puptake~Treatment, data=Pots2)  # 0.1659
-#ModP2Pup1
-ModP2Pup1 <- aov(Puptake~Treatment+Block, data=Pots2)
-anova(ModP2Pup1)
+cat("Skewness:", Pots2Pup_skew, "\n") # -0.039
+cat("Kurtosis:", Pots2Pup_kur, "\n") # -0.941
+shapiro.test(Pots2$Puptake) # p=0.84
+plot(Pots2$Puptake)
+hist(Pots2$Puptake) # normalish
+leveneTest(Puptake~Treatment, data=Pots2)  # 0.23
+# glmm
+ModP2Pup1<- glmmTMB(Puptake~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude, # singularity issue
+                    control=glmmTMBControl(optimizer = optim, optArgs = list(method='BFGS')))
+glmmTMB:::Anova.glmmTMB(ModP2Pup1, type="III")
 summary(ModP2Pup1)
-hist(resid(ModP2Pup1))
-shapiro.test(resid(ModP2Pup1))  # p=0.6417
-plot(fitted(ModP2Pup1),resid(ModP2Pup1),pch=16) #slightly left skewed but very random
-qqnorm(resid(ModP2Pup1))
+shapiro.test(resid(ModP2Pup1)) # p=0.19
+plot(fitted(ModP2Pup1),resid(ModP2Pup1),pch=16) # normal
+qqnorm(resid(ModP2Pup1)) # small tails
 qqline(resid(ModP2Pup1))
-ModP2Pup1_tidy <- tidy(ModP2Pup1)
-ModP2Pup1sum_sq_reg <- ModP2Pup1_tidy$sumsq[1] 
-ModP2Pup1sum_sq_resid <- ModP2Pup1_tidy$sumsq[2]
-ModP2Pup1sum_sq_reg / (ModP2Pup1sum_sq_reg + ModP2Pup1sum_sq_resid) # 0.7522534
-# lm model with weighted least squares
-ModP2Pupvar <- tapply(Pots2$Puptake, Pots2$Treatment, var, na.rm=TRUE)
-weightsPup <- 1 / ModP2Pupvar
-weightsPup_full <- rep(weightsPup, each = length(Pots2$Puptake) / length(weightsPup))
-ModP2Pup2 <- lm(Puptake ~ Treatment + Block, data=Pots2, weights=weightsPup_full) 
-hist(resid(ModP2Pup2))  # slight left skew
-shapiro.test(resid(ModP2Pup2))  # p= 0.2411
-plot(fitted(ModP2Pup2),resid(ModP2Pup2),pch=16) #slightly left  skewed but very random
-qqnorm(resid(ModP2Pup2)) #left tail somewhat longer
+performance::r2(ModP2Pup1) # NA, marginal = 0.58
+# lmer
+ModP2Pup2 <- lmer(Puptake~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
+Anova(ModP2Pup2, type='III') 
+summary(ModP2Pup2)
+shapiro.test(resid(ModP2Pup2)) # p=0.19
+plot(fitted(ModP2Pup2),resid(ModP2Pup2),pch=16) # normal
+qqnorm(resid(ModP2Pup2)) # small tails
 qqline(resid(ModP2Pup2))
-rsq(ModP2Pup2)  # 0.6712941
-# ModP2Pup3 glmm - possible singularity issues
-ModP2Pup3<- glmmTMB(Puptake~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
-glmmTMB:::Anova.glmmTMB(ModP2Pup3, type="III")
+rsq(ModP2Pup2)  # 0.57
+performance::r2(ModP2Pup2) # NA, marginal = 0.49
+# lme
+ModP2Pup3 <- lme(Puptake ~ Treatment, random=~1|Block, data=Pots2, na.action=na.omit, control=lmerControl(optCtrl=list(maxfun=100000)))
+Anova(ModP2Pup3, type='III')
 summary(ModP2Pup3)
-shapiro.test(resid(ModP2Pup3)) # p=0.16
+shapiro.test(resid(ModP2Pup3)) # p= 0.19
 plot(fitted(ModP2Pup3),resid(ModP2Pup3),pch=16) # normal
-qqnorm(resid(ModP2Pup3)) # moderate tails
+qqnorm(resid(ModP2Pup3)) # small tails
 qqline(resid(ModP2Pup3))
-performance::r2(ModP2Pup3) # 0.709
-#ModP2Pup4 - singular
-ModP2Pup4 <- lmer(Puptake~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
-anova(ModP2Pup4) 
+rsq(ModP2Pup3) # 0.49
+performance::r2(ModP2Pup3) # 0.49
+# glmer
+ModP2Pup4 <- glmer(Puptake~Treatment+(1|Block), data=Pots2, family=Gamma(link="identity"), na.action=na.omit,
+                   control=glmerControl(optimizer = "Nelder_Mead"))
+Anova(ModP2Pup4, type='III')
 summary(ModP2Pup4)
-shapiro.test(resid(ModP2Pup4)) # p=0.027
+shapiro.test(resid(ModP2Pup4)) # p=0.39
+bf.test(Puptake~Treatment, data=Pots2) # p=0.01, variances equal
 plot(fitted(ModP2Pup4),resid(ModP2Pup4),pch=16) # normal
-qqnorm(resid(ModP2Pup4)) # heavy left & moderate right tail
+qqnorm(resid(ModP2Pup4)) # small tails
 qqline(resid(ModP2Pup4))
-rsq(ModP2Pup4)  # 0.688
-# ModP2Pup5 lme model - only 3 degrees of freedom
-ModP2Pup5 <- lme(Puptake ~ Treatment, random=~1|Block, data=Pots2, na.action=na.exclude)
-summary(ModP2Pup5)
-anova(ModP2Pup5)
-shapiro.test(resid(ModP2Pup5)) # p= 0.16
-plot(fitted(ModP2Pup5),resid(ModP2Pup5),pch=16) # normal
-qqnorm(resid(ModP2Pup5)) # moderate tails
-qqline(resid(ModP2Pup5))
-rsq(ModP2Pup5) # NA
-#ModP2Pup6 glmer - infinite degrees of freedom
-ModP2Pup6 <- glmer(Puptake~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"), na.action=na.exclude)
-anova(ModP2Pup6)
-summary(ModP2Pup6)
-shapiro.test(resid(ModP2Pup6)) # p=0.203
-bf.test(Puptake~Treatment, data=Pots2) # p=0.541, variances equal
-plot(fitted(ModP2Pup6),resid(ModP2Pup6),pch=16) # normal
-qqnorm(resid(ModP2Pup6)) # slight left & moderate right tail
-qqline(resid(ModP2Pup6))
-rsq(ModP2Pup6) # can't get value
+rsq(ModP2Pup4) # NA
+performance::r2(ModP2Pup4) # 0.99
 
 #AIC and BIC values
-Pots2Pup_modlist <- list(ModP2Pup3, ModP2Pup4, ModP2Pup5, ModP2Pup6)
+Pots2Pup_modlist <- list(ModP2Pup1, ModP2Pup2, ModP2Pup3, ModP2Pup4)
 AIC_values <- sapply(Pots2Pup_modlist, AIC)
 BIC_values <- sapply(Pots2Pup_modlist, BIC)
-Pots2AICPup <- data.frame(Model=c("ModP2Pup3", "ModP2Pup4", "ModP2Pup5", "ModP2Pup6"), AIC_values, BIC_values)
-print(Pots2AICPup)
+(Pots2AIC_Pup <- data.frame(Model=c("ModP2Pup1", "ModP2Pup2", "ModP2Pup3", "ModP2Pup4"), AIC_values, BIC_values))
 #Model AIC_values BIC_values
-#1 ModP2Pup3   190.7314   205.0713
-#2 ModP2Pup4   164.3397   178.6796
-#3 ModP2Pup5   164.3397   175.6947
-#4 ModP2Pup6   194.0916   208.4315
+#1 ModP2Pup1   130.8610   144.5340 - 19 df
+#2 ModP2Pup2   117.2842   130.9572 - 21 df
+#3 ModP2Pup3   117.2842   127.7294 - 3 df
+#4 ModP2Pup4   134.2811   147.9540 - Inf df, highest r2, chosen as best model
 
 #emmeans on lmer model
-ModP2emPup <- emmeans(ModP2Pup4,~Treatment, alpha=0.1, type="response")
-ModP2emPup_cld <- cld(ModP2emPup, Letters = trimws(letters), reversed=TRUE) 
-View(ModP2emPup_cld)
+(ModP2Pup_em <- emmeans(ModP2Pup4,~Treatment, infer=TRUE, type="response"))
+(ModP2Pup_cld <- cld(ModP2Pup_em, Letters = trimws(letters), reversed=TRUE))
 write.csv(ModP2emPup_cld, file="Pots2_Puptake.csv")
 
 # Plotting the summary data
-(Pots2PuptakePlot <- ggplot(ModP2emPup_cld, aes(x=Treatment, y=emmean)) +
-    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01, width=0.7)+
+(Pots2PuptakePlot <- ggplot(ModP2Pup_cld, aes(x=factor(Treatment, levels=Pots2Trt_order), y=emmean, fill=Treatment)) +
+    geom_bar_pattern(stat = "identity", position = position_dodge2(padding=0.2), colour="black", fill=fillCol, #fil=='white' 
+                   pattern_density=0.05, pattern_spacing=0.02, width=0.65)+
+    #scale_fill_manual(limits=Pots2Trt_order, values=fillCol, guide="none")+  # only for defence presentation
     geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9)) +
     geom_text(aes(label=trimws(.group), y=emmean+SE), size=9, vjust=-0.5)+
     labs(x = "Treatment", y = "Wheat P uptake (ug/g soil)") +
-    scale_x_discrete(labels = c("Control1", "Control2", "Canola\nMeal", "Manure", "Willow", 
-                              "Meat and Bone\nMeal - Coarse", "Meat and Bone\nMeal - Fine", 
-                              "TSP\nfertilizer"))+
-    scale_y_continuous(limits = c(0, 30))+
+    scale_x_discrete(breaks=Pots2Trt_order, labels = Pots2LabDash_Main)+
+    scale_y_continuous(limits = c(0, 22))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
           axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
@@ -729,7 +719,7 @@ write.csv(ModP2emPup_cld, file="Pots2_Puptake.csv")
           panel.background = element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(Pots2PuptakePlot, file="Pots2_Puptake.jpg", width = 8, height = 6, dpi = 150)
+ggsave(Pots2PuptakePlot, file="Pots2_Puptake.jpg", width = 8, height = 6.5, dpi = 150)
 
 
 
@@ -880,12 +870,30 @@ qqline(resid(ModP2SPO43))
 performance::r2(ModP2SPO43) # Na, possible singularity effect
 
 #emmeans 
-ModP2emSPO4 <- emmeans(ModP2SPO43,~Treatment, type="response")
-ModP2emSPO4_cld <- cld(ModP2emSPO4, Letters = trimws(letters), reversed=TRUE) 
-View(ModP2emSPO4_cld)
+(ModP2emSPO4 <- emmeans(ModP2SPO43,~Treatment, infer=TRUE, type="response"))
+(ModP2emSPO4_cld <- cld(ModP2emSPO4, Letters = trimws(letters), reversed=TRUE))
 write.csv(ModP2emSPO4_cld, file="Pots2_SoilPO4.csv")
 
+(SPO4_plot1 <- ggplot(ModP2emSPO4_cld, aes(x = Treatment, y = emmean, fill=Treatment))+
+  geom_bar(stat = "identity", position = position_dodge2(padding=0.2), colour="black", width=0.7)+
+  geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9))+
+  geom_text(aes(label=trimws(.group), y=emmean+SE), size=7, vjust=-0.5)+
+  labs(x = "", y = "Soil Phosphorus (µg/g)")+
+    scale_fill_manual(limits=Pots2Trt_order, values=fillCol, guide="none")+
+    scale_x_discrete(limits=Pots2Trt_order, labels = Pots2LabDash_Main)+
+  scale_y_continuous(limits = c(0, 17))+
+  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+        legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+        axis.text.x=element_text(size=16, angle=45, hjust=1, face="bold", colour="black"),
+        axis.text.y = element_text(size = 16, face = "bold", colour = "black"),
+        axis.title.x=element_text(size=20, face="bold", margin=margin(r=15)),
+        axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
+        panel.background = element_blank(),
+        panel.border=element_blank(), panel.grid.major=element_blank(),
+        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(SPO4_plot1, file="Pots2_SoilPo4.jpg", width = 10, height = 7, dpi = 150)
 
+  
 
 ## Soil Resin P ----
 Pots2ResP_Mean <- summary_by(ResinP~Treatment+Block, data=Pots2, FUN=mean) 
@@ -1247,92 +1255,6 @@ write_xlsx(ModP2emOC1_cld, path = "Pots2_OC.xlsx")
 
 
 # LEACHATE ----
-Leach_labels <- factor(unique(Pots2$Treatment), levels=Pots2Trt_order,
-                       labels=c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "Meat & Bone\nMeal- Coarse",
-                                "Meat & Bone\nMeal- Fine", "TSP\nfertilizer"))
-## Leachate PO4 ----
-Pots2LPO4_Mean <- summary_by(LPO4~Treatment*Block, data=Pots2, FUN=mean) 
-Pots2LPO4_Mean <- as.numeric(Pots2LPO4_Mean$LPO4)
-Pots2LPO4_skew <- skewness(Pots2LPO4_Mean,na.rm=TRUE)
-Pots2LPO4_kur <- kurtosis(Pots2LPO4_Mean,na.rm=TRUE)
-cat("Skewness:", Pots2LPO4_skew, "\n") # 0.9148318 
-cat("Kurtosis:", Pots2LPO4_kur, "\n") # -0.2687111 
-shapiro.test(Pots2$LPO4) # p=0.0003759
-hist(Pots2$LPO4) # heavy left skew
-leveneTest(LPO4~Treatment, data=Pots2)  # P=0.1088
-# transform
-shapiro.test(log(Pots2$LPO4)) # p=0.06458
-hist(log(Pots2$LPO4)) # slight right skew
-leveneTest(log(LPO4)~Treatment, data=Pots2)  # P=0.5318
-#ModP2LPO41
-ModP2LPO41 <- aov(log(LPO4)~Treatment+Block, data=Pots2)
-anova(ModP2LPO41)
-summary(ModP2LPO41)
-hist(resid(ModP2LPO41))
-shapiro.test(resid(ModP2LPO41))  # p=0.6565
-plot(fitted(ModP2LPO41),resid(ModP2LPO41),pch=16) 
-qqnorm(resid(ModP2LPO41)) #slight left tail
-qqline(resid(ModP2LPO41))
-ModP2LPO41_tidy <- tidy(ModP2LPO41)
-ModP2LPO41sum_sq_reg <- ModP2LPO41_tidy$sumsq[1] 
-ModP2LPO41sum_sq_resid <- ModP2LPO41_tidy$sumsq[2]
-ModP2LPO41sum_sq_reg / (ModP2LPO41sum_sq_reg + ModP2LPO41sum_sq_resid) #0.9115165
-# glmm model - singularity issues
-ModP2LPO42<- glmmTMB(log(LPO4)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
-glmmTMB:::Anova.glmmTMB(ModP2LPO42, type="III")
-summary(ModP2LPO42)
-shapiro.test(resid(ModP2LPO42)) # p=0.349
-plot(fitted(ModP2LPO42),resid(ModP2LPO42),pch=16) # normal, equal around mid-line
-qqnorm(resid(ModP2LPO42)) # moderate tails
-qqline(resid(ModP2LPO42))
-performance::r2(ModP2LPO42) # NA
-#ModP2LPO43  - singular
-ModP2LPO43 <- lmer(log(LPO4)~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
-anova(ModP2LPO43) 
-summary(ModP2LPO43)
-shapiro.test(resid(ModP2LPO43)) # p=0.35
-plot(fitted(ModP2LPO43),resid(ModP2LPO43),pch=16) # normal
-qqnorm(resid(ModP2LPO43)) # slight-moderate tails
-qqline(resid(ModP2LPO43))
-rsq(ModP2LPO43)  # 0.423
-# ModP2LPO44 lme model - only 3 degrees of freedom
-ModP2LPO44 <- lme(log(LPO4) ~ Treatment, random=~1|Block, data=Pots2, na.action=na.exclude)
-summary(ModP2LPO44)
-anova(ModP2LPO44)
-shapiro.test(resid(ModP2LPO44)) # p= 0.35
-plot(fitted(ModP2LPO44),resid(ModP2LPO44),pch=16) #  normal
-qqnorm(resid(ModP2LPO44)) # moderate tails
-qqline(resid(ModP2LPO44))
-rsq(ModP2LPO44) # NA
-#ModP2LPO45 glmer - infinite degrees of freedom
-ModP2LPO45 <- glmer(log(LPO4)~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"), na.action=na.exclude)
-anova(ModP2LPO45)
-summary(ModP2LPO45)
-shapiro.test(resid(ModP2LPO45)) # p=0.143
-bf.test(LPO4~Treatment, data=Pots2) # p=0.16, variances equal
-plot(fitted(ModP2LPO45),resid(ModP2LPO45),pch=16) # normal
-qqnorm(resid(ModP2LPO45)) # heavy tails
-qqline(resid(ModP2LPO45))
-rsq(ModP2LPO45) # N/A
-
-#emmeans on glmm - least issues
-ModP2emLPO4 <- emmeans(ModP2LPO42,~Treatment, alpha=0.1, type="response", infer=TRUE)
-(ModP2emLPO4_cld <- cld(ModP2emLPO4, Letters = trimws(letters), reversed = TRUE))
-ModP2emLPO4_cld <- ModP2emLPO4_cld %>% dplyr::rename(emmean="response")
-View(ModP2emLPO4_cld)
-write.csv(ModP2emLPO4_cld, file="Pots2_LPO4.csv")
-(Pots2PO4LeachPlot <- ggplot(ModP2emLPO4_cld,aes(x=Treatment,y=emmean))+
-    geom_bar(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="grey80", width=0.45)+
-    geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
-    scale_y_continuous(limits = c(0,0.05))+
-    geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
-    labs(x="", y=bquote(bold("PO"[4]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Leach_labels)+
-    theme(axis.title = element_text(size=18), axis.text=element_text(size=13, face="bold", angle=45, hjust=1, color="black"),
-          panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
-          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-
-
-
 ## Leachate NO3 ----
 Pots2LNO3_Mean <- summary_by(LNO3~Treatment+Block, data=Pots2, FUN=mean) 
 Pots2LNO3_Mean <- as.numeric(Pots2LNO3_Mean$LNO3)
@@ -1412,7 +1334,7 @@ write.csv(ModP2emLNO3_cld, file="Pots2_LNO3.csv")
     geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
     scale_y_continuous(limits = c(0,5.5))+
     geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
-    labs(x="", y=bquote(bold("NO"[3]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Leach_labels)+
+    labs(x="", y=bquote(bold("NO"[3]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Pots2LabDash_Main)+
     theme(axis.title = element_text(size=18), axis.text=element_text(size=13, face="bold", angle=45, hjust=1, color="black"),
           panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
@@ -1485,10 +1407,105 @@ write.csv(ModP2emLNH4_cld, file="Pots2_LNH4.csv")
     geom_errorbar(aes(ymin = pmax(emmean - SE, 0), ymax=emmean+SE), width=0.2)+
     scale_y_continuous(limits = c(0,0.11))+
     geom_text(aes(label=trimws(.group), y=emmean+SE), size=6, vjust=-1)+
-    labs(x="", y=bquote(bold("NH"[4]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Leach_labels)+
+    labs(x="", y=bquote(bold("NH"[4]~" in leacahte (µg/g)")))+ scale_x_discrete(labels=Pots2LabDash_Main)+
     theme(axis.title = element_text(size=18), axis.text=element_text(size=13, face="bold", angle=45, hjust=1, color="black"),
           panel.background = element_blank(), panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+
+## Leachate PO4 ----
+Pots2LPO4_Mean <- summary_by(LPO4~Treatment*Block, data=Pots2, FUN=mean) 
+Pots2LPO4_Mean <- as.numeric(Pots2LPO4_Mean$LPO4)
+Pots2LPO4_skew <- skewness(Pots2LPO4_Mean,na.rm=TRUE)
+Pots2LPO4_kur <- kurtosis(Pots2LPO4_Mean,na.rm=TRUE)
+cat("Skewness:", Pots2LPO4_skew, "\n") # 0.9148318 
+cat("Kurtosis:", Pots2LPO4_kur, "\n") # -0.2687111 
+shapiro.test(Pots2$LPO4) # p=0.0003759
+hist(Pots2$LPO4) # heavy left skew
+leveneTest(LPO4~Treatment, data=Pots2)  # P=0.1088
+# transform
+shapiro.test(log(Pots2$LPO4)) # p=0.06458
+hist(log(Pots2$LPO4)) # slight right skew
+leveneTest(log(LPO4)~Treatment, data=Pots2)  # P=0.5318
+#ModP2LPO41
+ModP2LPO41 <- aov(log(LPO4)~Treatment+Block, data=Pots2)
+anova(ModP2LPO41)
+summary(ModP2LPO41)
+hist(resid(ModP2LPO41))
+shapiro.test(resid(ModP2LPO41))  # p=0.6565
+plot(fitted(ModP2LPO41),resid(ModP2LPO41),pch=16) 
+qqnorm(resid(ModP2LPO41)) #slight left tail
+qqline(resid(ModP2LPO41))
+ModP2LPO41_tidy <- tidy(ModP2LPO41)
+ModP2LPO41sum_sq_reg <- ModP2LPO41_tidy$sumsq[1] 
+ModP2LPO41sum_sq_resid <- ModP2LPO41_tidy$sumsq[2]
+ModP2LPO41sum_sq_reg / (ModP2LPO41sum_sq_reg + ModP2LPO41sum_sq_resid) #0.9115165
+# glmm model - singularity issues
+ModP2LPO42<- glmmTMB(log(LPO4)~Treatment+(1|Block), data=Pots2, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModP2LPO42, type="III")
+summary(ModP2LPO42)
+shapiro.test(resid(ModP2LPO42)) # p=0.349
+plot(fitted(ModP2LPO42),resid(ModP2LPO42),pch=16) # normal, equal around mid-line
+qqnorm(resid(ModP2LPO42)) # moderate tails
+qqline(resid(ModP2LPO42))
+performance::r2(ModP2LPO42) # NA
+#ModP2LPO43  - singular
+ModP2LPO43 <- lmer(log(LPO4)~Treatment+(1|Block), data=Pots2, na.action=na.exclude)
+anova(ModP2LPO43) 
+summary(ModP2LPO43)
+shapiro.test(resid(ModP2LPO43)) # p=0.35
+plot(fitted(ModP2LPO43),resid(ModP2LPO43),pch=16) # normal
+qqnorm(resid(ModP2LPO43)) # slight-moderate tails
+qqline(resid(ModP2LPO43))
+rsq(ModP2LPO43)  # 0.423
+# ModP2LPO44 lme model - only 3 degrees of freedom
+ModP2LPO44 <- lme(log(LPO4) ~ Treatment, random=~1|Block, data=Pots2, na.action=na.exclude)
+summary(ModP2LPO44)
+anova(ModP2LPO44)
+shapiro.test(resid(ModP2LPO44)) # p= 0.35
+plot(fitted(ModP2LPO44),resid(ModP2LPO44),pch=16) #  normal
+qqnorm(resid(ModP2LPO44)) # moderate tails
+qqline(resid(ModP2LPO44))
+rsq(ModP2LPO44) # NA
+#ModP2LPO45 glmer - infinite degrees of freedom
+ModP2LPO45 <- glmer(log(LPO4)~Treatment+(1|Block),data=Pots2,family=Gamma(link="log"), na.action=na.exclude)
+anova(ModP2LPO45)
+summary(ModP2LPO45)
+shapiro.test(resid(ModP2LPO45)) # p=0.143
+bf.test(LPO4~Treatment, data=Pots2) # p=0.16, variances equal
+plot(fitted(ModP2LPO45),resid(ModP2LPO45),pch=16) # normal
+qqnorm(resid(ModP2LPO45)) # heavy tails
+qqline(resid(ModP2LPO45))
+rsq(ModP2LPO45) # N/A
+
+#emmeans on glmm - least issues
+(ModP2emLPO4 <- emmeans(ModP2LPO42,~Treatment, alpha=0.1, type="response", infer=TRUE))
+(ModP2emLPO4_cld <- cld(ModP2emLPO4, Letters = trimws(letters), reversed = TRUE))
+ModP2emLPO4_cld <- ModP2emLPO4_cld %>% dplyr::rename(emmean="response")
+View(ModP2emLPO4_cld)
+write.csv(ModP2emLPO4_cld, file="Pots2_LPO4.csv")
+(Pots2PO4LeachPlot <- ggplot(ModP2emLPO4_cld,aes(x=Treatment,y=emmean, fill=Treatment))+
+       geom_bar(stat = "identity", position = position_dodge2(padding=0.2), colour="black", width=0.7)+
+    scale_fill_manual(limits=Pots2Trt_order, values=fillCol, guide="none")+
+       geom_errorbar(aes(ymin = emmean - SE, ymax = emmean + SE), width = 0.2, position = position_dodge(width = 0.9))+
+       geom_text(aes(label=trimws(.group), y=emmean+SE), size=7, vjust=-0.5)+
+       labs(x = "", y = "Leachate Phosphorus (µg/g)")+
+       scale_x_discrete(limits=Pots2Trt_order, labels=Pots2LabDash_Main)+
+       scale_y_continuous(limits = c(0, 0.06))+
+       theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+             legend.title = element_text(size = 20, face = "bold"), legend.text=element_text(size=18),
+             axis.text.x=element_text(size=16, angle=45, hjust=1, face="bold", colour="black"),
+             axis.text.y = element_text(size = 16, face = "bold", colour = "black"),
+             axis.title.x=element_text(size=20, face="bold", margin=margin(r=15)),
+             axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
+             panel.background = element_blank(),
+             panel.border=element_blank(), panel.grid.major=element_blank(),
+             panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+  ggsave(Pots2PO4LeachPlot, file="Pots2_LeachatePo4.jpg", width = 10, height = 7, dpi = 150)
+  
+  (LeachatePlot <- plot_grid(SPO4_plot1, Pots2PO4LeachPlot, ncol=2, labels='AUTO', label_size=20, label_x = c(0.16,0.15)))
+  (LeachatePlot_label <- ggdraw()+draw_plot(LeachatePlot)+ draw_label("Treatment", y=0.03, size=25, fontface="bold"))
+  ggsave("Pots2_Pfractions_Leach.jpg", height=6, width=12, dpi=150)
+  
 
 ## Combine Leachate Plots ----
 (Leach_plot <- plot_grid(Pots2PO4LeachPlot, Pots2NO3LeachPlot, Pots2NH4LeachPlot, labels = c('A', 'B', 'C'), label_size = 20, ncol=3, 
@@ -1501,14 +1518,22 @@ Pots2PCorPdf <- data.frame(Treatment=Pots2$Treatment, # plot soil PO4 against le
                            SPO4=Pots2$SPO4,
                            LPO4=Pots2$LPO4)
 print(Pots2PCorPdf)
+ggplot(Pots2PCorPdf, aes(x = SPO4, y = LPO4))+ # check trendlines
+  geom_point()+
+  geom_smooth(method='lm', se=FALSE)+
+  labs(x='SPO4', y='LPO4')+
+  facet_wrap(~Treatment)
+# OPtion 1
+Pots2PCor <- function(Pots2PCorPdf) {
+  return(data.frame(Correlation = cor(Pots2PCorPdf$SPO4, Pots2PCorPdf$LPO4, use = "complete.obs")))
+}
+ddply(Pots2PCorPdf, .(Treatment), Pots2PCor)
+# OPtion 2 (same results)
 Pots2PCor3 <- Pots2PCorPdf %>%
   group_by(Treatment) %>%
-  dplyr::summarize(Correlation = cor(LPO4, SPO4, use = "complete.obs")) %>%
+  dplyr::summarize(Correlation = cor(SPO4, LPO4, use = "complete.obs")) %>%
   ungroup()
-Pots2PCor3$Treatment <- factor(Pots2PCor3$Treatment, levels=Pots2Trt_order,
-                               labels=c("Control 1", "Control 2", "Canola\nMeal", "Manure", "Willow", 
-                                        "Meat and\nBoneMeal -\nCoarse", "Meat and\nBonemeal-\nFine", 
-                                        "TSP\nFertilizer"))
+Pots2PCor3$Treatment <- factor(Pots2PCor3$Treatment, levels=Pots2Trt_order, labels=Pots2LabDash_Main)
 print(Pots2PCor3)
 # visualize correlation using ggplot
 (Pots2_Pcorplot2 <- ggplot(Pots2PCor3, aes(x=Treatment, y=0.5, fill=Correlation)) +
@@ -1528,6 +1553,51 @@ print(Pots2PCor3)
     labs(x="", y="", title= bquote(bold("Leachate PO"[4] ~ "-" ~ "Soil residual PO"[4]))))
 ggsave(Pots2_Pcorplot2, file="Pots2_Pcorplot_LPO4.jpg", width=14, height=5, dpi=100)
 
+## P fractions using radar plots
+# FOR DEFENCE PRESENTATION #
+# Option 1
+Pfraction_long <- melt(Pots2PCorPdf, id.vars='Treatment', na.rm=TRUE)
+print(Pfraction_long)
+(SPO4_plot <- ggplot(ModP2emLPO4_cld[ModP2emLPO4_cld$emmean], aes(x=Treatment, y=value, color=Treatment))+
+    geom_point(size=2)+
+    geom_path()+
+    theme_minimal()+
+    coord_polar()+
+    labs(title = "Soil residual phosphorus fraction", x = NULL, y = NULL)+
+    scale_color_brewer(palette = "Dark2", limits=Pots2Trt_order, labels=Pots2Lab_Main)+
+    theme(legend.position = "none"))
+(LPO4_plot <- ggplot(subset(Pfraction_long, variable=='LPO4'), aes(x=Treatment, y=value, color=Treatment))+
+    geom_point(size=2)+
+    geom_path()+
+    theme_minimal()+
+    coord_polar()+
+    labs(title = "Leachate phosphorus fraction", x = NULL, y = NULL)+
+    scale_color_brewer(palette = "Dark2", labels=Pots2Lab_Main)+
+    theme(legend.position = "none"))
+          
+# Option 2 - DID NOT WORK
+Pfraction_summary <- summary_by(cbind(SPO4, LPO4)~Treatment, data=Pots2, FUN=mean, na.rm=TRUE)
+Pfraction_summary <- Pfraction_summary %>% dplyr::rename(SPO4='SPO4.mean')
+Pfraction_summary <- Pfraction_summary %>% dplyr::rename(LPO4='LPO4.mean')
+print(Pfraction_summary)
+(PfractionSum_long <- pivot_longer(Pfraction_summary, cols=c('SPO4', 'LPO4'), names_to = "Variable", values_to = "Value"))
+Pfraction_wider <- pivot_wider(PfractionSum_long, names_from = Treatment, values_from = Value)
+print(Pfraction_wider)
+SPO4_DF <- as.data.frame(Pfraction_wider %>%
+  filter(Variable == 'SPO4'))
+print(SPO4_DF)
+SPO4_DF
+(SPO4_DF <- data.frame(Treatment=c("Control 1", "Control 2", "Canola\nMeal", "Manure", "Willow", "MBMA\nCoarse", "MBMA\nFine", "TSP Fertilizer"),
+                      Min=rep(0,8),
+                      Max=rep(12,8),
+                      SPO4=c(6.71, 5.31, 5.99, 11.69, 7.69, 12.89, 8.19, 13.50)))
+(SPO4_longer <- pivot_longer(SPO4_DF, cols=c('Min', 'Max', 'SPO4'), names_to = "Variable", values_to = "Value"))
+(SPO4_wider <- as.data.frame(pivot_wider(SPO4_longer, names_from = Treatment, values_from = Value)))
+rownames(SPO4_wider) <- SPO4_wider$Variable
+(SPO4_wider <- SPO4_wider[-1])
+radarchart(SPO4_wider, caxislabels = c(0, 4, 8, 12, 16), axistype = 1, pcol = 1:8, plwd = 2, plty = 1, 
+           cglty = 1, cglcol = 'grey45', axislabcol = "grey45", vlcex = 0.8,
+           title = "Soil Residual Phosphorus", maxmin = T)
 
 
 # COVARIANCE HEAT MAPS ----
@@ -1710,7 +1780,8 @@ Pots2EigenMatrix <- Pots2[complete.cases(Pots2), c("Nuptake", "Puptake", "SNO3",
 Pots2EigenCor <- cor(Pots2EigenMatrix)
 Pots2EigenPCA <- PCA(Pots2EigenMatrix, scale.unit = TRUE, ncp = length(Pots2EigenMatrix)-1)
 Pots2EigenPrin <-princomp(Pots2EigenCor)
-summary(Pots2EigenPrin, digits=3)
+options(digits=3)
+summary(Pots2EigenPrin)
 round(Pots2EigenPrin$loadings[, 1:2], 3)
 
 

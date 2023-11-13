@@ -52,7 +52,7 @@
     Infil$Time <- as.numeric(as.character(Infil$Time))
     Infil$CI <- as.numeric(as.character(Infil$CI))
     
-  ## Check for outliers   ----
+## Check for outliers   ----
     Infiltrationraw$Block <- factor(Infiltrationraw$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
     Infiltrationraw$Treatment <- factor(Infiltrationraw$Treatment,levels = FieldTrt_order)
     Infiltrationraw$Time <- as.numeric(as.character(Infiltrationraw$TimeS))
@@ -60,7 +60,7 @@
     Infilsubraw$Slope <- as.numeric(Infilsubraw$S)
     Infilsubraw$Block <- factor(Infilsubraw$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
     Infilsubraw$Treatment <- factor(Infilsubraw$Treatment,levels = FieldTrt_order)
-# check data from Infilsub
+  # check data from Infilsub
     # Slopes calculated using philips model
     ggplot(Infilsubraw, aes(x=Treatment, y=Slope, fill=Treatment)) +
       geom_boxplot() +
@@ -181,6 +181,7 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
 
 
 
+
 # MODEL AND GRAPH INFILTRATION DATA ----
   ## Model predicted data using Philips model ----
      ### Set up the new database to include values from both Infilstration.csv and Infil.csv
@@ -189,7 +190,7 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
         Infil$Infiltration <- Infil$Infiltration/10 # set infiltration to the same scale as CI (cm)
         Infil$Time <- Infil$Time/3600 # csale time to hours
       # select columns from Infilsub to be combined with Infil
-        InfilSelect <- dplyr::select(Infilsubraw, Treatment, Block, S, K) 
+        InfilSelect <- dplyr::select(Infilsubraw, Treatment, Block, Sorptivity, K) 
         InfilDF <- merge(Infil, InfilSelect, by = c("Treatment", "Block"), all.x = TRUE) # merge selected columns with Infil data frame
         View(InfilDF <- InfilDF[complete.cases(InfilDF), ])
         ### need to use a non-linear model to do a best fit and prediction - using Philips two term model as best option
@@ -228,27 +229,30 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
           pivot_longer(cols = c(CI, PredictedCI, Infiltration),
                        names_to = "Variable", values_to = "Value")
         View(InfilReady_long)
-        color_palette <- c("darkred", "steelblue", "green4")
-        #transparent_palette <- alpha(color_palette, alpha = 0.8)  # Adjust the alpha value as needed (0 = fully transparent, 1 = fully opaque)
+                #transparent_palette <- alpha(color_palette, alpha = 0.8)  # Adjust the alpha value as needed (0 = fully transparent, 1 = fully opaque)
         InfilLegend <- c("Cumulative infiltration (CI)", "Measured infiltration", "Predicted CI")
         InfilReady_long$Treatment <- factor(InfilReady_long$Treatment,
                                             levels=c("Control1", "Control2", "Biochar25kgPha", "Biochar10tha", "Biochar10thaTSP", "Phosphorus"),
                                             labels=c("Control 1", "Control 2","Biochar\n25kgP/ha", "Biochar\n10t/ha", "Biochar\n10t/ha&TSP",
                                                      "TSP\nFertilizer"))
+        color_palette <- c("dodgerblue3", "darkred", "yellow4")
         (InfilPlot <- ggplot(InfilReady_long, aes(x=Time, y=Value, color=Variable)) + #fill by block shows individual lines for each plot
-            facet_wrap(~ Treatment, scales="free")+
-            geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1, aes(fill=Variable)) + 
+            facet_wrap(~ Treatment, scales="free", nrow=2)+
+            geom_smooth(method = "loess", se = TRUE, fullrange = FALSE, level = 0.95, span = 1, aes(fill=Variable, colour=Variable)) + 
                 #aes(fill) sets the colour of the error bands
                 # higher span reduces the curvature of the line
                 # SE in geom_smooth adds the error band, can also use confidence band
-            scale_color_manual(values = color_palette, labels = InfilLegend, guide="none") + # sets the colour of the lines
+            scale_color_manual(values = color_palette, label=InfilLegend) + # sets the colour of the lines
+            scale_fill_manual(values=color_palette, aesthetics='fill', label=InfilLegend)+#, labels = InfilLegend,)+
+            scale_y_continuous(limits = c(0,12))+
             labs(x = "Time (hours)", y = "Infiltration (cm)")+
-            theme(axis.title = element_text(size=18, face="bold"), axis.text = element_text(size=14, face="bold"),
-              strip.text.x = element_text(size = 14, face="bold"), strip.background = element_blank(), legend.position = "bottom",
-              legend.key.size=unit(9,"mm"), legend.text=element_text(size=14, face="bold"), legend.title = element_blank(),
-              panel.border=element_blank(), panel.grid.major=element_blank(), panel.background = element_blank(),
-              panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-        ggsave(InfilPlot, file="Infiltration curves.jpg", width=10, height=8, dpi=150)
+            theme(strip.text.x = element_text(size = 14, face="bold"), strip.background = element_blank(),
+              legend.position = "bottom", legend.key.size=unit(9,"mm"),
+              legend.text=element_text(size=14, face="bold"), legend.title = element_blank(),
+              axis.title = element_text(size=18, face="bold"), axis.text = element_text(size=14, face="bold", colour='black'),
+              panel.border=element_blank(), panel.grid=element_blank(), panel.background = element_blank(),
+              axis.line=element_line(colour="black")))
+        ggsave(InfilPlot, file="Infiltration curves.jpg", width=12, height=10, dpi=150)
 # warning related to blank outlier data for CI & I
 
 
@@ -338,8 +342,8 @@ Field$MoistDry <- as.numeric(Field$MoistDry)
         qqnorm(resid(InfilModMoist)) # moderate tails
         qqline(resid(InfilModMoist))
         rsq(InfilModMoist) # 0.094
-        (InfilModMoistEm <- emmeans(InfilModMoist,~"Treatment", infer = TRUE)) #, alpha=0.1
-        (InfilModMoistEm_cld <- cld(InfilModMoistEm, Letters=trimws(letters), reversed=TRUE)) #, alpha=0.1
+        (InfilModMoistEm <- emmeans(InfilModMoist,~"Treatment", infer = TRUE))
+        (InfilModMoistEm_cld <- cld(InfilModMoistEm, Letters=trimws(letters), reversed=TRUE, alpha=0.1))
         write_xlsx(InfilModMoistEm_cld, path="InfilMod_Moisture.xlsx")
         
         ### Slope

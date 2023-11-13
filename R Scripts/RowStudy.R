@@ -1,6 +1,5 @@
 # Loading data in to R & Summaries ----
 Rows<-read.csv("Data/Rows.csv", fileEncoding="UTF-8-BOM")
-View(Rows)
 Rowsraw<-read.csv("Data/Rowsraw.csv", fileEncoding="UTF-8-BOM")
 
 ## Loading libraries ----
@@ -34,23 +33,26 @@ library(writexl)
 library(openxlsx)
 
 ## Summary and ordering of data ----
-#Check for missing values in a specific field
+# Missing values and summaries
 missing <- colSums(is.na(Rows[,]))
 missing <- colSums(is.na(Rowsraw[,]))
 print(missing)
+summary(Rows)
+str(Rows) #displays the structure of the object
+RowsMean <- summary_by(.~Treatment, data=Rows, FUN=mean, na.rm=TRUE)
+print(RowsMean)
 
 #Change columns in a dataframe: set order that treatments appear in any analysis and in figures
 # set to factors/categorical values, str displays 
-RowsTrt_order <-c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus")
-Rows$Treatment <- factor(Rows$Treatment,levels=RowsTrt_order)
-RowsTrt_sub <- c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus")
 Rows$Block <- factor(Rows$Block, levels=c("Block1", "Block2", "Block3", "Block4"))
-Rows$Biomass <- as.numeric(as.character(Rows$Biomass)) #only set if issues happen when running analysis
-summary(Rows)
-str(Rows) #displays the structure of the object
-View(Rows) #view the object in a separate window (e.g. as a table)
-RowsMean <- summary_by(.~Treatment, data=Rows, FUN=mean, na.rm=TRUE)
-View(RowsMean)
+RowsTrt_order <- as.factor(c("Control1", "Control2", "CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"))
+RowsTrtSub <- as.factor(c("CanolaMeal", "Manure", "Willow", "MBMACoarse", "MBMAFine", "Phosphorus"))
+
+# for labels
+RowsLab_Main <- as.factor(c("Control 1", "Control 2", "Canola Meal", "Manure", "Willow", "MBMA Coarse", "MBMA Fine", "TSP Fertilizer"))
+RowsLab_Sub <- as.factor(c("Canola Meal", "Manure", "Willow", "MBMA Coarse", "MBMA Fine", "TSP Fertilizer"))
+RowsLabDash_Main <- as.factor(c("Control 1", "Control 2", "Canola\nMeal", "Manure", "Willow", "MBMA\nCoarse", "MBMA\nFine", "TSP\nFertilizer"))
+RowsLabDash_sub <- as.factor(c("Canola\nMeal", "Manure", "Willow", "MBMA\nCoarse", "MBMA\nFine", "TSP\nFertilizer"))
 
 ## Check for outliers ----
 ## Biomass

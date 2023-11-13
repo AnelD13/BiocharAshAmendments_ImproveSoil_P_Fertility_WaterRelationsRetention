@@ -22,7 +22,7 @@ library(plotrix) # various plot options, I used it for ablines
 library(cowplot) # combine ggplot output into a single graph
 library(patchwork) #similar to cowplot
 library(gridExtra) # Functions for grid based plots
-library(ggpubr) # make ggplots publication ready
+library(ggpubr) # make ggplots publication ready  & for GGARRANGE
 library(car) # general package with lots of uses, including Anova
 library(afex) # used to bring raw data into ggplot
 library(onewaytests) # for one way ANOVAs
@@ -35,7 +35,7 @@ library(broom) # cleans up messy output into tibbles
 library(multcomp) # simultaneous test and confidence intervals
 library(multcompView) # for correlations
 library(wCorr) # for calculating correlations
-library(corrr)
+library(corrr) # for PCA analysis
 library(emmeans) # estimated marginal means in place of lsmeans
 library(e1071) #skewness and kurtosis
 library(rsq)
@@ -88,9 +88,19 @@ PotsLabDash_sub <- c("Canola Meal\n50kg P/ha", "Canola Hull\n50kg P/ha", "Manure
                    "Willow\n50kg P/ha", "Canola Meal\n10t/ha", "Canola Hull\n10t/ha", "Manure\n10t/ha", "Willow\n10t/ha", 
                    "Canola Meal\n10t/ha & TSP", "Canola Hull\n10t/ha & TSP", "Manure\n10t/ha & TSP", 
                    "Willow\n10t/ha & TSP", "TSP\nFertilizer")
+PotsTrtVar <- as.factor(c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", "TSP\nFertilizer"))
+PotsCharCon <- as.factor(c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
+                           "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", 
+                           "TSP\nFertilizer"))
+PotsRedTrtVar <- as.factor(c("Canola Meal", "Canola Hull", "Manure", "Willow", "TSP\nFertilizer"))
+PotsRedCarcon <- as.factor(c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", 
+                             "Canola Hull\n& TSP","Manure\n& TSP", "Willow\n& TSP", "TSP\nFertilizer"))
+
+Pots1Col_TrtVar <- c('grey45', 'grey45', 'darkred', 'darkred', 'darkred', 'darkred', 'darkblue')
+Pots1Col_CharCon <- c('grey45', 'grey45', 'darkred', 'darkred', 'darkred', 'darkred', 'darkorange3','darkorange3','darkorange3','darkorange3', 'darkblue')
 
 # Summary data (means, SD, etc.) for each treatment and variable
-Pots1Mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean, na.rm=TRUE)
+(Pots1Mean <- summary_by(.~Soil+Treatment, data=Pots1, FUN=mean, na.rm=TRUE))
 Pots1Mean <- rename(Pots1Mean, Yield=Yield.mean, Nuptake=Nuptake.mean, Nrecovery=Nrecovery.mean, Puptake=Puptake.mean, 
                     Precovery=Precovery.mean, NO3=NO3.mean, NH4=NH4.mean, PO4=PO4.mean, ResinP=ResinP.mean, 
                     WaterSolP=WaterSolP.mean, TotalP2=TotalP2.mean, pH=pH.mean, EC=EC.mean, OC=OC.mean)
@@ -222,115 +232,119 @@ hist((log(Pots1$Yield))) # severe right skew
 hist((log10(Pots1$Yield))) # severe right skew
 hist((sqrt(Pots1$Yield)))# severe right skew
 #Running models - tried lm (mod1) & aov (mod1a) but these do not allow for random effects which must be included
-# Mod1b glmm
-Mod1b <- glmmTMB(Yield~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
-glmmTMB:::Anova.glmmTMB(Mod1b, type="III") # signficant differences
-summary(Mod1b)
-performance::r2(Mod1b) # NA, singularity issue
-shapiro.test(resid(Mod1b)) # S-W p value= 0.1965; Data is considered normal
-plot(fitted(Mod1b),resid(Mod1b),pch=16, abline(h=0, lty=2)) #plots the residuals vs the fitted values 
+#glmm
+ModPots1_Yield1 <- glmmTMB(Yield~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModPots1_Yield1, type="III") # signficant differences
+summary(ModPots1_Yield1)
+shapiro.test(resid(ModPots1_Yield1)) # S-W p value= 0.1965; Data is considered normal
+plot(fitted(ModPots1_Yield1),resid(ModPots1_Yield1),pch=16, abline(h=0, lty=2)) #plots the residuals vs the fitted values 
     #from a linear regression model, abline shows the linear horizontal line at 0
-plot(Mod1b, which=1) #plots the residuals vs the actual values, the line is the regression line
-plot(Mod1b, which=2) # different way to do the below qqnorm & qqline
-qqnorm(resid(Mod1b)) # small tails
-qqline(resid(Mod1b))
-# Mod1c Lmer
-Mod1c<-lmer(Yield~Treatment*Soil+(1|Soil),data=Pots1) #model failed to converge
-anova(Mod1c)
-summary(Mod1c)
-rsq(Mod1c) # adjusted R squared: 0.894
-#Mod1d - lme
-Mod1d<-lme(Yield~Treatment*Soil,random=~1|Soil, data=Pots1, na.action=na.exclude)
-anova(Mod1d)
-summary(Mod1d)
-rsq(Mod1d) # issue with low degrees of freedom for random effect
-#Mod1e - glmer
-Mod1e <- glmer(Yield~Treatment*Soil+(1|Soil),data=Pots1,family=gaussian(link="log"))
-anova(Mod1e)
-summary(Mod1e)
-shapiro.test(resid(Mod1e))  # p=6.486e-09
-plot(fitted(Mod1e),resid(Mod1e),pch=16) # severe right cluster
-qqnorm(resid(Mod1e)) # heavy tails
-qqline(resid(Mod1e))
-rsq(Mod1e)
+plot(ModPots1_Yield1, which=1) #plots the residuals vs the actual values, the line is the regression line
+plot(ModPots1_Yield1, which=2) # different way to do the below qqnorm & qqline
+hist(resid(ModPots1_Yield1))
+qqnorm(resid(ModPots1_Yield1)) # small tails
+qqline(resid(ModPots1_Yield1))
+performance::r2(ModPots1_Yield1) # NA, singularity issue, marginal = 0.89
+# lmer
+ModPots1_Yield2<-lmer(Yield~Treatment*Soil+(1|Soil),data=Pots1) #model failed to converge
+Anova(ModPots1_Yield2, type='III')
+summary(ModPots1_Yield2)
+plot(fitted(ModPots1_Yield2),resid(ModPots1_Yield2),pch=16, abline(h=0, lty=2)) #plots the residuals vs the fitted values 
+  #from a linear regression model, abline shows the linear horizontal line at 0
+plot(ModPots1_Yield2, which=1) #plots the residuals vs the actual values, the line is the regression line
+plot(ModPots1_Yield2, which=2) # different way to do the below qqnorm & qqline
+qqnorm(resid(ModPots1_Yield2)) # small tails
+qqline(resid(ModPots1_Yield2))
+rsq(ModPots1_Yield2) # 0.89
+# lme
+ModPots1_Yield3<-lme(Yield~Treatment*Soil,random=~1|Soil, data=Pots1, na.action=na.exclude)
+Anova(ModPots1_Yield3, type='III')
+summary(ModPots1_Yield3)
+rsq(ModPots1_Yield3) # issue with low degrees of freedom for random effect
+# glmer
+ModPots1_Yield4 <- glmer(Yield~Treatment*Soil+(1|Soil),data=Pots1,family=gaussian(link="log"))
+Anova(ModPots1_Yield4, type='III')
+summary(ModPots1_Yield4)
+shapiro.test(resid(ModPots1_Yield4))  # p=6.486e-09
+plot(fitted(ModPots1_Yield4),resid(ModPots1_Yield4),pch=16) # severe right cluster
+qqnorm(resid(ModPots1_Yield4)) # heavy tails
+qqline(resid(ModPots1_Yield4))
+rsq(ModPots1_Yield4)
+#AIC and BIC
+Pots1Yield_modlist <- list(ModPots1_Yield1, ModPots1_Yield2, ModPots1_Yield3, ModPots1_Yield4)
+AIC_Biomass <- sapply(Pots1Yield_modlist, AIC)
+BIC_Biomass <- sapply(Pots1Yield_modlist, BIC)
+(NrecAB <- data.frame(Model=c('ModPots1_Yield1', 'ModPots1_Yield2', 'ModPots1_Yield3', 'ModPots1_Yield4'),
+                      AIC_Biomass, BIC_Biomass))
+#Model AIC_Biomass BIC_Biomass
+#1 ModPots1_Yield1    402.4658    490.5807
+#2 ModPots1_Yield2    381.1046    469.2194
+#3 ModPots1_Yield3    381.1046    459.6437
+#4 ModPots1_Yield4    404.4658    492.5807
 
-#Compare models - doesn't work for certain types of models
-anova(Mod1, Mod1a, Mod1b, Mod1c)
-
-#extract the anova results in a tidy format
-View(Mod1_tidy <- tidy(Mod1))
-View(Mod1_tidy <- tidy(Mod1a))
-View(Mod1_tidy <- tidy(Mod1b))  #No tidy method for objects of class glmmTMB
-View(Mod1_tidy <- tidy(Mod1c))  # same for class lmerModLmerTest
-View(Mod1_tidy <- tidy(Mod1d))  # same for class lme
-
-#emmeans for each soil separately - # cld use directly in ggplot - make sure labels are correct in ggplot
-(Mod1em_split <- emmeans(Mod1b,~Treatment|Soil, subset=(Pots1$Yield)))
-    #MUST use trimws to trim the white spaces around the cld letters to ensure proper alignment in plot
-(Mod1cld_split <- cld(Mod1em_split, Letters=trimws(letters), reversed=TRUE, by="Soil")) #reversed=letters in correct order
-write.xlsx(Mod1cld_split, file="Pots1_Yield.xlsx")
+#emmeans
+(YieldMod_em <- emmeans(ModPots1_Yield1,~Treatment|Soil, infer=TRUE))
+(YieldMod_cld <- cld(YieldMod_em, Letters=trimws(letters), reversed=TRUE, by="Soil")) #reversed=letters in correct order
+  #MUST use trimws to trim the white spaces around the cld letters to ensure proper alignment in plot
+write.xlsx(YieldMod_cld, file="Pots1_Yield.xlsx")
 
 ##Developing visualizations
 ##select specific treatments and use those in the graph - repeat for all subsets
 #Plotting dry weight using constant P and variable biochar rates
-Yield_subVar <- Mod1cld_split %>%
+Yield_subVar <- YieldMod_cld %>%
   filter(Treatment %in% TrtVar)
-(Yield50kg <- ggplot(Yield_subVar, aes(x=Treatment, y=emmean, pattern=Soil))+
-  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
-                       labels=c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-                width=0.2, position=position_dodge(width=0.9)) +
-  #geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),   ## FOR ITALIC LETTERS
-           # size=6, position=position_dodge2(width=0.9), vjust=-0.5) + # change Oxbow to italics.
-    #trim white spaces in Geom_text to align properly
-  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))),   # FOR UPPERCASE LETTERS
-                y=emmean + SE + 0.5), size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 25mg P/pot", y="Biomass yield (g)")+
-  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                            "TSP\nFertilizer"))+
-  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
-        legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
-        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"), #hjust right aligns text
-        axis.text.y=element_text(size=18, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold", margin=margin(b=15)), 
-        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
-        panel.background=element_blank(),
-        panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
-ggsave(Yield50kg, file="Pots1_Yield_50kgPha.jpg", width=12, height=8, dpi=150)
+(Yield50kg <- ggplot(Yield_subVar, aes(x=Treatment, y=emmean, pattern=Soil, fill=Soil))+ #fill=Treatment
+      geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
+                       pattern_density=0.1, pattern_spacing=0.02)+
+      scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), labels=c("Haverhill", "Oxbow"))+ #"Oxbow"="none"
+      #scale_fill_manual(limits=TrtVar, values=Pots1Col_TrtVar, guide="none")+
+      geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
+      #geom_text(aes(label=.group, y=emmean+SE, fontface=ifelse(Soil == "Haverhill", "italic", "plain")),   ## FOR ITALIC LETTERS
+                     # size=6, position=position_dodge2(width=0.9), vjust=-0.5) + # change Oxbow to italics.
+      geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean + SE + 0.5),
+                size=6, position=position_dodge(width=0.9))+
+      labs(x="Treatments at 25mg P/pot", y="Total above-ground biomass (g)")+ #50kg P/ha
+      scale_x_discrete(labels=PotsTrtVar)+
+    scale_y_continuous(limits=c(0,15))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(size=18, angle=45, hjust=1, face="bold", colour="black"),
+          axis.text.y=element_text(size=18, face="bold", colour="black"),
+          axis.title.x=element_text(size=20, face="bold", margin=margin(t=15)), 
+          axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
+          panel.background=element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+ggsave(Yield50kg, file="Pots1_Yield_50kgPha.jpg", width=10, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
-Yield_subCon <- Mod1cld_split %>%
+Yield_subCon <- YieldMod_cld %>%
   filter(Treatment %in% CharCon)
-(Yield10tha <- ggplot(Yield_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
-  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
-                       labels=c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-                width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean + SE + 0.5),
+(Yield10tha <- ggplot(Yield_subCon, aes(x=Treatment, y=emmean, pattern=Soil, fill=Soil))+ #fill=Treatment
+    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
+                     pattern_density=0.1, pattern_spacing=0.02)+
+    scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"= "crosshatch"), labels=c("Haverhill", "Oxbow"))+ #"Oxbow"="none"
+    #scale_fill_manual(limits=CharCon, values=Pots1Col_CharCon, guide="none")+
+    geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
+    geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean + SE + 0.5),
               size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 5g char/pot", y="Biomass yield (g)") +
-  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                            "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP", 
-                            "TSP\nFertilizer"))+
-  theme(legend.position="none", #legend.justification="center", legend.key.size=unit(10,"mm"), 
-        #legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18), # REMOVED FOR COMBINED PLOTS
-        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
-        axis.text.y=element_text(size=18, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold", margin=margin(b=15)), 
-        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
-        panel.background=element_blank(),
-        panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+    labs(x="Treatments at 5g char/pot", y="Total above-ground biomass (g)") + #10t/ha
+    scale_x_discrete(labels=PotsCharCon)+
+    scale_y_continuous(limits=c(0,15))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(size=18, angle=45, hjust=1, face="bold", colour="black"),
+          axis.text.y=element_text(size=18, face="bold", colour="black"),
+          axis.title.x=element_text(size=20, face="bold", margin=margin(t=15)), 
+          axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
+          panel.background=element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Yield10tha, file="Pots1_Yield_10tha.jpg", width=12, height=8, dpi=150)
 
 # Combined plots -  error message to do with use of patterns and displaying in plot viewer
-(Pots1Yield_plot <- plot_grid(Yield50kg, Yield10tha, rel_widths = c(1, 1), axis = 't', ncol=1,    # align = "v" aligns the vertical axis
-                              labels = c('A', 'B'), label_size = 30, label_x = c(0.07,0.08)))   # rel_widths assign relative widths to the plots
-ggsave(Pots1Yield_plot, file="Pots1_Yield.jpg", height=16, width=12, dpi=150)
+(Pots1Yield_plot <- ggarrange(Yield50kg, Yield10tha, nrow=2, common.legend = TRUE, legend = "top", #widths = c(0.8,1),
+                              labels = "AUTO", font.label=list(size=25, face="bold"), label.x = c(0.13,0.13)))
+ggsave(Pots1Yield_plot, file="Pots1_Yield.jpg", height=14, width=10, dpi=150)
 
 
 ## N uptake ----
@@ -368,7 +382,7 @@ qqline(resid(Mod3a))
 # Mod3b 
 Mod3b<-lmer(log(Nuptake)~Treatment*Soil+(1|Soil), data=Pots1, na.action=na.exclude, 
             control=lmerControl(optimizer="bobyqa", optCtrl=list(maxfun=2e5)))
-anova(Mod3b)
+Anova(Mod3b, type="III")
 shapiro.test(resid(Mod3b)) # p=2.081e-08
 plot(fitted(Mod3b),resid(Mod3b),pch=16) # clustered at the right end
 qqnorm(resid(Mod3b)) # heavy tails
@@ -377,7 +391,7 @@ rsq(Mod3b) # 0.842
 # Sqrt transformation
 Mod3c<- lmer(sqrt(Nuptake)~Treatment*Soil+(1|Soil),data=Pots1, na.action=na.exclude)
 rsq(Mod3c) # 0.8086
-vif(Mod3c) # variance inflation factor - measures how easily factor X is predicted by a regression 
+DAAG::vif(Mod3c) # variance inflation factor - measures how easily factor X is predicted by a regression 
     # using other factors. VIF detects multicollinearity
 anova(Mod3c)
 summary(Mod3c)
@@ -690,76 +704,72 @@ cat("Kurtosis:", Pup_kur, "\n") ## data has low/moderate kurtosis @ -1.115
 shapiro.test(Pots1$Puptake)  # p=0.001144
 hist(Pots1$Puptake) # left skewed
 leveneTest(Puptake ~ Treatment*Soil, data=Pots1) # variances are equal; p=0.1601
-#Mod5 (aov, robust aov and lm removed)
 # Mod5c glmm
-Mod5c <- glmmTMB(Puptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
-glmmTMB:::Anova.glmmTMB(Mod5c, type="III")
-summary(Mod5c)
-performance::r2(Mod5c) # 0.938
-shapiro.test(resid(Mod5c)) # p=0.6237
-plot(fitted(Mod5c),resid(Mod5c),pch=16) # normal
-qqnorm(resid(Mod5c)) # almost no tails
-qqline(resid(Mod5c))
+Pots1Mod_Pup1 <- glmmTMB(Puptake~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(Pots1Mod_Pup1, type="III")
+summary(Pots1Mod_Pup1)
+performance::r2(Pots1Mod_Pup1) # marginal=0.938
+shapiro.test(resid(Pots1Mod_Pup1)) # p=0.62
+plot(fitted(Pots1Mod_Pup1),resid(Pots1Mod_Pup1),pch=16) # normal
+qqnorm(resid(Pots1Mod_Pup1)) # almost no tails
+qqline(resid(Pots1Mod_Pup1))
 
 # emmeans
-Mod5em <- emmeans(Mod5c,~Treatment|Soil)
-Mod5em_cld <- cld(Mod5em, Letters=trimws(letters), reversed=TRUE, by="Soil", type="response")
-View(Mod5em_cld)
-write_xlsx(Mod5em_cld, path="Pots1_Puptake.xlsx")
+(Pots1Pup_em <- emmeans(Pots1Mod_Pup1,~Treatment|Soil, infer=TRUE))
+(Pots1Pup_cld <- cld(Pots1Pup_em, Letters=trimws(letters), reversed=TRUE, by="Soil", type="response"))
+write_xlsx(Pots1Pup_cld, path="Pots1_Puptake.xlsx")
 
 ## Visualizations
-Pup_subVar <- Mod5em_cld %>% filter(Treatment %in% TrtVar)
-(Pup50kgha <- ggplot(Pup_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
-  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
-                       labels=c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+0.8),
-            size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 25mg P/pot", y="Phosphorus uptake (mg/kg soil)") +
-  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow", 
-                            "TSP\nFertilizer"))+
-  theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
-        legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
-        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
-        axis.text.y=element_text(size=18, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold", margin=margin(b=15)), 
-        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
-        panel.background=element_blank(),
-        panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+Pup_subVar <- Pots1Pup_cld %>% filter(Treatment %in% TrtVar)
+(Pup50kgha <- ggplot(Pup_subVar, aes(x=Treatment, y=emmean, pattern=Soil, fill=Treatment)) +
+    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
+                     pattern_density=0.1, pattern_spacing=0.02)+
+    scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), labels=c("Haverhill", "Oxbow"))+ #"Oxbow"="none"
+    #scale_fill_manual(limits=TrtVar, values=Pots1Col_TrtVar, guide="none")+
+    geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
+    geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+1.5),
+              size=6, position=position_dodge(width=0.9))+
+    labs(x="Treatments at 25mg P/pot", y="Phosphorus uptake (mg/kg soil)")+ #Treatments at 50kg P/ha
+    scale_x_discrete(labels=c(PotsTrtVar))+
+    scale_y_continuous(limits=c(0,30))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(size=18, angle=45, hjust=1, face="bold", colour="black"),
+          axis.text.y=element_text(size=18, face="bold", colour="black"),
+          axis.title.x=element_text(size=20, face="bold", margin=margin(t=15)), 
+          axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
+          panel.background=element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Pup50kgha, file="Pots1_Puptake_50kg_ha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
-Pup_subCon <- Mod5em_cld %>% filter(Treatment %in% CharCon)
-(Pup10tha <- ggplot(Pup_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
-  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
-                       labels=c("Haverhill", "Oxbow"))+
-  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-                width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+1),
-            size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 5g char/pot", y="Phosphorus uptake (mg/kg soil)") +
-  scale_x_discrete(labels=c("Control 1", "Control 2", "Canola Meal", "Canola Hull", "Manure", "Willow",
-                              "Canola Meal\n& TSP", "Canola Hull\n& TSP", "Manure\n& TSP", "Willow\n& TSP",
-                            "TSP\nFertilizer"))+
-  theme(legend.position="none", #legend.justification="center", legend.key.size=unit(10,"mm"), 
-        #legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
-        axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
-        axis.text.y=element_text(size=18, face="bold", colour="black"),
-        axis.title.x=element_text(size=22, face="bold", margin=margin(b=15)),  
-        axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
-        panel.background=element_blank(),
-        panel.border=element_blank(), panel.grid.major=element_blank(),
-        panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
+Pup_subCon <- Pots1Pup_cld %>% filter(Treatment %in% CharCon)
+(Pup10tha <- ggplot(Pup_subCon, aes(x=Treatment, y=emmean, pattern=Soil, fill=Treatment)) +
+    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
+                     pattern_density=0.1, pattern_spacing=0.02)+
+    scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), labels=c("Haverhill", "Oxbow"))+ #"Oxbow"="none"
+    #scale_fill_manual(limits=CharCon, values=Pots1Col_CharCon, guide="none")+
+    geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), width=0.2, position=position_dodge(width=0.9)) +
+    geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+1.5),
+              size=6, position=position_dodge(width=0.9))+
+    labs(x="Treatments at 5g char/pot", y="Phosphorus uptake (mg/kg soil)")+ #Treatments at 10t/ha
+    scale_x_discrete(labels=PotsCharCon)+
+    scale_y_continuous(limits=c(0,30))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(size=18, angle=45, hjust=1, face="bold", colour="black"),
+          axis.text.y=element_text(size=18, face="bold", colour="black"),
+          axis.title.x=element_text(size=20, face="bold", margin=margin(t=15)),
+          axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
+          panel.background=element_blank(),
+          panel.border=element_blank(), panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Pup10tha, file="Pots1_Puptake_10t_ha.jpg", width=12, height=8, dpi=150)
 
 # Combined plots -  error message to do with use of patterns and displaying in plot viewer
-(Pots1Puptake_plot <- plot_grid(Pup50kgha, Pup10tha, rel_widths = c(1, 1), axis = 't', ncol=1, 
-                              labels = c('A', 'B'), label_size = 30, label_x = c(0.07,0.08)))  
-ggsave(Pots1Puptake_plot, file="Pots1_Puptake.jpg", height=16, width=12, dpi=150)
+(Pots1Puptake_plot <- ggarrange(Pup50kgha, Pup10tha, nrow=2, common.legend = TRUE, legend = "top", #widths = c(0.8, 1),
+                                labels = "AUTO", font.label = list(size=30, face="bold"), label.x = c(0.12,0.1)))
+ggsave(Pots1Puptake_plot, file="Pots1_Puptake.jpg", height=14, width=10, dpi=150)
 
 ## P Recovery ----
 Prec_Mean <- summary_by(Precovery~Soil+Treatment, data=Pots1, FUN=mean) 
@@ -775,78 +785,78 @@ leveneTest(Precovery ~ Treatment*Soil, data=Pots1)  # data has unequal variance:
 ## Precovery has missing values for Control1 & Control2 - the subset removes these values
 Prec <- Pots1[complete.cases(Pots1$Precovery),] #set up a subset removing the missing data only from column Precovery
 View(Prec)
-#Mod6 (aov & lm removed)
-#Mod6b - applying Yeo-Johnson transformation
+# lmer + Yeo-Johnson transformation
 Prec_YJ <- yjPower(Pots1$Precovery, 0.5,jacobian.adjusted=TRUE)
-Mod6b <- lmer(Prec_YJ ~ Treatment*Soil + (1|Soil), data=Pots1) # model failed to converge
-rsq(Mod6b) # adjusted R squared: 0.8369
-anova(Mod6b)
-summary(Mod6b)
+ModPots1_Prec1 <- lmer(Prec_YJ ~ Treatment*Soil + (1|Soil), data=Pots1) # model failed to converge
+anova(ModPots1_Prec1)
+summary(ModPots1_Prec1)
 leveneTest(Prec_YJ~Treatment*Soil, data=Pots1)  #data has slightly less unequal variances 2.875e-08
-shapiro.test(resid(Mod6b)) #data is not normally distributed: 3.853e-08
-plot(fitted(Mod6b),resid(Mod6b),pch=16) # moderately clustered in the middel fo the graph and slightly towards the top
-qqnorm(resid(Mod6b)) # heavy tails
-qqline(resid(Mod6b))
-# Mod 6c
-Mod6c <- lme(Precovery ~ Treatment*Soil, random=~1|Soil, data=Prec)
-summary(Mod6c)
-anova(Mod6c)
-shapiro.test(resid(Mod6c)) # p= 3.472e-08
-plot(fitted(Mod6c),resid(Mod6c),pch=16) # clustered to left, equal around 0
-qqnorm(resid(Mod6c)) # heavy  tails
-qqline(resid(Mod6c))
-rsq(Mod6c) # 0.88
-plot(ranef(Mod6c))
-# Mod6d
-Mod6d <- glmmTMB(Precovery~Treatment*Soil+(1|Soil), data=Prec, family=gaussian(), na.action=na.exclude)
-glmmTMB:::Anova.glmmTMB(Mod6d, type="III")
-summary(Mod6d)
-performance::r2(Mod6d) # 0.874
-shapiro.test(resid(Mod6d)) # p= 3.472e-08
-plot(fitted(Mod6d),resid(Mod6d),pch=16) # clustered to left, equal around 0
-qqnorm(resid(Mod6d)) # heavy  tails
-qqline(resid(Mod6d))
+shapiro.test(resid(ModPots1_Prec1)) #data is not normally distributed: 3.853e-08
+plot(fitted(ModPots1_Prec1),resid(ModPots1_Prec1),pch=16) # moderately clustered in the middel fo the graph and slightly towards the top
+qqnorm(resid(ModPots1_Prec1)) # heavy tails
+qqline(resid(ModPots1_Prec1))
+rsq(ModPots1_Prec1) # adjusted R squared: 0.8369
+# lme
+ModPots1_Prec2 <- lme(Precovery ~ Treatment*Soil, random=~1|Soil, data=Prec)
+summary(ModPots1_Prec2)
+anova(ModPots1_Prec2)
+shapiro.test(resid(ModPots1_Prec2)) # p= 3.472e-08
+plot(fitted(ModPots1_Prec2),resid(ModPots1_Prec2),pch=16) # clustered to left, equal around 0
+qqnorm(resid(ModPots1_Prec2)) # heavy  tails
+qqline(resid(ModPots1_Prec2))
+rsq(ModPots1_Prec2) # 0.88
+plot(ranef(ModPots1_Prec2))
+ranef(ModPots1_Prec2)
+# glmm
+ModPots1_Prec3 <- glmmTMB(Precovery~Treatment*Soil+(1|Soil), data=Prec, family=gaussian(), na.action=na.exclude)
+glmmTMB:::Anova.glmmTMB(ModPots1_Prec3, type="III")
+summary(ModPots1_Prec3)
+shapiro.test(resid(ModPots1_Prec3)) # p= 3.472e-08
+plot(fitted(ModPots1_Prec3),resid(ModPots1_Prec3),pch=16) # clustered to left, equal around 0
+qqnorm(resid(ModPots1_Prec3)) # heavy  tails
+qqline(resid(ModPots1_Prec3))
+ranef(ModPots1_Prec3)
+performance::r2(ModPots1_Prec3) # marginal=0.87
 
 #AIC and BIC values
-Prec_modlist <- list(Mod6b, Mod6c, Mod6d)
+Prec_modlist <- list(ModPots1_Prec1, ModPots1_Prec2, ModPots1_Prec3)
 AIC_values <- sapply(Prec_modlist, AIC)
 BIC_values <- sapply(Prec_modlist, BIC)
-PrecAB <- data.frame(Model=c("Mod6b","Mod6c", "Mod6d"), AIC_values, BIC_values)
-print(PrecAB)
+(PrecAB <- data.frame(Model=c('ModPots1_Prec1', 'ModPots1_Prec2', 'ModPots1_Prec3'), AIC_values, BIC_values))
 #Model AIC_values BIC_values
 #1 Mod6b   628.1842   701.1290 - df 122
 #2 Mod6c   627.4533   691.9672 - df 1 & 0 for soils
-#3 Mod6d   750.9711   823.9159
+#3 Mod6d   750.9711   823.9159 - df 72, values look reasonable, high rsq, chosen as best model
 
-#rsq values: Mod6b=0.84, Mod6c=0.88, Mod6d=0.87 (Mod6b failed to converge)
 
-#run emmeans on Mod6d - issues with Mods 6b & 6c
-(Mod6Em<- emmeans(Mod6d,~Treatment|Soil, subset=(Prec$Precovery), type="response"))
-(Mod6Em_cld <- cld(Mod6Em, Letters=trimws(letters), reversed=TRUE, by="Soil"))
-write_xlsx(Mod6Em_cld, path="Pots1_Precovery.xlsx")
+# emmeans
+(Pots1Prec_em<- emmeans(ModPots1_Prec3,~Treatment|Soil, subset=(Prec$Precovery), infer=TRUE, type="response"))
+(Pots1Prec_cld <- cld(Pots1Prec_em, Letters=trimws(letters), reversed=TRUE, by="Soil"))
+write_xlsx(Pots1Prec_cld, path="Pots1_Precovery.xlsx")
 
 ##Developing visualizations
 Prec_trtVar <- c("CanolaHull50kgha","CanolaMeal50kgha","Manure50kgha","Willow50kgha", "TripleSuperPhosphate")
-Prec_subVar <- Mod6Em_cld %>%
+PrecTrtVar_colours <- c('darkred', 'darkred', 'darkred', 'darkred', 'darkblue')
+Prec_subVar <- Pots1Prec_cld %>%
   filter(Treatment %in% Prec_trtVar)
-(Prec50kg <- ggplot(Prec_subVar, aes(x=Treatment, y=emmean, pattern=Soil)) +
-  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
-                       labels=c("Haverhill", "Oxbow"))+
-  scale_y_continuous(limits=c(-10, 70))+
-  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-                width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2.5),
+(Prec50kg <- ggplot(Prec_subVar, aes(x=Treatment, y=emmean, pattern=Soil, fill=Treatment)) +
+    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
+                     pattern_density=0.1, pattern_spacing=0.02)+
+    scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), labels=c("Haverhill", "Oxbow"))+ #"Oxbow"="none"
+    #scale_fill_manual(limits=Prec_trtVar, values=PrecTrtVar_colours, guide="none")+
+    scale_y_continuous(limits=c(-5, 105))+
+    geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                  width=0.2, position=position_dodge(width=0.9)) +
+    geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+8),
               size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 25mg P/pot", y="Phosphorus recovery (%)") +
-  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "TSP\nFertilizer"))+
+    labs(x="Treatments at 25mg P/pot", y="Phosphorus recovery (%)")+ #Treatments at 50kg P/ha
+    scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "TSP\nFertilizer"))+
     theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
           legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
-          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+          axis.text.x=element_text(size=18, angle=45, hjust=1, face="bold", colour="black"),
           axis.text.y=element_text(size=18, face="bold", colour="black"),
-          axis.title.x=element_text(size=22, face="bold", margin=margin(b=15)), 
-          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          axis.title.x=element_text(size=20, face="bold", margin=margin(t=15)), 
+          axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
           panel.background=element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
@@ -854,35 +864,37 @@ ggsave(Prec50kg, file="Pots1_Prec_50kg_ha.jpg", width=12, height=8, dpi=150)
 #Plotting constant biochar rates with var P rates
 Prec_charCon <- c("CanolaMeal10tha", "CanolaHull10tha", "Manure10tha",  "Willow10tha", "CanolaMeal10thaTSP", 
                   "CanolaHull10thaTSP", "Manure10thaTSP", "Willow10thaTSP","TripleSuperPhosphate")
-Prec_subCon <- Mod6Em_cld %>%
+PrecCharCon_colours <- c('darkred', 'darkred', 'darkred', 'darkred', 'darkorange3','darkorange3', 'darkorange3', 'darkorange3', 'darkblue')
+Prec_subCon <- Pots1Prec_cld %>%
   filter(Treatment %in% Prec_charCon)
-(Prec10tha <- ggplot(Prec_subCon, aes(x=Treatment, y=emmean, pattern=Soil)) +
-  geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white", 
-                   pattern_density=0.05, pattern_spacing=0.01)+
-  scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), 
-                       labels=c("Haverhill", "Oxbow"))+ 
-  geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
-                width=0.2, position=position_dodge(width=0.9)) +
-  geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+2.5),
+(Prec10tha <- ggplot(Prec_subCon, aes(x=Treatment, y=emmean, pattern=Soil, fill=Treatment)) +
+    geom_bar_pattern(stat="identity", position=position_dodge2(padding=0.2), colour="black", fill="white",
+                     pattern_density=0.1, pattern_spacing=0.02)+
+    scale_pattern_manual(values=c("Haverhill"="stripe", "Oxbow"="crosshatch"), labels=c("Haverhill", "Oxbow"))+ #"Oxbow"="none"
+    #scale_fill_manual(limits=Prec_charCon, values=PrecCharCon_colours, guide="none")+
+    geom_errorbar(aes(ymin=emmean - SE, ymax=emmean + SE), 
+                  width=0.2, position=position_dodge(width=0.9)) +
+    geom_text(aes(label=ifelse(Soil == "Haverhill", trimws(.group), toupper(trimws(.group))), y=emmean+SE+8),
               size=6, position=position_dodge(width=0.9))+
-  labs(x="Treatments at 5g char/pot", y="Phosphorus recovery (%)") +
-  scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", 
-                            "Canola Hull\n& TSP","Manure\n& TSP", "Willow\n& TSP", "TSP\nFertilizer"))+
-    theme(legend.position="none", #legend.justification="center", legend.key.size=unit(10,"mm"), 
-          #legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
-          axis.text.x=element_text(angle=45, hjust=1, size=20, face="bold", colour="black"),
+    labs(x="Treatments at 5g char/pot", y="Phosphorus recovery (%)")+ #Treatments at 10t/ha
+    scale_x_discrete(labels=c("Canola Meal", "Canola Hull", "Manure", "Willow", "Canola Meal\n& TSP", 
+                              "Canola Hull\n& TSP","Manure\n& TSP", "Willow\n& TSP", "TSP\nFertilizer"))+
+    scale_y_continuous(limits=c(-5,105))+
+    theme(legend.position="top", legend.justification="center", legend.key.size=unit(10,"mm"), 
+          legend.title=element_text(size=20, face="bold"), legend.text=element_text(size=18),
+          axis.text.x=element_text(size=18, angle=45, hjust=1, face="bold", colour="black"),
           axis.text.y=element_text(size=18, face="bold", colour="black"),
-          axis.title.x=element_text(size=22, face="bold", margin=margin(b=15)), 
-          axis.title.y=element_text(size=22, face="bold", margin=margin(r=15)),
+          axis.title.x=element_text(size=20, face="bold", margin=margin(t=15)), 
+          axis.title.y=element_text(size=20, face="bold", margin=margin(r=15)),
           panel.background=element_blank(),
           panel.border=element_blank(), panel.grid.major=element_blank(),
           panel.grid.minor=element_blank(), axis.line=element_line(colour="black")))
 ggsave(Prec10tha, file="Pots1_Prec_10t_ha.jpg", width=12, height=8, dpi=150)
 
 # Combined plots -  error message to do with use of patterns and displaying in plot viewer
-(Pots1Precovery_plot <- plot_grid(Prec50kg, Prec10tha, rel_widths = c(1, 1), axis = 't', ncol=1, 
-                                labels = c('A', 'B'), label_size = 30, label_x = c(0.07,0.08)))  
-ggsave(Pots1Precovery_plot, file="Pots1_P recovery.jpg", height=16, width=12, dpi=150)
+(Pots1Precovery_plot <- ggarrange(Prec50kg, Prec10tha, nrow=2, common.legend = TRUE, legend = "top", #widths = c(0.8, 1),
+                                  labels = "AUTO", font.label = list(size=30, face="bold"), label.x = c(0.14,0.11)))
+ggsave(Pots1Precovery_plot, file="Pots1_P recovery.jpg", height=14, width=10, dpi=150)
 
 
 ## Nutrient use efficiency ----
@@ -1391,59 +1403,38 @@ shapiro.test(sqrt(Pots1$pH)) # 0.0003507
 hist((log(Pots1$pH)))
 hist((log10(Pots1$pH)))
 hist((sqrt(Pots1$pH)))
-# Mod13
-Mod13 <- aov(pH~Treatment*Soil, data=Pots1)
-anova(Mod13)
-summary(Mod13)
-shapiro.test(resid(Mod13)) # p=1.083e-05
-plot(fitted(Mod13),resid(Mod13),pch=16) # somewhat clustered to right
-qqnorm(resid(Mod13)) # medium tails
-qqline(resid(Mod13))
-Mod13_tidy <- tidy(Mod13) # checking R squared value
-Mod13sum_sq_reg <- Mod13_tidy$sumsq[1] 
-Mod13sum_sq_resid <- Mod13_tidy$sumsq[2]  
-Mod13sum_sq_reg / (Mod13sum_sq_reg + Mod13sum_sq_resid) # 0.53968
-# Mod13a lm
-Mod13a <- lm(pH~Treatment*Soil,data=Pots1)
-anova(Mod13a) 
-summary(Mod13a)
-summary(Mod13a)$adj.r.squared  # 0.9189
-shapiro.test(resid(Mod13a)) # p=1.083e-05
-plot(fitted(Mod13a),resid(Mod13a),pch=16) # clustered to right
-qqnorm(resid(Mod13a)) # medium tails
-qqline(resid(Mod13a))
-#Mod13b
-Mod13b <- lmer(pH~Treatment*Soil+(1|Soil), data=Pots1) # convergence issues
-print(vif(Mod13b)) #check collinearity
-rsq(Mod13b)  # 0.9428
-anova(Mod13b) 
-summary(Mod13b)
-shapiro.test(resid(Mod13b)) # p=1.083e-05
-plot(fitted(Mod13b),resid(Mod13b),pch=16) # clustered to right
-qqnorm(resid(Mod13b)) # medium tails
-qqline(resid(Mod13b))
-#Mod13c
-Mod13c <- glmer(pH~Treatment*Soil+(1|Soil),data=Pots1, family=gaussian(link="log")) #singularity issues
-print(vif(Mod13c)) 
-rsq(Mod13c) # 0.9386
-Anova(Mod13c)
-summary(Mod13c)
-shapiro.test(resid(Mod13c))  #p=1.083e-05
+# lmer
+ModPots1_pH1 <- lmer(pH~Treatment*Soil+(1|Soil), data=Pots1) # convergence issues
+print(vif(ModPots1_pH1)) #check collinearity
+rsq(ModPots1_pH1)  # 0.9428
+anova(ModPots1_pH1) 
+summary(ModPots1_pH1)
+shapiro.test(resid(ModPots1_pH1)) # p=1.083e-05
+plot(fitted(ModPots1_pH1),resid(ModPots1_pH1),pch=16) # clustered to right
+qqnorm(resid(ModPots1_pH1)) # medium tails
+qqline(resid(ModPots1_pH1))
+# glmer
+ModPots1_pH2 <- glmer(pH~Treatment*Soil+(1|Soil),data=Pots1, family=gaussian(link="log")) #singularity issues
+print(vif(ModPots1_pH2)) 
+rsq(ModPots1_pH2) # 0.9386
+Anova(ModPots1_pH2)
+summary(ModPots1_pH2)
+shapiro.test(resid(ModPots1_pH2))  #p=1.083e-05
 bf.test(pH~Treatment, data=Pots1)  # variance equal p=0.2407674 
-plot(fitted(Mod13c),resid(Mod13c),pch=16) # clustered to right
-qqnorm(resid(Mod13c)) # medium tails
-qqline(resid(Mod13c))
-# Mod13d glmm - convergence issues
-Mod13d <- glmmTMB(pH~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), 
+plot(fitted(ModPots1_pH2),resid(ModPots1_pH2),pch=16) # clustered to right
+qqnorm(resid(ModPots1_pH2)) # medium tails
+qqline(resid(ModPots1_pH2))
+# glmm
+ModPots1_pH3 <- glmmTMB(pH~Treatment*Soil+(1|Soil), data=Pots1, family=gaussian(), 
                   control=glmmTMBControl(optimizer=optim, optArgs=list(parallel=TRUE, nthreads=4)))
-glmmTMB:::Anova.glmmTMB(Mod13d, type="III")
-print(vif(Mod13d))
-summary(Mod13d)
-performance::r2(Mod13d) # 0.939
-shapiro.test(resid(Mod13d)) # p= 8.949e-06
-plot(fitted(Mod13d),resid(Mod13d),pch=16) # normalish
-qqnorm(resid(Mod13d)) # moderate tails
-qqline(resid(Mod13d))
+glmmTMB:::Anova.glmmTMB(ModPots1_pH3, type="III")
+print(vif(ModPots1_pH3))
+summary(ModPots1_pH3)
+performance::r2(ModPots1_pH3) # 0.939
+shapiro.test(resid(ModPots1_pH3)) # p= 8.949e-06
+plot(fitted(ModPots1_pH3),resid(ModPots1_pH3),pch=16) # normalish
+qqnorm(resid(ModPots1_pH3)) # moderate tails
+qqline(resid(ModPots1_pH3))
 
 # Rsq summary: Mod13=0.53968; Mod13a=0.9189; Mod13b=0.9428; Mod13c=0.9386
 #AIC and BIC values - this indicated that Mod13 was the best fit
