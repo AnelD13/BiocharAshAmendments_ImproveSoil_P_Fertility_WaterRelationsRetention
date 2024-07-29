@@ -93,5 +93,5 @@ Please reference the thesis as:
 Dannhauser, A. (2023).  Biochar and ash amendments to improve soil phosphorus fertility, water relations and retention. Unpublished MSc thesis, University of Saskatchewan, Saskatoon, SK, Canada.  
 
 ## Thesis and license
-Link to thesis: To be published   
+Link to thesis: https://harvest.usask.ca/items/8c3559f9-ac0c-40a0-8bb0-d3b7474484d5  
 License: MIT
