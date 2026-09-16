@@ -85,7 +85,9 @@ All code set up to be `Run` either as individual lines or blocks of code (select
 - Moisture was reported on but not bulk density. Data is available in the data files.
 
 ## Credits & References
-This code was built using examples provided by Blake Weiseth and Dr Eric Lamb from the University of Saskatchewan. ChatGPT was used in understanding and debugging the code and statistics. Special thanks to Dr Ryan Hangs for help in understanding the stastistical requirements.  
+- Initial R examples and guidance were provided by Dr. Blake Weiseth and Dr. Eric Lamb (University of Saskatchewan), which helped inform my early exploration of R. The code in this repository was subsequently developed and substantially expanded independently, including the statistical analyses and visualizations.
+- ChatGPT was used as a supplementary tool for understanding R syntax, debugging code, and clarifying statistical concepts.
+- Special thanks to Dr. Ryan Hangs for guidance in understanding the statistical requirements.
   
 Please reference this repo as:  
 Dannhauser, A. (2023). Biochar and ash amendments to improve soil phosphorus fertility, water relations and retention. GitHub repository, https://github.com/AnelD13/BiocharAshAmendments_ImproveSoil_P_Fertility_WaterRelationsRetention.git.
