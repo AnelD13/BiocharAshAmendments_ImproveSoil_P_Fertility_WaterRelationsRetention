@@ -17,6 +17,7 @@ Code set up to run in a R Project (NO `setwd` or `getwd`). Pull repo and set up 
 
 
 ## Build status
+2024 - Cleaned and final code has been uploaded.
 As of 15 August 2023 the code still has to be cleaned up. Further changes may occur before the thesis is finalised.  
 Versions were saved on local drive and only committed and pushed at a later date.  As of 14 August 2023, changes will be done directly within the repo. Previous version commits contain trial and error code for reference. Unused code sections have been removed from latest versions. Comments within scripts indicate reasoning.  
 
